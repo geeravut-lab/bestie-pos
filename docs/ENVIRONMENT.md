@@ -45,7 +45,13 @@ pnpm check                      # same as CI
 ```
 
 
-## 4. Vercel setup (one-time, in the Vercel dashboard)
+## 4. Vercel setup
+
+**Already applied via the Vercel API (2026-11-17)** for project `bestie-pos` (team `geeravut-lab`): Root Directory `apps/pos`, framework Vite,
+Node 22.x, "include source files outside root" on, **Preview deployments disabled** (only `main` → production deploys),
+Vercel Authentication limited to previews so the production URL stays public, env vars below set (`SUPABASE_SERVICE_ROLE_KEY` as *Sensitive*, production only).
+The first production deploy happens when a PR is merged into `main`. The build was dry-run locally with `vercel pull` + `vercel build --prod`
+(static output + `/api/health` function both OK). Manual steps, if the project is ever recreated:
 
 1. Import the GitHub repo `geeravut-lab/bestie-pos` as a project named `bestie-pos`.
 2. **Root Directory:** `apps/pos` and keep *"Include source files outside of the Root Directory"* ON

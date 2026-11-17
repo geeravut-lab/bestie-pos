@@ -130,9 +130,6 @@ importers:
       '@bestie/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@bestie/functions':
-        specifier: workspace:*
-        version: link:../../functions
       '@bestie/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n

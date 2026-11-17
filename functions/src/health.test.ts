@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ServerEnvError, readServerEnv } from './env';
-import { healthReport, healthResponse } from './health';
+import { ServerEnvError, readServerEnv } from './env.js';
+import { healthReport, healthResponse } from './health.js';
 
 describe('healthReport', () => {
   it('reports configuration presence without leaking values', async () => {

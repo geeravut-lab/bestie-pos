@@ -19,6 +19,8 @@
 - 2026-11-17 — Owner standing rules recorded in CLAUDE.md: (1) every button/menu that does work shows a loading spinner until it finishes and cannot be double-submitted; (2) after every finished prompt, list the remaining steps of the current/next phase so the owner can choose what to run next.
 - 2026-11-17 — Server secrets (`SUPABASE_SERVICE_ROLE_KEY`, LINE and AI provider keys) live only in Vercel environment variables, never in git and never with a `VITE_`/`NEXT_PUBLIC_`/`PUBLIC_` prefix (lint-enforced).
 
+- 2026-11-18 — Vercel: Preview deployments are **disabled** (owner request); only `main` deploys to production `https://bestie-pos.vercel.app/`. Vercel/Supabase access tokens are stored as proxy-injected network secrets of the Claude environment, never in git. Vercel Functions import `functions/src` by relative path with `.js` extensions (workspace packages that point at `.ts` do not resolve inside the Lambda).
+
 ## Proposed (confirm)
 - Offline-first on Supabase (Firestore's built-in offline cache is gone): IndexedDB (Dexie) local store + an outbox of client-generated-UUID writes replayed to Supabase with per-entity conflict rules. Needed before task "Offline: full order flow works with network off".
 - Live sync = Supabase Realtime "ping" topics + refetch, per docs/LIVE-SYNC-KNOWLEDGE.md (adapted from Next.js `router.refresh()` to React Query/refetch).

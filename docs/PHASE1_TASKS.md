@@ -6,7 +6,8 @@ Work top to bottom. One PR per task. Tick when merged.
 ## 0. Foundation  _(stack: Vercel + Supabase, see DECISIONS.md)_
 - [x] Scaffold pnpm monorepo: apps/pos, apps/admin, apps/guest, packages/core, functions (+ packages/i18n, packages/ui, packages/supabase)
 - [x] ~~Firebase project config~~ → Supabase project config (`supabase/config.toml`), Vercel config per app, environment variables documented (docs/ENVIRONMENT.md, `.env.example`)
-- [ ] Verify against the real services (needs owner access): `supabase start` locally, link hosted project, Vercel project + env vars, first green CI run on GitHub
+- [x] Vercel project configured via API (root dir, env vars, previews off) and build dry-run locally
+- [ ] Still to verify: first production deploy after merge to `main` (`/api/health`), first green CI run on GitHub, `supabase start` locally
 - [x] Lint, format, Vitest, CI on every PR (ESLint + repo-conventions script: no raw colours, no Thai literals in code, no public-prefixed secrets)
 - [x] i18n setup (th, en) shared by all apps
 - [x] Design tokens "Island Breeze" + contrast tests, default logo + favicon/PWA icons, `AsyncButton` spinner rule (docs/UX-DESIGN.md)

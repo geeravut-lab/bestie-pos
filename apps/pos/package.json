@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@bestie/core": "workspace:*",
-    "@bestie/functions": "workspace:*",
     "@bestie/i18n": "workspace:*",
     "@bestie/supabase": "workspace:*",
     "@bestie/ui": "workspace:*",

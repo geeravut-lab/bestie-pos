@@ -1,4 +1,5 @@
 export { AuthApp } from './AuthApp';
+export type { PageContext } from './AuthApp';
 export { AuthProvider, useAuth } from './context';
 export type { AuthStatus } from './context';
 export { authErrorCode, passwordChangeProblem, signUpProblem } from './errors';
@@ -12,4 +13,4 @@ export {
 } from './myContext';
 export type { Membership, MyContext, StoreInfo } from './myContext';
 export { aivoraAuthorizeUrl, fetchEnabledProviders } from './providers';
-export { LoginPage, OnboardingPage, SsoCallbackPage, AccountPage } from './components';
+export { LoginPage, Notice, OnboardingPage, SsoCallbackPage, AccountPage } from './components';

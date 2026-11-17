@@ -79,11 +79,12 @@ Work top to bottom. One PR per task. Tick when merged.
 - [ ] Interplay with the offline outbox (sync indicator: online/offline + queued writes)
 
 ## 11. Audit trail  _(AUDIT-TRAIL-KNOWLEDGE + admin switches, see KNOWLEDGE-MAPPING §A)_
-- [ ] `audit_log` (append-only, no PII) + `audit()` helper (never throws) + DB triggers on money/staff tables
-- [ ] Event registry (typed, TH/EN labels, grouped, `critical` flag)
-- [ ] Admin: master on/off + tick-list of event types (stores only what is *off*), settings change always audited
-- [ ] Admin: viewer, filters, CSV export (export itself audited)
-- [ ] Test: any function that checks staff permission must import `audit`
+- [x] `audit_log` (append-only, no PII) + `audit()` helper (never throws) + DB triggers on money/staff tables
+- [x] Event registry (typed, TH/EN labels, grouped, `critical` flag)
+- [x] Admin: master on/off + tick-list of event types (stores only what is *off*), settings change always audited
+- [x] Admin: viewer, filters, CSV export (export itself audited)
+- [ ] Test: any function that checks staff permission must import `audit` (no staff-permission functions exist yet — add when §2/§3 actions land)
+- [ ] Retention / purge function (open question: how many years)
 
 ## 12. Authentication
 - [x] Supabase Auth: owner e-mail sign-up / sign-in, shop onboarding (`create_org`), profiles + roles tables (role never comes from SSO), live role home from the DB

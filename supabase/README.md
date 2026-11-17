@@ -8,6 +8,7 @@ Database, Auth, Storage and Realtime for Bestie POS.
     platform_admins, platform_settings, RLS helper functions, `create_org()` onboarding RPC, guards (last owner,
     no self-promotion, legal sign-off server-only).
   - `20261117234934_aivora_links.sql` — `aivora_links` (hub user id ↔ Supabase user), server-only.
+  - `20261117235800_audit_trail.sql` — append-only `audit_log`, event catalogue, per-org switches (`set_audit_settings`), `write_audit` RPC, DB triggers on staff / orgs / stores.
 - `tests/` — `local_stub.sql` (Supabase look-alike roles + `auth` schema) and `*.test.sql` (RLS / guard assertions).
   Run `pnpm test:db` (needs PostgreSQL 14+ binaries; CI runs it too). The same assertions were dry-run inside a rolled-back
   transaction on the hosted project before applying.

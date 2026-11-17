@@ -707,3 +707,111 @@ a.nav-card[aria-busy='true'] {
   background: var(--bp-mint);
   color: var(--bp-primary-hover);
 }
+
+/* ── back-office pages: tabs, filters, tables, checkbox rows ─────────────── */
+.admin-page {
+  display: grid;
+  gap: 1rem;
+}
+.admin-page h1 {
+  font-size: 1.5rem;
+}
+.admin-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.tab {
+  min-height: var(--bp-touch);
+  padding: 0 1.1rem;
+  border: 2px solid transparent;
+  border-radius: var(--bp-radius-pill);
+  background: var(--bp-surface);
+  color: var(--bp-ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tab[aria-selected='true'] {
+  background: var(--bp-mint);
+  border-color: var(--bp-primary);
+  color: var(--bp-primary-hover);
+}
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.table-wrap {
+  overflow-x: auto; /* wide tables scroll inside their own box, never the page */
+  border: 1px solid var(--bp-line);
+  border-radius: var(--bp-radius-control);
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+.table th {
+  padding: 0.6rem 0.75rem;
+  background: var(--bp-mint);
+  text-align: left;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.table td {
+  padding: 0.55rem 0.75rem;
+  border-top: 1px solid var(--bp-line);
+  vertical-align: top;
+}
+.nowrap {
+  white-space: nowrap;
+}
+.mono {
+  font-family: var(--bp-font-mono);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+.detail {
+  max-width: 22rem;
+}
+.switch-row,
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: var(--bp-touch);
+  cursor: pointer;
+}
+.switch-text {
+  font-weight: 800;
+}
+.switch-row input,
+.check-row input {
+  width: 1.4rem;
+  height: 1.4rem;
+  accent-color: var(--bp-primary);
+  flex: none;
+}
+.audit-group {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--bp-line);
+  border-radius: var(--bp-radius-control);
+}
+.audit-group legend {
+  padding: 0 0.5rem;
+  font-weight: 800;
+}

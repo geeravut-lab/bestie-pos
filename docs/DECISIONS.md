@@ -28,6 +28,8 @@
 - 2026-11-17 — SSO accounts always use a **synthetic** address `aivora+<hub id>@<site host>` (the hub's e-mail is stored only as `user_metadata.hub_email`). Deviation from docs/SSO-Aivora-Supabase.md ("use the hub e-mail if present"): the hub does not say whether its e-mail is verified, so creating a confirmed account with it would let someone pre-register another person's e-mail (account squatting). Linking is by hub user id in `aivora_links`.
 - 2026-11-17 — Login never assigns a role. A new user (e-mail, Google or LINE) lands on shop onboarding; `create_org()` makes them the owner of the shop they create. Staff are added to an org by an owner/manager. Platform admin = row in `platform_admins` (service_role only).
 
+- 2026-11-17 — Audit trail: the org owner/admin can switch auditing off and untick event types (stored as "only what is off"). **35 event types; 14 are `critical`** (refund, void, Credit/Points ledger changes, staff role/deactivation, POS ID, module toggles, legal sign-off, audit settings, audit export, password change) and are always recorded — the switches cannot hide them. Proposal from KNOWLEDGE-MAPPING §A, implemented; the owner may change the list of critical events.
+
 ## Proposed (confirm)
 - Offline-first on Supabase (Firestore's built-in offline cache is gone): IndexedDB (Dexie) local store + an outbox of client-generated-UUID writes replayed to Supabase with per-entity conflict rules. Needed before task "Offline: full order flow works with network off".
 - Live sync = Supabase Realtime "ping" topics + refetch, per docs/LIVE-SYNC-KNOWLEDGE.md (adapted from Next.js `router.refresh()` to React Query/refetch).

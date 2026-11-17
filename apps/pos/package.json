@@ -12,6 +12,7 @@
     "e2e": "playwright test"
   },
   "dependencies": {
+    "@bestie/admin-ui": "workspace:*",
     "@bestie/auth": "workspace:*",
     "@bestie/core": "workspace:*",
     "@bestie/i18n": "workspace:*",

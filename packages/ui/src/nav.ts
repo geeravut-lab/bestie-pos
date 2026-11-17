@@ -152,7 +152,7 @@ export const ROLE_LAYOUT: Readonly<Record<AppRole, RoleLayout>> = {
   manager: {
     center: 'sell',
     tabs: ['home', 'orders', 'reports'],
-    cards: ['reports', 'sell', 'menu', 'stock', 'staff', 'credit', 'points'],
+    cards: ['reports', 'sell', 'menu', 'stock', 'staff', 'credit', 'points', 'audit'],
   },
   owner: {
     center: 'dashboard',
@@ -167,11 +167,12 @@ export const ROLE_LAYOUT: Readonly<Record<AppRole, RoleLayout>> = {
       'points',
       'ai',
       'reports',
+      'audit',
     ],
   },
   platformAdmin: {
-    tabs: ['home', 'branding', 'audit'],
-    cards: ['branding', 'flags', 'audit', 'ai', 'line', 'analytics'],
+    tabs: ['home', 'branding', 'flags'],
+    cards: ['branding', 'flags', 'ai', 'line', 'analytics'],
   },
   guest: {
     center: 'guestMenu',

@@ -603,3 +603,107 @@ a.nav-card[aria-busy='true'] {
   background: var(--bp-primary);
   color: var(--bp-on-primary);
 }
+
+/* ── auth screens, forms, account ───────────────────────────────────────── */
+.auth-screen {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, var(--bp-sky), var(--bp-bg) 40%);
+}
+.auth-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+}
+.auth-main {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 1rem;
+  flex: 1;
+  padding: 1rem 1rem 3rem;
+}
+.auth-card {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+  max-width: 28rem;
+  padding: 1.5rem;
+}
+.auth-card h1 {
+  font-size: 1.5rem;
+}
+.auth-card h2 {
+  font-size: 1.25rem;
+}
+.auth-card p {
+  margin: 0;
+}
+.auth-form {
+  display: grid;
+  gap: 1rem;
+}
+.account {
+  display: grid;
+  gap: 1rem;
+  justify-items: center;
+}
+.form-row {
+  display: grid;
+  gap: 0.35rem;
+}
+.label {
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.hint {
+  font-size: 0.875rem;
+}
+.password-box {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.password-toggle,
+.link-button {
+  min-height: var(--bp-touch);
+  padding: 0 0.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--bp-primary-hover);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.auth-or {
+  text-align: center;
+}
+.sso-working {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--bp-primary-hover);
+  font-weight: 700;
+}
+.chip[disabled] {
+  border-style: dashed;
+  background: var(--bp-disabled-bg);
+  color: var(--bp-disabled-fg);
+  cursor: not-allowed;
+}
+.chip-note {
+  font-weight: 600;
+}
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: var(--bp-touch);
+  height: var(--bp-touch);
+  border-radius: 50%;
+  background: var(--bp-mint);
+  color: var(--bp-primary-hover);
+}

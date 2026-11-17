@@ -62,6 +62,7 @@ export const ART_IDS = [
   'book',
   'pay',
   'home',
+  'account',
 ] as const;
 export type ArtId = (typeof ART_IDS)[number];
 
@@ -90,6 +91,7 @@ const item = (
 
 export const NAV_ITEMS: readonly NavItem[] = [
   item('home', '/', 'navHome'),
+  item('account', '/account', 'navAccount'),
   item('sell', '/sell', 'navSell', 'hintSell'),
   item('tables', '/tables', 'navTables', 'hintTables', ['tables.floorplan']),
   item('queue', '/queue', 'navQueue', 'hintQueue', ['queue.call']),

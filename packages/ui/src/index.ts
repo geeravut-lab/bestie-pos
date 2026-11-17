@@ -1,5 +1,5 @@
 export { AppRoot } from './AppRoot';
-export type { AppId } from './AppRoot';
+export type { AppId, AppRootProps, LiveSession } from './AppRoot';
 export { AppShell, roleNavIds } from './AppShell';
 export type { ShellProps } from './AppShell';
 export { AsyncButton } from './AsyncButton';

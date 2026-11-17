@@ -2,6 +2,7 @@ import type { ArtId } from './nav';
 
 /** 24×24 stroke icons for nav items. `currentColor` only — colour comes from the surrounding token. */
 const PATHS: Record<ArtId | 'more' | 'close' | 'back', string[]> = {
+  account: ['M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M4 21a8 8 0 0 1 16 0'],
   home: ['M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z'],
   sell: ['M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z', 'M12 8v8M8 12h8'],
   tables: ['M3 10a9 4 0 1 0 18 0 9 4 0 0 0-18 0z', 'M12 14v6M8 20h8'],

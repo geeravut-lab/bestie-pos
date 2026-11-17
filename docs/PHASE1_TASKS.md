@@ -86,10 +86,11 @@ Work top to bottom. One PR per task. Tick when merged.
 - [ ] Test: any function that checks staff permission must import `audit`
 
 ## 12. Authentication
-- [ ] Supabase Auth: owner email login, staff PIN (lockout), profiles + roles table (role never comes from SSO)
-- [ ] Google login (Supabase provider; needs Google OAuth client — owner action)
-- [ ] LINE login via Aivora SSO (docs/SSO-Aivora-Supabase.md): `/sso/callback`, `/api/sso-exchange` (service_role, server only), link by `aivora_user_id`, bootstrap called directly after `setSession`, role-picker for new users
-- [ ] Change password (re-auth, sign out other devices, audit + notify)
+- [x] Supabase Auth: owner e-mail sign-up / sign-in, shop onboarding (`create_org`), profiles + roles tables (role never comes from SSO), live role home from the DB
+- [ ] Staff PIN login with lockout (needs devices + per-staff PIN hash — with §2 Devices/Staff)
+- [ ] Google login — **code ready** (button appears automatically when Supabase has Google enabled); owner action: create a Google OAuth client and enable the provider in Supabase
+- [ ] LINE login via Aivora SSO — **code ready and unit-tested** (`/sso/callback`, `/api/sso-exchange`, `aivora_links`, synthetic e-mail, direct bootstrap); needs `APP_SLUG` registered at the hub + a real ticket from the Launcher to test (cannot be simulated: single use, 60 s)
+- [x] Change password (re-auth, sign out other devices); audit + LINE notice of the change arrive with §11 / §14
 
 ## 13. AI assistant  _(AI-PROVIDER-MODEL, AI-PROMPTS-RULES; roles in KNOWLEDGE-MAPPING §B)_
 - [ ] Provider/model registry with capabilities + per-task routes + fallback; admin page to choose provider and model per task; keys only in Vercel env

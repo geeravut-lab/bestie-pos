@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Bestie POS">
+  <defs>
+    <linearGradient id="sea" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3BE0CB"/>
+      <stop offset="1" stop-color="#00968D"/>
+    </linearGradient>
+  </defs>
+  <!-- island-sea tile -->
+  <rect width="512" height="512" rx="120" fill="url(#sea)"/>
+  <!-- friendly chat bubble: a "bestie" talking to you -->
+  <path fill="#FFFFFF" d="M136 112H376a56 56 0 0 1 56 56V284a56 56 0 0 1-56 56H264L184 416V340H136a56 56 0 0 1-56-56V168a56 56 0 0 1 56-56Z"/>
+  <!-- rounded B -->
+  <path fill="none" stroke="#0F2D4A" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"
+        d="M218 168V288M218 168H262a31 31 0 0 1 0 62H218M218 230H272a29 29 0 0 1 0 58H218"/>
+  <!-- sun = good mood -->
+  <circle cx="408" cy="112" r="46" fill="#FFCB3D"/>
+  <circle cx="408" cy="112" r="46" fill="none" stroke="#FFFFFF" stroke-width="10"/>
+</svg>

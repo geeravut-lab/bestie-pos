@@ -1,0 +1,36 @@
+{
+  "name": "bestie-pos",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Bestie POS — multi-profile cloud POS for small businesses on Koh Phangan",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+    "dev:pos": "pnpm --filter @bestie/pos dev",
+    "dev:admin": "pnpm --filter @bestie/admin dev",
+    "dev:guest": "pnpm --filter @bestie/guest dev",
+    "build": "pnpm -r --if-present build",
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "eslint . && pnpm check:conventions",
+    "check:conventions": "node scripts/check-conventions.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "brand:build": "node scripts/build-brand-assets.mjs",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "26.6.6",
+    "eslint": "10.15.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.14.0",
+    "prettier": "3.10.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.73.0"
+  }
+}

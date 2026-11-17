@@ -1,10 +1,5 @@
-import { I18nProvider } from '@bestie/i18n';
-import { ScaffoldPage } from '@bestie/ui';
+import { AppRoot } from '@bestie/ui';
 
 export function App() {
-  return (
-    <I18nProvider>
-      <ScaffoldPage app="admin" />
-    </I18nProvider>
-  );
+  return <AppRoot app="admin" />;
 }

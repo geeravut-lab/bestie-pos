@@ -37,5 +37,8 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+      - name: Database migrations + RLS tests (throw-away Postgres)
+        run: bash supabase/tests/run-local.sh
+
       - name: Build all apps
         run: pnpm build

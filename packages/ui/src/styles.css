@@ -5,6 +5,7 @@
 @import '@fontsource-variable/nunito';
 @import '@fontsource-variable/noto-sans-thai';
 @import './theme.css';
+@import './shell.css'; /* app shell, nav, role home, illustrations — docs/UX-DESIGN.md §7 */
 
 *,
 *::before,
@@ -224,37 +225,6 @@ h3 {
   letter-spacing: -0.01em;
 }
 
-/* ── scaffold page (placeholder until real screens land) ─────────────────── */
-.scaffold {
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-}
-.scaffold-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
-  background: var(--bp-surface);
-  border-bottom: 1px solid var(--bp-line);
-}
-.scaffold-hero {
-  background: linear-gradient(135deg, var(--bp-brand), var(--bp-sky));
-  color: var(--bp-ink); /* ink on bright fills, always */
-}
-.scaffold-main {
-  width: 100%;
-  max-width: 48rem;
-  margin: 0 auto;
-  padding: 2rem 1rem 3rem;
-  flex: 1;
-}
-.scaffold-card {
-  padding: 1.5rem;
-  display: grid;
-  gap: 1rem;
-}
 .badge {
   display: inline-block;
   width: fit-content;

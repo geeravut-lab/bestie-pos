@@ -4,12 +4,12 @@ import { App } from './App';
 
 afterEach(cleanup);
 
-describe('<App> scaffold', () => {
-  it('renders the branded landing with a language switch and the demo loading button', () => {
+describe('<App>', () => {
+  it('renders the branded shell with the role home, language switch and navigation', () => {
     render(<App />);
-    expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
-    expect(screen.getByRole('group')).toBeTruthy(); // language switch
-    expect(screen.getAllByRole('button').length).toBeGreaterThanOrEqual(3);
-    expect(screen.getByRole('img').getAttribute('src')).toBeTruthy(); // logo
+    expect(screen.getByRole('heading', { level: 1 })).toBeTruthy(); // greeting
+    expect(screen.getAllByRole('group').length).toBeGreaterThan(0); // language switch + preview chips
+    expect(screen.getAllByRole('link').length).toBeGreaterThan(3); // nav + cards
+    expect(screen.getAllByRole('img')[0]!.getAttribute('src')).toBeTruthy(); // logo
   });
 });

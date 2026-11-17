@@ -64,10 +64,11 @@ Work top to bottom. One PR per task. Tick when merged.
 - [ ] Onboarding checklist for pilot shops (hardware, printer, POS ID registration)
 
 ## 9. UX shell, role home & branding  _(design: docs/UX-DESIGN.md)_
-- [ ] App shell: sidebar (desktop) / rail (tablet) / bottom bar + "More" sheet (phone), one nav list, safe-area, back links, Playwright 390×844 + 1280×800 + axe
-- [ ] Role home screens (cashier, waiter, kitchen, manager, owner, platform admin, guest) as illustrated cards, grey when module off
-- [ ] Card illustrations (SVG set in Island Breeze palette) + admin upload override per card (Storage bucket `card-images`)
-- [ ] Navigation feedback: progress bar + spinner on the tapped item while the next screen loads
+- [x] App shell: sidebar (desktop) / rail (tablet) / bottom bar + "More" sheet (phone), one nav list, safe-area, back links, Playwright 390×844 + 1280×800 + axe
+- [x] Role home screens (cashier, waiter, kitchen, manager, owner, platform admin, guest) as illustrated cards, grey when module off
+- [x] Card illustrations: 30 built-in SVGs in the Island Breeze palette; `RoleHome` already accepts per-card `imageUrls`
+- [ ] Admin upload override per card (Storage bucket `card-images` + `home_card_images` table + admin screen)
+- [x] Navigation feedback: progress bar + spinner on the tapped item while the next screen loads
 - [ ] Branding admin (BRANDING-KNOWLEDGE): upload logo/icon, rename app, `/brand/logo` + `/brand/favicon` functions, dynamic manifest + `<title>`, defaults = designed logo
 - [ ] Per-store 5-colour theme with contrast validation
 

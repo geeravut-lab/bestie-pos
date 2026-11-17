@@ -1,0 +1,135 @@
+import { useState, useTransition } from 'react';
+import { BrowserRouter, useLocation, useNavigate } from 'react-router';
+import { I18nProvider, useI18n } from '@bestie/i18n';
+import type { StoreModuleConfig } from '@bestie/core';
+import { AppShell } from './AppShell';
+import { LangSwitch } from './LangSwitch';
+import { NAV_ITEMS, roleLabelKey } from './nav';
+import type { AppRole, NavContext } from './nav';
+import { PageSoon } from './PageSoon';
+import { RoleHome } from './RoleHome';
+
+export type AppId = 'pos' | 'admin' | 'guest';
+
+/** Roles each app can preview until sign-in + roles arrive (Phase 1 §12). First = default. */
+const APP_ROLES_PREVIEW: Record<AppId, readonly AppRole[]> = {
+  pos: ['cashier', 'waiter', 'kitchen', 'manager'],
+  admin: ['owner', 'manager', 'platformAdmin'],
+  guest: ['guest'],
+};
+
+const PREVIEW_PROFILES = ['restaurant', 'cafe'] as const;
+type PreviewProfile = (typeof PREVIEW_PROFILES)[number];
+
+const ROLE_KEY = 'bestie-preview-role';
+const PROFILE_KEY = 'bestie-preview-profile';
+
+function stored<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
+  try {
+    const v = globalThis.localStorage?.getItem(key);
+    return (allowed as readonly string[]).includes(v ?? '') ? (v as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+function remember(key: string, value: string) {
+  try {
+    globalThis.localStorage?.setItem(key, value);
+  } catch {
+    /* best effort */
+  }
+}
+
+const demoStore = (profile: PreviewProfile): StoreModuleConfig => ({
+  profile,
+  plan: 'pro',
+  moduleOverrides: {},
+  legalSignOff: { cryptoTopup: false },
+});
+
+function Frame({ app }: { app: AppId }) {
+  const { t } = useI18n();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [pending, startTransition] = useTransition();
+  const [target, setTarget] = useState<string | null>(null);
+  const roles = APP_ROLES_PREVIEW[app];
+  const [role, setRole] = useState<AppRole>(() => stored(ROLE_KEY + app, roles, roles[0]!));
+  const [profile, setProfile] = useState<PreviewProfile>(() =>
+    stored(PROFILE_KEY, PREVIEW_PROFILES, 'restaurant'),
+  );
+
+  const ctx: NavContext = { store: demoStore(profile) };
+  // Spinner + progress bar from the moment an item is tapped until the next screen is ready.
+  const go = (path: string) => {
+    setTarget(path);
+    startTransition(() => navigate(path));
+  };
+  const pendingPath = pending ? target : null;
+
+  const profileLabel = { restaurant: t.profileRestaurant, cafe: t.profileCafe };
+  const current = NAV_ITEMS.find((n) => n.path === location.pathname);
+
+  return (
+    <AppShell
+      role={role}
+      ctx={ctx}
+      path={location.pathname}
+      onNavigate={go}
+      pendingPath={pendingPath}
+      headerRight={<LangSwitch />}
+    >
+      <div className="preview-strip" role="group" aria-label={t.homePreviewNote}>
+        <p className="muted preview-note">{t.homePreviewNote}</p>
+        <div className="chips" role="group" aria-label={t.homePreviewLabel}>
+          {roles.map((r) => (
+            <button
+              key={r}
+              type="button"
+              className="chip"
+              aria-pressed={r === role}
+              onClick={() => {
+                setRole(r);
+                remember(ROLE_KEY + app, r);
+              }}
+            >
+              {t[roleLabelKey(r)]}
+            </button>
+          ))}
+        </div>
+        <div className="chips" role="group" aria-label={t.profileLabel}>
+          {PREVIEW_PROFILES.map((p) => (
+            <button
+              key={p}
+              type="button"
+              className="chip"
+              aria-pressed={p === profile}
+              onClick={() => {
+                setProfile(p);
+                remember(PROFILE_KEY, p);
+              }}
+            >
+              {profileLabel[p]}
+            </button>
+          ))}
+        </div>
+      </div>
+      {location.pathname === '/' ? (
+        <RoleHome role={role} ctx={ctx} onNavigate={go} pendingPath={pendingPath} />
+      ) : (
+        <PageSoon art={current?.id ?? 'home'} onNavigate={go} />
+      )}
+    </AppShell>
+  );
+}
+
+/** Whole app frame shared by pos / admin / guest: i18n + router + shell + role home. */
+export function AppRoot({ app }: { app: AppId }) {
+  return (
+    <I18nProvider>
+      <BrowserRouter>
+        <Frame app={app} />
+      </BrowserRouter>
+    </I18nProvider>
+  );
+}

@@ -54,6 +54,7 @@
   --bp-radius-pill: 999px;
   --bp-shadow: 0 6px 20px rgb(15 45 74 / 0.08);
   --bp-shadow-lift: 0 10px 28px rgb(15 45 74 / 0.14);
+  --bp-shadow-up: 0 -6px 18px rgb(15 45 74 / 0.06);
 
   /* type */
   --bp-font:

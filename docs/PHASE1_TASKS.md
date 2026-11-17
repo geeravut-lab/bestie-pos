@@ -21,6 +21,7 @@ Work top to bottom. One PR per task. Tick when merged.
 - [x] Points rules: earn from THB spend only, redeem as discount, no purchase/cash-out (enforced + tested)
 
 ## 2. Back office (apps/admin)
+- [x] Database foundation applied to Supabase (orgs, stores, roles, staff, RLS, `create_org()` RPC) — UI for owner signup still to build
 - [ ] Owner signup → create org + store → pick profile → see enabled modules
 - [ ] Module toggle screen (store level) with dependency warnings
 - [ ] Menu editor: categories, items, modifiers (min/max), channel prices, Thai/English names

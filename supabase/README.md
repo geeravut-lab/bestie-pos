@@ -3,8 +3,13 @@
 Database, Auth, Storage and Realtime for Bestie POS.
 
 - `config.toml` — local stack (`supabase start`). Hosted project: `https://pqomylchauwecpgqxoad.supabase.co`.
-- `migrations/` — SQL migrations, applied in filename order. **Empty on purpose after the Foundation task**;
-  the first migration arrives with Phase 1 task 1/2 (orgs, stores, profiles, `platform_settings`).
+- `migrations/` — SQL migrations, applied in filename order. Applied to the hosted project so far:
+  - `20261117233030_foundation.sql` — profiles (+ auto-create on signup), orgs, legal_entities, stores, roles, staff,
+    platform_admins, platform_settings, RLS helper functions, `create_org()` onboarding RPC, guards (last owner,
+    no self-promotion, legal sign-off server-only).
+- `tests/` — `local_stub.sql` (Supabase look-alike roles + `auth` schema) and `*.test.sql` (RLS / guard assertions).
+  Run `pnpm test:db` (needs PostgreSQL 14+ binaries; CI runs it too). The same assertions were dry-run inside a rolled-back
+  transaction on the hosted project before applying.
 
 Rules every migration must follow (docs/CLAUDE.md rules 5–7, docs/KNOWLEDGE-MAPPING.md):
 
@@ -13,3 +18,8 @@ Rules every migration must follow (docs/CLAUDE.md rules 5–7, docs/KNOWLEDGE-MA
 3. Offline-first: client-generated `uuid` primary keys, `updated_at`, soft delete (`deleted_at`) so queued writes can sync later.
 4. Code must tolerate a deploy that runs before its migration (catch `42703` / `PGRST204` / `23514`, degrade gracefully).
 5. Never write `service_role` keys into this repo.
+
+How a migration reaches the hosted project (done by Claude through the Management API with the owner's token, or `supabase db push`):
+1. write it, add RLS + tests, `pnpm test:db` locally; 2. dry-run on the hosted project inside `begin; … rollback;`;
+3. apply via `POST /v1/projects/<ref>/database/migrations` (records history) and rename the file to the returned version;
+4. never edit an applied migration — add a new one. New tables must `revoke all … from anon, authenticated` and grant only what is needed.

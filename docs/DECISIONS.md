@@ -21,6 +21,10 @@
 
 - 2026-11-18 — Vercel: Preview deployments are **disabled** (owner request); only `main` deploys to production `https://bestie-pos.vercel.app/`. Vercel/Supabase access tokens are stored as proxy-injected network secrets of the Claude environment, never in git. Vercel Functions import `functions/src` by relative path with `.js` extensions (workspace packages that point at `.ts` do not resolve inside the Lambda).
 
+- 2026-11-17 — Core money rules (packages/core): money = integer satang; basis points for rates; rounding is per tender (`RoundingRule`, default exact) and shown as its own bill line; bill order = line discounts → bill discount → Points discount (capped) → service charge on the discounted subtotal → VAT on (subtotal + service). Service charge carries VAT. **Accountant must confirm** (Open questions).
+- 2026-11-17 — Points: earned only from confirmed cash / PromptPay / gateway / **Credit-spend** payments (never on the Points portion, never from buying Credit); redeemed only as a bill discount capped by `maxRedeemBps`; ledger kinds are a closed set and unknown kinds such as `purchase` / `cash_out` are rejected at runtime. Defaults (editable per org): 1 point per THB 25, 1 point = THB 1, max 50 % of a bill.
+- 2026-11-17 — Modules: `tender.credit` is off by default for every profile until the lawyer confirms the single-entity prepaid structure; `credit.topup.crypto` depends on it and needs `legalSignOff.cryptoTopup`. `deposits` depends on `appointments` (a table reservation is an appointment). Plan tiers are cumulative: basic ⊂ pro ⊂ resort.
+
 ## Proposed (confirm)
 - Offline-first on Supabase (Firestore's built-in offline cache is gone): IndexedDB (Dexie) local store + an outbox of client-generated-UUID writes replayed to Supabase with per-entity conflict rules. Needed before task "Offline: full order flow works with network off".
 - Live sync = Supabase Realtime "ping" topics + refetch, per docs/LIVE-SYNC-KNOWLEDGE.md (adapted from Next.js `router.refresh()` to React Query/refetch).
@@ -43,4 +47,6 @@
 - AI assistant: which providers/models to enable by default and who pays for usage (platform key vs. each org's own key)?
 - Landing/role home: confirm the list of roles (owner, manager, cashier, waiter/staff, kitchen/KDS, guest) and which cards each sees by default.
 - Audit trail: confirm retention period (the knowledge file uses 4 years; Thai accounting-record retention is commonly cited as 5 years — verify with the accountant/lawyer before fixing the number).
+- ACCOUNTING: confirm bill maths — is the 10 % service charge subject to VAT (we assume yes), is it computed after discounts (we assume yes), and which cash rounding (none / 25 satang / baht) pilot shops use. Defaults live in `packages/core` (`computeBill`, `DEFAULT_ROUNDING`).
+- LOYALTY: confirm default Points rule (1 point per THB 25 spent, 1 point = THB 1, max 50 % of bill) and whether spending Bestie Credit earns points (we assume yes).
 

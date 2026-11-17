@@ -1,0 +1,67 @@
+/*
+ * Bestie POS design tokens — "Island Breeze".
+ *
+ * THE ONLY FILE THAT MAY CONTAIN COLOUR VALUES (scripts/check-conventions.mjs enforces it).
+ * Everything else uses var(--bp-*). Rationale + usage rules: docs/UX-DESIGN.md.
+ *
+ * Contrast rules (verified by theme.test.ts):
+ *  - text on light surfaces ........ ink / muted            >= 4.5
+ *  - text on --bp-primary ........... white                  >= 4.5
+ *  - text on --bp-brand/accent/sun .. ink ONLY (bright fills are backgrounds, never text colour)
+ *  - borders you must see ........... --bp-field-border      >= 3
+ *  - --bp-line is decoration only (cards, dividers)
+ */
+:root {
+  /* surfaces */
+  --bp-bg: #f3fbfb;
+  --bp-surface: #ffffff;
+  --bp-mint: #d5f7f0;
+  --bp-sky: #dff1fb;
+
+  /* text */
+  --bp-ink: #0f2d4a;
+  --bp-muted: #4f6577;
+  --bp-on-primary: #ffffff;
+
+  /* brand */
+  --bp-primary: #00796f;
+  --bp-primary-hover: #005f58;
+  --bp-primary-pressed: #004d47;
+  --bp-brand: #2bd4bf; /* fill only: hero bands, badges, charts */
+  --bp-accent: #ff7a59; /* fill only: promo, counters */
+  --bp-sun: #ffcb3d; /* fill only: highlights, "new" */
+
+  /* lines */
+  --bp-line: #d8e8e8;
+  --bp-field-border: #6a8590;
+
+  /* status (always paired with an icon or text, never colour alone) */
+  --bp-success-bg: #d5f7f0;
+  --bp-success-fg: #005f58;
+  --bp-warning-bg: #ffe9a8;
+  --bp-warning-fg: #0f2d4a;
+  --bp-danger-bg: #fde4e1;
+  --bp-danger-fg: #b3261e;
+  --bp-danger-solid: #b3261e;
+  --bp-info-bg: #dff1fb;
+  --bp-info-fg: #0f2d4a;
+  --bp-disabled-bg: #eef3f2;
+  --bp-disabled-fg: #7a8c99;
+
+  /* shape + depth */
+  --bp-radius-card: 20px;
+  --bp-radius-control: 14px;
+  --bp-radius-pill: 999px;
+  --bp-shadow: 0 6px 20px rgb(15 45 74 / 0.08);
+  --bp-shadow-lift: 0 10px 28px rgb(15 45 74 / 0.14);
+
+  /* type */
+  --bp-font:
+    'Nunito Variable', 'Noto Sans Thai Variable', ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', sans-serif;
+  --bp-font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* layout */
+  --bp-touch: 44px; /* minimum tap target */
+  --bp-nav-h: 64px; /* mobile bottom bar */
+}

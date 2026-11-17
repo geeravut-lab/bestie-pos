@@ -3,11 +3,13 @@
 Goal: Core + Restaurant and Cafe profiles, usable by 3–5 pilot shops on Koh Phangan.
 Work top to bottom. One PR per task. Tick when merged.
 
-## 0. Foundation
-- [ ] Scaffold pnpm monorepo: apps/pos, apps/admin, apps/guest, packages/core, functions
-- [ ] Firebase project config (emulators for local dev + tests), environment variables documented
-- [ ] Lint, format, Vitest, CI on every PR
-- [ ] i18n setup (th, en) shared by all apps
+## 0. Foundation  _(stack: Vercel + Supabase, see DECISIONS.md)_
+- [x] Scaffold pnpm monorepo: apps/pos, apps/admin, apps/guest, packages/core, functions (+ packages/i18n, packages/ui, packages/supabase)
+- [x] ~~Firebase project config~~ → Supabase project config (`supabase/config.toml`), Vercel config per app, environment variables documented (docs/ENVIRONMENT.md, `.env.example`)
+- [ ] Verify against the real services (needs owner access): `supabase start` locally, link hosted project, Vercel project + env vars, first green CI run on GitHub
+- [x] Lint, format, Vitest, CI on every PR (ESLint + repo-conventions script: no raw colours, no Thai literals in code, no public-prefixed secrets)
+- [x] i18n setup (th, en) shared by all apps
+- [x] Design tokens "Island Breeze" + contrast tests, default logo + favicon/PWA icons, `AsyncButton` spinner rule (docs/UX-DESIGN.md)
 
 ## 1. Core domain (packages/core, pure TS + tests)
 - [ ] Types: Org, Store, Device, Staff, Role, Profile, Module, MenuItem, Modifier, Order, Payment, Customer, PointsLedger
@@ -57,3 +59,43 @@ Work top to bottom. One PR per task. Tick when merged.
 ## 8. Pilot readiness
 - [ ] Seed script with demo restaurant + cafe
 - [ ] Onboarding checklist for pilot shops (hardware, printer, POS ID registration)
+
+## 9. UX shell, role home & branding  _(design: docs/UX-DESIGN.md)_
+- [ ] App shell: sidebar (desktop) / rail (tablet) / bottom bar + "More" sheet (phone), one nav list, safe-area, back links, Playwright 390×844 + 1280×800 + axe
+- [ ] Role home screens (cashier, waiter, kitchen, manager, owner, platform admin, guest) as illustrated cards, grey when module off
+- [ ] Card illustrations (SVG set in Island Breeze palette) + admin upload override per card (Storage bucket `card-images`)
+- [ ] Navigation feedback: progress bar + spinner on the tapped item while the next screen loads
+- [ ] Branding admin (BRANDING-KNOWLEDGE): upload logo/icon, rename app, `/brand/logo` + `/brand/favicon` functions, dynamic manifest + `<title>`, defaults = designed logo
+- [ ] Per-store 5-colour theme with contrast validation
+
+## 10. Live sync  _(LIVE-SYNC-KNOWLEDGE)_
+- [ ] Supabase Realtime private channels + `live_ping(topic)` DB trigger helper + policy deciding who may listen (store/org/kds/user topics)
+- [ ] `useLiveSync` hook: refetch on ping, polling fingerprint fallback, pause on hidden tab, never refresh under typing / open payment dialog
+- [ ] Wire to: floor plan, order list, KDS, queue screen, guest "order ready", admin lists
+- [ ] Interplay with the offline outbox (sync indicator: online/offline + queued writes)
+
+## 11. Audit trail  _(AUDIT-TRAIL-KNOWLEDGE + admin switches, see KNOWLEDGE-MAPPING §A)_
+- [ ] `audit_log` (append-only, no PII) + `audit()` helper (never throws) + DB triggers on money/staff tables
+- [ ] Event registry (typed, TH/EN labels, grouped, `critical` flag)
+- [ ] Admin: master on/off + tick-list of event types (stores only what is *off*), settings change always audited
+- [ ] Admin: viewer, filters, CSV export (export itself audited)
+- [ ] Test: any function that checks staff permission must import `audit`
+
+## 12. Authentication
+- [ ] Supabase Auth: owner email login, staff PIN (lockout), profiles + roles table (role never comes from SSO)
+- [ ] Google login (Supabase provider; needs Google OAuth client — owner action)
+- [ ] LINE login via Aivora SSO (docs/SSO-Aivora-Supabase.md): `/sso/callback`, `/api/sso-exchange` (service_role, server only), link by `aivora_user_id`, bootstrap called directly after `setSession`, role-picker for new users
+- [ ] Change password (re-auth, sign out other devices, audit + notify)
+
+## 13. AI assistant  _(AI-PROVIDER-MODEL, AI-PROMPTS-RULES; roles in KNOWLEDGE-MAPPING §B)_
+- [ ] Provider/model registry with capabilities + per-task routes + fallback; admin page to choose provider and model per task; keys only in Vercel env
+- [ ] Admin prompts & rules page: append-only extra instructions, two-gate screening, versioned history, shows the real prompt
+- [ ] Module `ai.assistant` with store/role toggles; Owner/Manager "Ask my shop" (read-only, numbers from SQL), menu translation/description helper
+- [ ] Usage + cost log per task
+
+## 14. LINE notifications  _(LINE-ACCOUNT-LINKING, LINE-NOTIFICATIONS, LINE-FLEX-CARD)_
+- [ ] LINE OA webhook + one-time-code account linking + status in account page
+- [ ] `notify()` writer: in-app inbox + LINE queue, dedupe keys, quota with reserve, retry table, per-user opt-in
+- [ ] Flex bubble builder in Bestie colours (title → ≤ 8 label/value lines → "Open app"), rich `altText`, TH/EN by recipient
+- [ ] First notices: PromptPay paid, order ready, low stock, shift variance, daily summary
+

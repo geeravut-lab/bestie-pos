@@ -2,3 +2,7 @@ export { ServerEnvError, readServerEnv } from './env.js';
 export type { ServerEnv } from './env.js';
 export { healthReport, healthResponse } from './health.js';
 export type { HealthReport } from './health.js';
+export { SsoError, exchangeTicket, parseHubPayload, syntheticEmail } from './sso.js';
+export type { ExchangeResult, HubUser, Session, SsoAdmin, SsoConfig, SsoErrorCode } from './sso.js';
+export { createSupabaseSsoAdmin } from './sso-admin.js';
+export { ssoExchangeResponse } from './sso-handler.js';

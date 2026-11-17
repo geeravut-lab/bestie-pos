@@ -20,6 +20,8 @@ Public (shipped to the browser — `VITE_` prefix, safe to be seen):
 | `VITE_SUPABASE_URL` | `https://pqomylchauwecpgqxoad.supabase.co` | known |
 | `VITE_SUPABASE_ANON_KEY` | anon key | Supabase Dashboard → Project Settings → API |
 | `VITE_SITE_URL` | `https://bestie-pos.vercel.app` | known |
+| `VITE_AIVORA_HUB_URL` | `https://aivora-lc.netlify.app` (default) | Aivora hub |
+| `VITE_AIVORA_APP_SLUG` | the slug registered for Bestie at the hub (empty = no LINE button) | **needed from the owner** |
 
 Server only (Vercel Functions in `apps/*/api`, code in `functions/`) — **never** a `VITE_`/`NEXT_PUBLIC_`/`PUBLIC_` prefix:
 
@@ -30,7 +32,7 @@ Server only (Vercel Functions in `apps/*/api`, code in `functions/`) — **never
 | *(later)* `LINE_CHANNEL_SECRET`, `LINE_CHANNEL_ACCESS_TOKEN` | LINE webhook + push |
 | *(later)* `CRON_SECRET` | authenticates scheduled-function calls (constant-time compare) |
 | *(later)* `AI_*` provider keys | AI assistant providers (Anthropic, Google, …) |
-| *(later)* `AIVORA_HUB_URL`, `AIVORA_APP_SLUG` | SSO (see DECISIONS.md open question) |
+| `AIVORA_APP_SLUG`, `AIVORA_HUB_EXCHANGE_URL`, `SITE_HOST` | SSO exchange function (`/api/sso-exchange`); slug **needed from the owner** |
 
 Guards: `packages/supabase` throws on a secret-looking name with a public prefix, and
 `scripts/check-conventions.mjs` fails CI if one appears in the repo.

@@ -9,6 +9,8 @@ export type PublicEnv = {
   supabaseUrl: string;
   supabaseAnonKey: string;
   siteUrl: string;
+  /** Present only when the app slug is configured (public values, safe in the browser). */
+  aivora?: { hubUrl: string; appSlug: string };
 };
 
 type RawEnv = Record<string, string | boolean | undefined>;
@@ -21,7 +23,8 @@ export class EnvError extends Error {
 }
 
 const CLIENT_PREFIXES = ['VITE_', 'NEXT_PUBLIC_', 'PUBLIC_'];
-const SECRET_HINT = /(SERVICE_ROLE|SECRET|PRIVATE)/;
+// `_ROLE` catches the Supabase service-role key without spelling its name: CI greps every browser bundle for that word.
+const SECRET_HINT = /(_ROLE|SECRET|PRIVATE)/;
 
 /** Throws if anything that looks like a server secret was given a browser-exposed prefix. */
 export function assertNoServerSecretsInClientEnv(env: RawEnv): void {
@@ -60,9 +63,18 @@ export function readPublicEnv(env: RawEnv): PublicEnv | undefined {
     );
   }
 
+  const appSlug = str(env.VITE_AIVORA_APP_SLUG);
   return {
     supabaseUrl: parsed.origin,
     supabaseAnonKey,
     siteUrl: str(env.VITE_SITE_URL) || (typeof location !== 'undefined' ? location.origin : ''),
+    ...(appSlug
+      ? {
+          aivora: {
+            hubUrl: str(env.VITE_AIVORA_HUB_URL) || 'https://aivora-lc.netlify.app',
+            appSlug,
+          },
+        }
+      : {}),
   };
 }

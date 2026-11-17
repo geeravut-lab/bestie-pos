@@ -398,6 +398,17 @@ const SCENES: Record<ArtId, { tone: Tone; art: ReactNode }> = {
       </>
     ),
   },
+  account: {
+    tone: 'sky',
+    art: (
+      <>
+        <circle className="il-sun il-edge" cx="80" cy="34" r="17" />
+        <path className="il-brand il-edge" d="M44 92a36 36 0 0 1 72 0z" />
+        <path className="il-edge-line" d="M73 32q7 6 14 0" />
+        <circle className="il-accent il-edge" cx="120" cy="30" r="9" />
+      </>
+    ),
+  },
   home: {
     tone: 'mint',
     art: (

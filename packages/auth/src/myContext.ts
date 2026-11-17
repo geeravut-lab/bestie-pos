@@ -1,0 +1,174 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { MODULE_IDS, PERMISSIONS } from '@bestie/core';
+import type {
+  BuiltInRoleKey,
+  LegalSignOff,
+  ModuleId,
+  Permission,
+  PlanTier,
+  StoreModuleConfig,
+} from '@bestie/core';
+import type { AppRole } from '@bestie/ui';
+import type { BusinessProfile } from '@bestie/core';
+
+/** Who is signed in, where they work and what they may do — assembled from RLS-filtered rows. */
+export type Membership = {
+  staffId: string;
+  orgId: string;
+  orgName: string;
+  /** null = works in every store of the org. */
+  storeId: string | null;
+  displayName: string;
+  roleBuiltIn: BuiltInRoleKey | null;
+  roleName: string;
+  permissions: Permission[];
+  hiddenModules: ModuleId[];
+  legalSignOff: LegalSignOff;
+};
+
+export type StoreInfo = StoreModuleConfig & {
+  id: string;
+  orgId: string;
+  name: string;
+  legalEntityId: string;
+};
+
+export type MyContext = {
+  profile: { displayName: string | null; language: 'th' | 'en' } | null;
+  memberships: Membership[];
+  stores: StoreInfo[];
+  isPlatformAdmin: boolean;
+};
+
+type Row = Record<string, unknown>;
+const one = <T>(v: T | T[] | null | undefined): T | undefined =>
+  Array.isArray(v) ? v[0] : (v ?? undefined);
+const asStrings = (v: unknown): string[] =>
+  Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+const BUILT_IN: readonly string[] = ['owner', 'manager', 'cashier', 'waiter', 'kitchen'];
+
+export function mapMembership(row: Row): Membership | null {
+  if (row.active === false) return null;
+  const role = one(row.roles as Row | Row[] | undefined);
+  const org = one(row.orgs as Row | Row[] | undefined);
+  if (!role || !org || typeof row.id !== 'string' || typeof row.org_id !== 'string') return null;
+  const sign = (org.legal_sign_off ?? {}) as Row;
+  return {
+    staffId: row.id,
+    orgId: row.org_id,
+    orgName: String(org.name ?? ''),
+    storeId: typeof row.store_id === 'string' ? row.store_id : null,
+    displayName: String(row.display_name ?? ''),
+    roleBuiltIn: BUILT_IN.includes(String(role.built_in))
+      ? (role.built_in as BuiltInRoleKey)
+      : null,
+    roleName: String(role.name ?? ''),
+    permissions: asStrings(role.permissions).filter((p): p is Permission =>
+      (PERMISSIONS as readonly string[]).includes(p),
+    ),
+    hiddenModules: asStrings(role.hidden_modules).filter((m): m is ModuleId =>
+      (MODULE_IDS as readonly string[]).includes(m),
+    ),
+    // Only an explicit `true` counts: a missing / garbled value must never open the legal gate.
+    legalSignOff: { cryptoTopup: sign.cryptoTopup === true },
+  };
+}
+
+/** Unknown module ids and non-boolean values are dropped (a bad row must not break every screen). */
+export function cleanOverrides(raw: unknown): Partial<Record<ModuleId, boolean>> {
+  const out: Partial<Record<ModuleId, boolean>> = {};
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    for (const [k, v] of Object.entries(raw)) {
+      if ((MODULE_IDS as readonly string[]).includes(k) && typeof v === 'boolean')
+        out[k as ModuleId] = v;
+    }
+  }
+  return out;
+}
+
+const PROFILES: readonly string[] = [
+  'restaurant',
+  'cafe',
+  'salon',
+  'spa',
+  'resort',
+  'retail',
+  'tours',
+];
+const PLANS: readonly string[] = ['basic', 'pro', 'resort'];
+
+export function mapStore(row: Row, legalSignOff: LegalSignOff): StoreInfo | null {
+  if (typeof row.id !== 'string' || typeof row.org_id !== 'string' || row.deleted_at) return null;
+  if (!PROFILES.includes(String(row.profile))) return null;
+  return {
+    id: row.id,
+    orgId: row.org_id,
+    name: String(row.name ?? ''),
+    legalEntityId: String(row.legal_entity_id ?? ''),
+    profile: row.profile as BusinessProfile,
+    plan: (PLANS.includes(String(row.plan)) ? row.plan : 'basic') as PlanTier, // unknown plan → lowest, never highest
+    moduleOverrides: cleanOverrides(row.module_overrides),
+    legalSignOff,
+  };
+}
+
+/** Which role-home / menu set to show. Login never decides this — the org's role assignment does. */
+export function appRoleFor(
+  m: Membership | undefined,
+  opts: { app: 'pos' | 'admin' | 'guest'; isPlatformAdmin: boolean },
+): AppRole {
+  if (opts.app === 'admin' && opts.isPlatformAdmin) return 'platformAdmin';
+  if (!m) return opts.app === 'guest' ? 'guest' : 'cashier';
+  if (m.roleBuiltIn) return m.roleBuiltIn;
+  // custom role: infer the closest home from its permissions
+  if (m.permissions.includes('staff.manage')) return 'manager';
+  if (m.permissions.includes('payment.take')) return 'cashier';
+  if (m.permissions.includes('order.create')) return 'waiter';
+  return 'kitchen';
+}
+
+export async function loadMyContext(client: SupabaseClient): Promise<MyContext> {
+  const [profile, staff, stores, admin] = await Promise.all([
+    client.from('profiles').select('display_name, language').maybeSingle(),
+    client
+      .from('staff')
+      .select(
+        'id, org_id, store_id, display_name, active, roles(built_in, name, permissions, hidden_modules), orgs(name, legal_sign_off)',
+      )
+      .eq('active', true),
+    client
+      .from('stores')
+      .select('id, org_id, legal_entity_id, name, profile, plan, module_overrides, deleted_at')
+      .is('deleted_at', null),
+    client.rpc('is_platform_admin'),
+  ]);
+  if (staff.error) throw new Error(`staff: ${staff.error.code ?? 'error'}`);
+  if (stores.error) throw new Error(`stores: ${stores.error.code ?? 'error'}`);
+
+  const memberships = ((staff.data ?? []) as Row[])
+    .map(mapMembership)
+    .filter((m): m is Membership => m !== null);
+  const legalByOrg = new Map(memberships.map((m) => [m.orgId, m.legalSignOff]));
+  const storeInfos = ((stores.data ?? []) as Row[])
+    .map((r) => mapStore(r, legalByOrg.get(String(r.org_id)) ?? { cryptoTopup: false }))
+    .filter((s): s is StoreInfo => s !== null);
+
+  const p = profile.data as Row | null;
+  return {
+    profile: p
+      ? {
+          displayName: (p.display_name as string | null) ?? null,
+          language: p.language === 'en' ? 'en' : 'th',
+        }
+      : null,
+    memberships,
+    stores: storeInfos,
+    isPlatformAdmin: admin.data === true,
+  };
+}
+
+/** The store to work in: the membership's own store, else the org's first store. */
+export function pickStore(ctx: MyContext, m: Membership | undefined): StoreInfo | undefined {
+  if (!m) return undefined;
+  return ctx.stores.find((s) => s.orgId === m.orgId && (m.storeId === null || s.id === m.storeId));
+}

@@ -1,5 +1,6 @@
-import { AppRoot } from '@bestie/ui';
+import { AuthApp } from '@bestie/auth';
 
+// Public build-time config only (VITE_ prefix). See docs/ENVIRONMENT.md.
 export function App() {
-  return <AppRoot app="admin" />;
+  return <AuthApp app="admin" rawEnv={import.meta.env} />;
 }

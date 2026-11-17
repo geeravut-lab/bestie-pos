@@ -30,6 +30,16 @@ describe('readPublicEnv', () => {
   });
 });
 
+describe('readPublicEnv — Aivora SSO', () => {
+  it('exposes the SSO settings only when the app slug is configured', () => {
+    expect(readPublicEnv(good)?.aivora).toBeUndefined();
+    expect(readPublicEnv({ ...good, VITE_AIVORA_APP_SLUG: 'bestie-pos' })?.aivora).toEqual({
+      hubUrl: 'https://aivora-lc.netlify.app',
+      appSlug: 'bestie-pos',
+    });
+  });
+});
+
 describe('assertNoServerSecretsInClientEnv', () => {
   it('blocks a service_role key that would ship to the browser', () => {
     expect(() => assertNoServerSecretsInClientEnv({ VITE_SUPABASE_SERVICE_ROLE_KEY: 'x' })).toThrow(

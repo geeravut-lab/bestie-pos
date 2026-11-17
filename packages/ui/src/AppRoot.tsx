@@ -1,4 +1,5 @@
 import { useState, useTransition } from 'react';
+import type { ReactNode } from 'react';
 import { BrowserRouter, useLocation, useNavigate } from 'react-router';
 import { I18nProvider, useI18n } from '@bestie/i18n';
 import type { StoreModuleConfig } from '@bestie/core';
@@ -10,6 +11,21 @@ import { PageSoon } from './PageSoon';
 import { RoleHome } from './RoleHome';
 
 export type AppId = 'pos' | 'admin' | 'guest';
+
+/** Real session data: replaces the preview chips (role + store come from the database, not from a picker). */
+export type LiveSession = { role: AppRole; ctx: NavContext };
+
+export type AppRootProps = {
+  app: AppId;
+  /** Present = signed-in mode. Absent = preview mode (no backend configured). */
+  live?: LiveSession;
+  /** Takes over the whole screen before the shell (login, SSO callback, onboarding). Return null to continue. */
+  gate?: (p: { path: string; navigate: (path: string) => void }) => ReactNode | null;
+  /** Real pages; return null to fall back to the "being built" placeholder. */
+  renderPage?: (p: { path: string; navigate: (path: string) => void }) => ReactNode | null;
+  /** Extra controls on the right of the top bar (account link). */
+  headerExtra?: ReactNode;
+};
 
 /** Roles each app can preview until sign-in + roles arrive (Phase 1 §12). First = default. */
 const APP_ROLES_PREVIEW: Record<AppId, readonly AppRole[]> = {
@@ -47,7 +63,7 @@ const demoStore = (profile: PreviewProfile): StoreModuleConfig => ({
   legalSignOff: { cryptoTopup: false },
 });
 
-function Frame({ app }: { app: AppId }) {
+function Frame({ app, live, gate, renderPage, headerExtra }: AppRootProps) {
   const { t } = useI18n();
   const location = useLocation();
   const navigate = useNavigate();
@@ -59,7 +75,9 @@ function Frame({ app }: { app: AppId }) {
     stored(PROFILE_KEY, PREVIEW_PROFILES, 'restaurant'),
   );
 
-  const ctx: NavContext = { store: demoStore(profile) };
+  const previewCtx: NavContext = { store: demoStore(profile) };
+  const ctx = live?.ctx ?? previewCtx;
+  const activeRole = live?.role ?? role;
   // Spinner + progress bar from the moment an item is tapped until the next screen is ready.
   const go = (path: string) => {
     setTarget(path);
@@ -70,52 +88,65 @@ function Frame({ app }: { app: AppId }) {
   const profileLabel = { restaurant: t.profileRestaurant, cafe: t.profileCafe };
   const current = NAV_ITEMS.find((n) => n.path === location.pathname);
 
+  const gated = gate?.({ path: location.pathname, navigate });
+  if (gated) return <>{gated}</>;
+  const page = renderPage?.({ path: location.pathname, navigate: go });
+
   return (
     <AppShell
-      role={role}
+      role={activeRole}
       ctx={ctx}
       path={location.pathname}
       onNavigate={go}
       pendingPath={pendingPath}
-      headerRight={<LangSwitch />}
+      headerRight={
+        <>
+          {headerExtra}
+          <LangSwitch />
+        </>
+      }
     >
-      <div className="preview-strip" role="group" aria-label={t.homePreviewNote}>
-        <p className="muted preview-note">{t.homePreviewNote}</p>
-        <div className="chips" role="group" aria-label={t.homePreviewLabel}>
-          {roles.map((r) => (
-            <button
-              key={r}
-              type="button"
-              className="chip"
-              aria-pressed={r === role}
-              onClick={() => {
-                setRole(r);
-                remember(ROLE_KEY + app, r);
-              }}
-            >
-              {t[roleLabelKey(r)]}
-            </button>
-          ))}
+      {live ? null : (
+        <div className="preview-strip" role="group" aria-label={t.homePreviewNote}>
+          <p className="muted preview-note">{t.homePreviewNote}</p>
+          <div className="chips" role="group" aria-label={t.homePreviewLabel}>
+            {roles.map((r) => (
+              <button
+                key={r}
+                type="button"
+                className="chip"
+                aria-pressed={r === role}
+                onClick={() => {
+                  setRole(r);
+                  remember(ROLE_KEY + app, r);
+                }}
+              >
+                {t[roleLabelKey(r)]}
+              </button>
+            ))}
+          </div>
+          <div className="chips" role="group" aria-label={t.profileLabel}>
+            {PREVIEW_PROFILES.map((p) => (
+              <button
+                key={p}
+                type="button"
+                className="chip"
+                aria-pressed={p === profile}
+                onClick={() => {
+                  setProfile(p);
+                  remember(PROFILE_KEY, p);
+                }}
+              >
+                {profileLabel[p]}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="chips" role="group" aria-label={t.profileLabel}>
-          {PREVIEW_PROFILES.map((p) => (
-            <button
-              key={p}
-              type="button"
-              className="chip"
-              aria-pressed={p === profile}
-              onClick={() => {
-                setProfile(p);
-                remember(PROFILE_KEY, p);
-              }}
-            >
-              {profileLabel[p]}
-            </button>
-          ))}
-        </div>
-      </div>
-      {location.pathname === '/' ? (
-        <RoleHome role={role} ctx={ctx} onNavigate={go} pendingPath={pendingPath} />
+      )}
+      {page ? (
+        page
+      ) : location.pathname === '/' ? (
+        <RoleHome role={activeRole} ctx={ctx} onNavigate={go} pendingPath={pendingPath} />
       ) : (
         <PageSoon art={current?.id ?? 'home'} onNavigate={go} />
       )}
@@ -124,11 +155,11 @@ function Frame({ app }: { app: AppId }) {
 }
 
 /** Whole app frame shared by pos / admin / guest: i18n + router + shell + role home. */
-export function AppRoot({ app }: { app: AppId }) {
+export function AppRoot(props: AppRootProps) {
   return (
     <I18nProvider>
       <BrowserRouter>
-        <Frame app={app} />
+        <Frame {...props} />
       </BrowserRouter>
     </I18nProvider>
   );

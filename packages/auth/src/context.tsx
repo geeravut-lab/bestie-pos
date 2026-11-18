@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Session, SupabaseClient, User } from '@supabase/supabase-js';
+import { cachedRead, clearDeviceCaches } from '@bestie/offline';
 import { loadMyContext } from './myContext';
 import { useLiveSync } from './useLiveSync';
 import type { MyContext } from './myContext';
@@ -65,7 +66,9 @@ export function AuthProvider({
   const load = useCallback(async () => {
     if (!client || !userId) return;
     try {
-      setResult({ userId, status: 'ready', data: await loadMyContext(client) });
+      // network first; with no signal the last good copy keeps the till working (offline-first, CLAUDE.md rule 5)
+      const { data } = await cachedRead(`my:${userId}`, () => loadMyContext(client));
+      setResult({ userId, status: 'ready', data });
     } catch (e) {
       console.error('[auth] loading shop data failed', e instanceof Error ? e.message : 'unknown');
       setResult({ userId, status: 'error', data: null });
@@ -94,6 +97,7 @@ export function AuthProvider({
   const signOut = useCallback(async () => {
     if (!client) return;
     await client.auth.signOut();
+    await clearDeviceCaches(); // the next person on this tablet must not see this account's cached shop data
   }, [client]);
 
   const value = useMemo<AuthValue>(

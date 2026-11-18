@@ -138,4 +138,10 @@ select t_rows('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$update 
 select t_rows(null, 'service_role', $$select 1 from public.audit_log where action = 'device.register'$$, 2, 'registrations were audited');
 select t_rows(null, 'service_role', $$select 1 from public.audit_log where action = 'device.pos_id_change'$$, 1, 'the POS ID change was audited (critical)');
 select t_err(null, 'anon', $$select * from public.devices$$, '42501', 'anon cannot read devices');
+
+-- ── lock-screen list ──
+select t_val('00000000-0000-0000-0000-0000000000d4', 'authenticated', 'pinned', $$select count(*)::text from public.staff_with_pin((select v::uuid from t_out where k='acme'))$$);
+select t_rows(null, 'service_role', $$select 1 from t_out where k='pinned' and v='1'$$, 1, 'a cashier sees which people have a PIN (only Nok has one)');
+select t_err('00000000-0000-0000-0000-0000000000e5', 'authenticated', $$select * from public.staff_with_pin((select v::uuid from t_out where k='acme'))$$, '42501', 'another org cannot list PIN holders');
+select t_err(null, 'anon', $$select * from public.staff_with_pin((select v::uuid from t_out where k='acme'))$$, '42501', 'anon cannot list PIN holders');
 \echo ALL BACK OFFICE TESTS PASSED

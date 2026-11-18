@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { DEVICE_ROLES, KDS_STATIONS, deviceProblems } from '@bestie/core';
 import type { DeviceRole, KdsStation } from '@bestie/core';
-import { errorText, useI18n } from '@bestie/i18n';
+import { errorText, fmt, useI18n } from '@bestie/i18n';
 import type { Dict, ErrorKey } from '@bestie/i18n';
 import { AsyncButton, Spinner } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
+import { setDeviceBinding, useDeviceBinding } from '@bestie/offline';
 import type { PageContext } from '@bestie/auth';
 import { useRemote } from './useRemote';
 
@@ -108,6 +109,8 @@ function DeviceItem({
 }) {
   const { t } = useI18n();
   const [posId, setPosId] = useState(device.revenue_pos_id ?? '');
+  const here = useDeviceBinding();
+  const isHere = here?.deviceId === device.id;
   const [error, setError] = useState<ErrorKey | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -148,7 +151,9 @@ function DeviceItem({
           <span className="badge">{tx(t, `deviceStation_${device.station}`)}</span>
         ) : null}
         {!device.active ? <span className="badge">{t.deviceOff}</span> : null}
+        {isHere ? <span className="badge">{t.deviceHere}</span> : null}
       </div>
+      {isHere ? <p className="muted">{fmt(t.deviceBoundNote, { name: device.name })}</p> : null}
       <div className="member-controls">
         <div className="form-row">
           <label className="label" htmlFor={`pos-${device.id}`}>
@@ -175,6 +180,28 @@ function DeviceItem({
             <AsyncButton variant="secondary" onClick={() => save({ active: !device.active })}>
               {device.active ? t.deviceDisable : t.deviceEnable}
             </AsyncButton>
+            {device.active || isHere ? (
+              <AsyncButton
+                variant="secondary"
+                onClick={() =>
+                  setDeviceBinding(
+                    isHere
+                      ? null
+                      : {
+                          deviceId: device.id,
+                          storeId: device.store_id,
+                          orgId: ctx.orgId,
+                          name: device.name,
+                          role: device.role,
+                          station: device.station,
+                          posId: device.revenue_pos_id,
+                        },
+                  )
+                }
+              >
+                {isHere ? t.deviceUnbind : t.deviceBind}
+              </AsyncButton>
+            ) : null}
           </div>
         ) : null}
       </div>

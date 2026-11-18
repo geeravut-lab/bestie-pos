@@ -30,7 +30,7 @@ Work top to bottom. One PR per task. Tick when merged.
 - [x] Devices: register tablet, set role (cashier / staff / KDS + station), assign Revenue Dept POS ID, switch off — `/devices`
 
 ## 3. POS app (apps/pos, PWA, offline-first)
-- [ ] Device login + staff PIN
+- [x] Device login + staff PIN: a tablet is bound to a registered device (`/devices` → "Use this tablet as this device"), "Who's working?" lock screen, PIN checked by the server or — with no signal — by a salted verifier kept on the tablet, auto-lock after 5 min idle, lock button. The acting person's role replaces the account's role on screen.
 - [ ] Restaurant: floor plan, open table, move/merge tables
 - [ ] Cafe: product grid, queue number
 - [ ] Order entry with modifiers, notes, send to kitchen
@@ -39,7 +39,7 @@ Work top to bottom. One PR per task. Tick when merged.
 - [ ] PromptPay auto-confirm via PSP webhook → bill auto-closes (choose PSP; log in DECISIONS.md)
 - [ ] Receipt printing (ESC/POS over network/Bluetooth) with POS ID; Thai/English receipt language
 - [ ] Shift open/close with cash count
-- [ ] Offline: full order flow works with network off; sync + conflict handling tested
+- [ ] Offline: full order flow works with network off; sync + conflict handling tested — **foundation done** (`@bestie/offline`: IndexedDB outbox with client uuids, ordered replay, retry/backoff, dead-letter, conflict rules per table, cached reads incl. the signed-in user's shop data); each order / payment screen below plugs into it
 
 ## 4. Kitchen & queue
 - [ ] KDS screen per station (kitchen / bar) with item routing rules
@@ -78,7 +78,7 @@ Work top to bottom. One PR per task. Tick when merged.
 - [x] `useLiveSync` hook + `LiveSyncController`: refetch on ping (debounced), polling fallback with backoff, pause on hidden tab + catch-up, never refresh under typing / open dialog, catch-up after reconnect
 - [x] Wired to: roles / modules / store settings of the signed-in user (all open screens of an org update by themselves), audit history
 - [ ] Wire to: floor plan, order list, KDS, queue screen, guest "order ready" — add a `live_ping_row` trigger on each table when those screens are built (§3, §4, §5)
-- [ ] Interplay with the offline outbox (sync indicator: online/offline + queued writes) — with the offline task in §3
+- [x] Interplay with the offline outbox: sync indicator in the top bar (offline / syncing / N waiting / needs attention) driven by the local queue
 
 ## 11. Audit trail  _(AUDIT-TRAIL-KNOWLEDGE + admin switches, see KNOWLEDGE-MAPPING §A)_
 - [x] `audit_log` (append-only, no PII) + `audit()` helper (never throws) + DB triggers on money/staff tables
@@ -90,7 +90,7 @@ Work top to bottom. One PR per task. Tick when merged.
 
 ## 12. Authentication
 - [x] Supabase Auth: owner e-mail sign-up / sign-in, shop onboarding (`create_org`), profiles + roles tables (role never comes from SSO), live role home from the DB
-- [ ] Staff PIN login with lockout (needs devices + per-staff PIN hash — with §2 Devices/Staff)
+- [x] Staff PIN login with lockout (server: 5 wrong tries lock 15 min; tablet: same rule for the offline check)
 - [ ] Google login — **code ready** (button appears automatically when Supabase has Google enabled); owner action: create a Google OAuth client and enable the provider in Supabase
 - [ ] LINE login via Aivora SSO — **code ready and unit-tested** (`/sso/callback`, `/api/sso-exchange`, `aivora_links`, synthetic e-mail, direct bootstrap); needs `APP_SLUG` registered at the hub + a real ticket from the Launcher to test (cannot be simulated: single use, 60 s)
 - [x] Change password (re-auth, sign out other devices); audit + LINE notice of the change arrive with §11 / §14

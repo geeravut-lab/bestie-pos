@@ -6,7 +6,10 @@ import type { PageContext } from '@bestie/auth';
 import { DevicesPage } from './DevicesPage';
 import { fakeDb } from './fakeDb';
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  localStorage.clear();
+});
 
 const stores = [{ id: 's1', name: 'Acme', vat_registered: true }];
 const device = {
@@ -128,5 +131,29 @@ describe('<DevicesPage>', () => {
     );
     expect(screen.queryByRole('button', { name: 'Register device' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+  });
+});
+
+describe('<DevicesPage> binding this tablet', () => {
+  it('binds this tablet to a device (kept on the tablet), shows it, and unbinds', async () => {
+    mount(ctx(fakeDb({ devices: [device], stores }).client));
+    await screen.findByText('Counter iPad');
+    await userEvent.click(screen.getByRole('button', { name: 'Use this tablet as this device' }));
+    expect(JSON.parse(localStorage.getItem('bestie-device')!)).toMatchObject({
+      deviceId: 'd1',
+      storeId: 's1',
+      orgId: 'o1',
+      role: 'cashier',
+      posId: 'POS-001',
+    });
+    expect(await screen.findByText('This tablet')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Stop using this tablet as a till' }));
+    expect(localStorage.getItem('bestie-device')).toBeNull();
+  });
+
+  it('a switched-off device cannot be bound', async () => {
+    mount(ctx(fakeDb({ devices: [{ ...device, active: false }], stores }).client));
+    await screen.findByText('Counter iPad');
+    expect(screen.queryByRole('button', { name: 'Use this tablet as this device' })).toBeNull();
   });
 });

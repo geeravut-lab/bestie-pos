@@ -108,3 +108,8 @@ export function cleanModuleOverrides(raw: unknown): Partial<Record<ModuleId, boo
   }
   return out;
 }
+
+/** A till locks itself after this much idle time (the next person enters their PIN). */
+export const IDLE_LOCK_MS = 5 * 60_000;
+export const isIdleExpired = (lastActive: number, now: number): boolean =>
+  now - lastActive >= IDLE_LOCK_MS;

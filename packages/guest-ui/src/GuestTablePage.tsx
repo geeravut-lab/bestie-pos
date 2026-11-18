@@ -15,10 +15,17 @@ import type { CartLine, GuestGroup, GuestItem } from '@bestie/core';
 import { fmt, useI18n } from '@bestie/i18n';
 import type { Dict } from '@bestie/i18n';
 import { AsyncButton, LangSwitch, Spinner } from '@bestie/ui';
-import { loadGuestTable, placeGuestOrder } from './guestApi';
-import type { GuestFailure, GuestLoad, GuestTable, PlacedOrder } from './guestApi';
+import {
+  cancelGuestPayment,
+  guestPaymentStatus,
+  loadGuestTable,
+  placeGuestOrder,
+  startGuestPayment,
+} from './guestApi';
+import type { GuestCharge, GuestFailure, GuestLoad, GuestTable, PlacedOrder } from './guestApi';
 
 const POLL_MS = 10_000;
+const PAY_POLL_MS = 3_000;
 const newId = (): string => globalThis.crypto.randomUUID();
 
 const failureText = (t: Dict, reason: GuestFailure): string =>
@@ -92,6 +99,10 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
   const [cat, setCat] = useState('');
   const [error, setError] = useState<GuestFailure | null>(null);
   const [placed, setPlaced] = useState<PlacedOrder | null>(null);
+  const [charge, setCharge] = useState<GuestCharge | null>(initial.pay.live);
+  const [paid, setPaid] = useState<{ receipt: string | null } | null>(null);
+  const [payNote, setPayNote] = useState<'failed' | 'review' | null>(null);
+  const [payError, setPayError] = useState<GuestFailure | null>(null);
   // One id per basket: pressing "Place order" again after a lost answer can never order twice; changing the basket starts a new id.
   const clientId = useRef(newId());
   const keySeq = useRef(0);
@@ -109,6 +120,32 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
     return () => clearInterval(id);
   }, [token]);
 
+  // while a PromptPay QR is on screen, ask the server every few seconds whether the bank has confirmed it
+  const chargeId = charge?.attemptId ?? null;
+  useEffect(() => {
+    if (!chargeId) return;
+    let alive = true;
+    const tick = async () => {
+      const r = await guestPaymentStatus(token, chargeId);
+      if (!alive || !r) return;
+      if (r.status === 'succeeded') {
+        setPaid({ receipt: r.receipt });
+        setCharge(null);
+      } else if (r.status === 'failed' || r.status === 'canceled') {
+        setPayNote('failed');
+        setCharge(null);
+      } else if (r.status === 'needs_review') {
+        setPayNote('review');
+        setCharge(null);
+      }
+    };
+    const id = setInterval(() => void tick(), PAY_POLL_MS);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, [token, chargeId]);
+
   const items = useMemo(
     () => menu.items.filter((i) => !cat || i.categoryId === cat),
     [menu.items, cat],
@@ -119,6 +156,19 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
     clientId.current = newId();
     setError(null);
     setPlaced(null);
+  };
+
+  const pay = async () => {
+    setPayError(null);
+    setPayNote(null);
+    const r = await startGuestPayment(token, lang);
+    if (!r.ok) return setPayError(r.reason);
+    setCharge(r.charge);
+  };
+  const cancelPay = async () => {
+    if (!charge) return;
+    await cancelGuestPayment(token, charge.attemptId);
+    setCharge(null);
   };
 
   const send = async () => {
@@ -243,9 +293,13 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
                 {failureText(t, error)}
               </p>
             ) : null}
-            <AsyncButton onClick={send}>
-              {t.gsSend} ({cartCount(cart)})
-            </AsyncButton>
+            {charge ? (
+              <p className="muted">{t.gsPayLocked}</p>
+            ) : (
+              <AsyncButton onClick={send}>
+                {t.gsSend} ({cartCount(cart)})
+              </AsyncButton>
+            )}
           </>
         ) : null}
       </section>
@@ -265,6 +319,51 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
               </li>
             ))}
           </ul>
+        </section>
+      ) : null}
+
+      {paid ? (
+        <section className="card guest-sent" role="status">
+          <h2>{t.gsPaid}</h2>
+          {paid.receipt ? (
+            <p className="muted">{fmt(t.gsPayReceipt, { number: paid.receipt })}</p>
+          ) : null}
+        </section>
+      ) : data.pay.enabled && data.bill.lines.length > 0 && data.pay.total > 0 ? (
+        <section className="card guest-pay" aria-label={t.gsPay}>
+          <h2>{t.gsPay}</h2>
+          {payNote ? (
+            <p className="notice notice-error" role="alert">
+              {payNote === 'review' ? t.gsPayReview : t.gsPayFailed}
+            </p>
+          ) : null}
+          {payError ? (
+            <p className="notice notice-error" role="alert">
+              {failureText(t, payError)}
+            </p>
+          ) : null}
+          {charge ? (
+            <>
+              <p>{fmt(t.gsPayScan, { amount: money(charge.amount) })}</p>
+              <img className="guest-qr" src={charge.qrImageUrl} alt={t.gsPayQrAlt} />
+              <p className="muted" role="status">
+                <Spinner /> {t.gsPayWaiting}
+              </p>
+              <AsyncButton variant="secondary" onClick={cancelPay}>
+                {t.gsPayCancel}
+              </AsyncButton>
+            </>
+          ) : data.pay.unconfirmed ? (
+            <p className="muted">{t.gsPayUnconfirmed}</p>
+          ) : (
+            <>
+              <p className="guest-total">
+                <span>{t.gsPayTotal}</span>
+                <strong className="tabular">{money(data.pay.total)}</strong>
+              </p>
+              <AsyncButton onClick={pay}>{t.gsPay}</AsyncButton>
+            </>
+          )}
         </section>
       ) : null}
 

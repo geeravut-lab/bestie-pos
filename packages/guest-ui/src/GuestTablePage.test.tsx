@@ -52,14 +52,32 @@ const MENU = {
   bill: { order_id: null, lines: [] },
 };
 
+const ATT = '40000000-0000-4000-8000-000000000001';
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 
-function stubFetch(handlers: { menu?: () => Response; order?: (body: unknown) => Response }) {
+function stubFetch(handlers: {
+  menu?: () => Response;
+  order?: (body: unknown) => Response;
+  pay?: () => Response;
+  payStatus?: () => Response;
+  payCancel?: () => Response;
+}) {
   const orders: unknown[] = [];
   const f = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
     const u = String(url);
     if (u.startsWith('/api/guest/menu')) return (handlers.menu ?? (() => json(MENU)))();
+    if (u.startsWith('/api/guest/pay?'))
+      return (
+        handlers.payStatus ?? (() => json({ status: 'pending', amount: 100, receipt: null }))
+      )();
+    if (u === '/api/guest/pay-cancel')
+      return (handlers.payCancel ?? (() => json({ status: 'canceled' })))();
+    if (u === '/api/guest/pay')
+      return (
+        handlers.pay ??
+        (() => json({ attempt_id: ATT, amount: 23100, qr_image_url: 'https://q.example/qr.png' }))
+      )();
     if (u === '/api/guest/order') {
       const body = JSON.parse(String(init?.body)) as unknown;
       orders.push(body);
@@ -234,5 +252,127 @@ describe('<GuestTablePage>', () => {
     vi.stubGlobal('fetch', f);
     mount();
     expect(await screen.findByRole('button', { name: 'Try again' })).toBeTruthy();
+  });
+});
+
+describe('<GuestTablePage> pay at the table', () => {
+  const withBill = (pay: Record<string, unknown>) => () =>
+    json({
+      ...MENU,
+      bill: {
+        order_id: 'o',
+        lines: [
+          { name: { th: 'ผัดไทย', en: 'Pad Thai' }, quantity: 1, status: 'sent', amount: 18000 },
+        ],
+      },
+      pay,
+    });
+
+  it('offers payment with the server’s total; pressing it shows the QR and the amount', async () => {
+    stubFetch({ menu: withBill({ enabled: true, total: 23100, unconfirmed: false, live: null }) });
+    mount();
+    const region = await screen.findByRole('region', { name: 'Pay with PromptPay' });
+    expect(within(region).getByText('฿231')).toBeTruthy();
+    await userEvent.click(within(region).getByRole('button', { name: 'Pay with PromptPay' }));
+    expect(await screen.findByRole('img', { name: /PromptPay QR/ })).toBeTruthy();
+    expect(screen.getByText(/Scan this QR with your banking app to pay ฿231/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Cancel payment' })).toBeTruthy();
+  });
+
+  it('is not offered when the shop has not switched it on, or there is nothing on the bill', async () => {
+    stubFetch({ menu: withBill({ enabled: false, total: 23100, unconfirmed: false, live: null }) });
+    mount();
+    await screen.findByText('Pad Thai');
+    expect(screen.queryByRole('region', { name: 'Pay with PromptPay' })).toBeNull();
+  });
+
+  it('waits for the staff when lines are unconfirmed (no pay button)', async () => {
+    stubFetch({ menu: withBill({ enabled: true, total: 23100, unconfirmed: true, live: null }) });
+    mount();
+    expect(await screen.findByText(/staff are confirming your latest order/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Pay with PromptPay' })).toBeNull();
+  });
+
+  it('resumes a QR that is already live after a reload', async () => {
+    stubFetch({
+      menu: withBill({
+        enabled: true,
+        total: 23100,
+        unconfirmed: false,
+        live: { attemptId: ATT, amount: 23100, qrImageUrl: 'https://q.example/live.png' },
+      }),
+    });
+    mount();
+    const img = (await screen.findByRole('img', { name: /PromptPay QR/ })) as HTMLImageElement;
+    expect(img.src).toBe('https://q.example/live.png');
+  });
+
+  it('cancelling clears the QR and tells the server', async () => {
+    const { f } = stubFetch({
+      menu: withBill({
+        enabled: true,
+        total: 23100,
+        unconfirmed: false,
+        live: { attemptId: ATT, amount: 23100, qrImageUrl: 'https://q.example/live.png' },
+      }),
+    });
+    mount();
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancel payment' }));
+    await waitFor(() => expect(screen.queryByRole('img', { name: /PromptPay QR/ })).toBeNull());
+    expect(f.mock.calls.some((c) => String(c[0]) === '/api/guest/pay-cancel')).toBe(true);
+  });
+
+  it('a refused start shows the reason', async () => {
+    stubFetch({
+      menu: withBill({ enabled: true, total: 23100, unconfirmed: false, live: null }),
+      pay: () => json({ error: 'unconfirmed' }, 409),
+    });
+    mount();
+    await userEvent.click(await screen.findByRole('button', { name: 'Pay with PromptPay' }));
+    expect((await screen.findByRole('alert')).textContent).toContain('waiting for the staff');
+  });
+
+  it('shows "paid" with the receipt number when the bank confirms', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      stubFetch({
+        menu: withBill({
+          enabled: true,
+          total: 23100,
+          unconfirmed: false,
+          live: { attemptId: ATT, amount: 23100, qrImageUrl: 'https://q.example/live.png' },
+        }),
+        payStatus: () => json({ status: 'succeeded', amount: 23100, receipt: 'A+000007' }),
+      });
+      mount();
+      await screen.findByRole('img', { name: /PromptPay QR/ });
+      await vi.advanceTimersByTimeAsync(3_500);
+      expect(await screen.findByText('Paid. Thank you!')).toBeTruthy();
+      expect(screen.getByText('Receipt A+000007')).toBeTruthy();
+      expect(screen.queryByRole('img', { name: /PromptPay QR/ })).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('says so when the payment failed or needs review', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      stubFetch({
+        menu: withBill({
+          enabled: true,
+          total: 23100,
+          unconfirmed: false,
+          live: { attemptId: ATT, amount: 23100, qrImageUrl: 'https://q.example/live.png' },
+        }),
+        payStatus: () => json({ status: 'needs_review', amount: 23100, receipt: null }),
+      });
+      mount();
+      await screen.findByRole('img', { name: /PromptPay QR/ });
+      await vi.advanceTimersByTimeAsync(3_500);
+      expect((await screen.findByRole('alert')).textContent).toContain('do not pay again');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

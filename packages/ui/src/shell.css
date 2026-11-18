@@ -1684,3 +1684,10 @@ a.nav-card[aria-busy='true'] {
     border: 0;
   }
 }
+.guest-qr {
+  display: block;
+  width: min(18rem, 80vw);
+  height: auto;
+  margin: 0 auto;
+  background: var(--bp-surface);
+}

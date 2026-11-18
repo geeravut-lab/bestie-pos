@@ -2,7 +2,15 @@ import { parseGuestBill, parseGuestMenu } from '@bestie/core';
 import type { CartLine, GuestBill, GuestMenu } from '@bestie/core';
 import { orderPayload } from '@bestie/core';
 
+export type GuestPayInfo = {
+  enabled: boolean;
+  total: number;
+  unconfirmed: boolean;
+  live: { attemptId: string; amount: number; qrImageUrl: string } | null;
+};
+
 export type GuestTable = {
+  pay: GuestPayInfo;
   storeName: string;
   tableName: string;
   autoSend: boolean;
@@ -12,7 +20,19 @@ export type GuestTable = {
 
 /** Why a call failed, in the words of the dictionary (`gsErr_<code>` / the not-found and off pages). */
 export type GuestFailure =
-  'not_found' | 'ordering_off' | 'unavailable' | 'too_many' | 'invalid' | 'rate_limited' | 'failed';
+  | 'not_found'
+  | 'ordering_off'
+  | 'unavailable'
+  | 'too_many'
+  | 'invalid'
+  | 'rate_limited'
+  | 'bill_locked'
+  | 'pay_off'
+  | 'unconfirmed'
+  | 'attempt_pending'
+  | 'provider_error'
+  | 'empty'
+  | 'failed';
 
 export type GuestLoad =
   | { ok: true; data: GuestTable }
@@ -25,6 +45,12 @@ const KNOWN: readonly GuestFailure[] = [
   'too_many',
   'invalid',
   'rate_limited',
+  'bill_locked',
+  'pay_off',
+  'unconfirmed',
+  'attempt_pending',
+  'provider_error',
+  'empty',
 ];
 const reasonOf = (v: unknown): GuestFailure => KNOWN.find((k) => k === v) ?? 'failed';
 
@@ -34,6 +60,24 @@ const nameOf = (v: unknown): string => {
   const n = obj(v).name;
   return typeof n === 'string' ? n : '';
 };
+
+function parsePay(raw: unknown): GuestPayInfo {
+  const p = obj(raw);
+  const live = obj(p.live);
+  return {
+    enabled: p.enabled === true,
+    total: typeof p.total === 'number' ? Math.round(p.total) : 0,
+    unconfirmed: p.unconfirmed === true,
+    live:
+      typeof live.attemptId === 'string' && typeof live.qrImageUrl === 'string'
+        ? {
+            attemptId: live.attemptId,
+            amount: typeof live.amount === 'number' ? live.amount : 0,
+            qrImageUrl: live.qrImageUrl,
+          }
+        : null,
+  };
+}
 
 export async function loadGuestTable(
   token: string,
@@ -61,6 +105,7 @@ export async function loadGuestTable(
         autoSend: b.autoSend === true,
         menu: parseGuestMenu(b.menu),
         bill: parseGuestBill(b.bill),
+        pay: parsePay(b.pay),
       },
     };
   } catch {
@@ -94,5 +139,86 @@ export async function placeGuestOrder(
     };
   } catch {
     return { ok: false, reason: 'failed' };
+  }
+}
+
+export type GuestCharge = { attemptId: string; amount: number; qrImageUrl: string };
+
+/** Ask the server for a PromptPay QR for the table's bill. The amount is the server's, not ours. */
+export async function startGuestPayment(
+  token: string,
+  lang: 'th' | 'en',
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ ok: true; charge: GuestCharge } | { ok: false; reason: GuestFailure }> {
+  try {
+    const res = await fetchImpl('/api/guest/pay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, lang }),
+    });
+    const b = obj(await res.json().catch(() => null));
+    if (!res.ok) return { ok: false, reason: reasonOf(b.error) };
+    if (typeof b.attempt_id !== 'string' || typeof b.qr_image_url !== 'string')
+      return { ok: false, reason: 'provider_error' };
+    return {
+      ok: true,
+      charge: {
+        attemptId: b.attempt_id,
+        amount: typeof b.amount === 'number' ? b.amount : 0,
+        qrImageUrl: b.qr_image_url,
+      },
+    };
+  } catch {
+    return { ok: false, reason: 'failed' };
+  }
+}
+
+export type GuestPayStatus = {
+  status: 'created' | 'pending' | 'succeeded' | 'failed' | 'canceled' | 'needs_review' | 'unknown';
+  receipt: string | null;
+};
+
+export async function guestPaymentStatus(
+  token: string,
+  attemptId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<GuestPayStatus | null> {
+  try {
+    const res = await fetchImpl(
+      `/api/guest/pay?t=${encodeURIComponent(token)}&a=${encodeURIComponent(attemptId)}`,
+      { cache: 'no-store' },
+    );
+    if (!res.ok) return null;
+    const b = obj(await res.json().catch(() => null));
+    const known = [
+      'created',
+      'pending',
+      'succeeded',
+      'failed',
+      'canceled',
+      'needs_review',
+    ] as const;
+    return {
+      status: known.find((k) => k === b.status) ?? 'unknown',
+      receipt: typeof b.receipt === 'string' ? b.receipt : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function cancelGuestPayment(
+  token: string,
+  attemptId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  try {
+    await fetchImpl('/api/guest/pay-cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, attemptId }),
+    });
+  } catch {
+    /* the QR expires by itself; the next "pay" press cancels a stale one */
   }
 }

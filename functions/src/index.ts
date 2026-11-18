@@ -38,4 +38,10 @@ export {
   stripeChargeResponse,
   stripeWebhookResponse,
 } from './stripe-handler.js';
-export { guestMenuResponse, guestOrderResponse } from './guest-handler.js';
+export {
+  guestMenuResponse,
+  guestOrderResponse,
+  guestPayCancelResponse,
+  guestPayResponse,
+  guestPayStatusResponse,
+} from './guest-handler.js';

@@ -1,5 +1,5 @@
-import { BPS, MoneyError, assertNonNegative, assertSatang, mulBps, sum } from './money';
-import type { Satang } from './money';
+import { BPS, MoneyError, assertNonNegative, assertSatang, mulBps, sum } from './money.js';
+import type { Satang } from './money.js';
 
 /** Thai VAT is 7 % (700 bps). Kept as a parameter: the rate belongs to the store, not to the code. */
 export const THAI_VAT_BPS = 700;

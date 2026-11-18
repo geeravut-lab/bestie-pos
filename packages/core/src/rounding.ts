@@ -1,5 +1,5 @@
-import { SATANG_PER_BAHT, assertNonNegative } from './money';
-import type { Satang } from './money';
+import { SATANG_PER_BAHT, assertNonNegative } from './money.js';
+import type { Satang } from './money.js';
 
 /**
  * Rounding is a per-payment-method concern (Thai cash has no 1-satang coin in practice; digital

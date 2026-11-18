@@ -40,6 +40,13 @@
 
 - 2026-11-18 — Billing & points are **owner-selectable options**, not constants: per store — VAT registered / rate, service charge %, menu prices incl./excl. VAT, service charge taxable or not, computed before or after discounts, cash rounding (none / 25 / 50 satang / baht / floor); per org — Points rule (baht per point, value per point, max % of a bill, whether Credit spend earns points). Stored as data (`stores.bill_options`, `stores.rounding`, `orgs.points_rule`), shape-guarded in the database, audited as `settings.change`, previewed live on a sample bill. The ban on buying / cashing out points is deliberately not an option.
 
+- 2026-11-18 — **Payment gateway / PSP = Stripe** (owner decision): cards and Thai **PromptPay QR** through Stripe PaymentIntents; the signed webhook (`payment_intent.succeeded`, secret `STRIPE_WEBHOOK_SECRET`) is what confirms a payment and auto-closes the bill — the cashier's screen never decides "paid" by itself. Code sits behind a gateway interface so another provider can be swapped in. Keys are server-only Vercel env vars (already set). This answers the open questions "which PSP / bank API confirms PromptPay" and "payment gateway choice"; the *acquirer for physical card terminals* stays open.
+- 2026-11-18 — Auth e-mail: the owner configured SMTP (Resend) inside Supabase Auth and removed the `RESEND_*` / `EMAIL_*` variables from Vercel. The app never sends auth e-mail itself.
+- 2026-11-18 — **Shop devices and staff PIN model.** A shop tablet is signed in once with an org account (owner / manager sets it up; it is registered in `devices` with a role and, for KDS, a station). Staff then identify themselves on that tablet with a **PIN** (4–8 digits, bcrypt in `staff_pins`, never readable by the browser; 5 wrong tries lock that PIN for 15 min and write `auth.pin_lockout`). The PIN only selects *who is acting* for audit and permissions; money-moving actions are still checked on the server against that person's role. A manager can set PINs but never an owner's, and can never invite an owner.
+- 2026-11-18 — **Staff invites** replace e-mail invitations: owner/manager creates a 12-hex-digit code (shown once, only its SHA-256 is stored, valid 7 days, single use, optional single-shop scope). The invitee signs up or signs in by any method (e-mail, Google, LINE) and redeems it on the first screen (`accept_staff_invite`), so SSO identities can be staff without ever receiving a role from SSO.
+- 2026-11-18 — **Adding a shop** (`create_store`) always reuses the org's first legal entity (or a chosen one of the same org) — Bestie Credit is scoped to the legal entity, so a second company is a separate org, not a second shop. Phase 1 offers Restaurant and Cafe profiles only.
+- 2026-11-18 — The module toggle screen saves only the difference from the profile default (`module_overrides`) and the database refuses unknown module ids, non-boolean values and `credit.topup.crypto` without `orgs.legal_sign_off.cryptoTopup`.
+
 ## Proposed (confirm)
 - Offline-first on Supabase (Firestore's built-in offline cache is gone): IndexedDB (Dexie) local store + an outbox of client-generated-UUID writes replayed to Supabase with per-entity conflict rules. Needed before task "Offline: full order flow works with network off".
 - Live sync = Supabase Realtime "ping" topics + refetch, per docs/LIVE-SYNC-KNOWLEDGE.md (adapted from Next.js `router.refresh()` to React Query/refetch).
@@ -48,9 +55,8 @@
 ## Open questions
 - LEGAL (before launch of Credit): does single-entity prepaid credit need BOT notification/registration under the Payment Systems Act 2017? Are all shops truly one legal entity?
 - LEGAL (before enabling direct crypto top-up): AML duties, tax treatment of crypto received, refund policy, wording allowed in marketing.
-- Payment gateway choice (card + e-wallets) and its PromptPay auto-confirm webhook.
-- Which PSP / bank API confirms PromptPay payments automatically?
-- Card payments: which acquirer / terminal for Phase 1?
+- ~~Payment gateway choice / PSP for PromptPay auto-confirm~~ → decided: Stripe (see Decided).
+- Card payments in person: do we use a Stripe Terminal reader for Phase 1, or only online / QR payments? (Stripe is the gateway; the physical reader is open.)
 - Pricing per plan tier (Basic / Pro / Resort) in THB.
 - Hardware list for pilot shops (tablet models, printers).
 - Pilot shops: names, profiles, languages their guests need.

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { MODULE_IDS, PERMISSIONS } from '@bestie/core';
+import { MODULE_IDS, PERMISSIONS, cleanModuleOverrides } from '@bestie/core';
 import type {
   BuiltInRoleKey,
   LegalSignOff,
@@ -74,17 +74,7 @@ export function mapMembership(row: Row): Membership | null {
   };
 }
 
-/** Unknown module ids and non-boolean values are dropped (a bad row must not break every screen). */
-export function cleanOverrides(raw: unknown): Partial<Record<ModuleId, boolean>> {
-  const out: Partial<Record<ModuleId, boolean>> = {};
-  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-    for (const [k, v] of Object.entries(raw)) {
-      if ((MODULE_IDS as readonly string[]).includes(k) && typeof v === 'boolean')
-        out[k as ModuleId] = v;
-    }
-  }
-  return out;
-}
+export const cleanOverrides = cleanModuleOverrides;
 
 const PROFILES: readonly string[] = [
   'restaurant',

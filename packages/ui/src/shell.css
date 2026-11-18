@@ -1424,3 +1424,17 @@ a.nav-card[aria-busy='true'] {
     display: none;
   }
 }
+
+.pay-waiting {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+.pay-qr {
+  max-width: 100%;
+  height: auto;
+  padding: 0.5rem;
+  border-radius: var(--bp-radius-control);
+  background: var(--bp-surface);
+}

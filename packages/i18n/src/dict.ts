@@ -668,7 +668,7 @@ const th = {
   // ── paying with cash, receipts ────────────────────────────────────────────
   langName: 'ไทย',
   payButton: 'รับเงิน',
-  payTitle: 'รับเงินสด',
+  payTitle: 'ชำระเงิน',
   payDue: 'ยอดที่ต้องชำระ',
   payRounding: 'ปัดเศษ',
   payReceived: 'รับเงินมา (บาท)',
@@ -707,6 +707,32 @@ const th = {
   receiptNotPaid: 'บิลนี้ยังไม่ได้ชำระ',
   receiptWaiting: 'รอซิงก์ขึ้นระบบ',
   err_pay_failed: 'รับเงินไม่สำเร็จ กรุณาตรวจจำนวนเงินแล้วลองใหม่',
+
+  // ── PromptPay QR / card reader ────────────────────────────────────────────
+  deviceReaderId: 'รหัสเครื่องรูดบัตร Stripe (tmr_…)',
+  deviceReaderSave: 'บันทึกเครื่องรูดบัตร',
+  payTabCash: 'เงินสด',
+  payTabPromptPay: 'PromptPay QR',
+  payTabCard: 'บัตร',
+  payOnlineOnly: 'ต้องต่อเน็ตจึงรับ PromptPay หรือบัตรได้',
+  payNoReader: 'เครื่องนี้ยังไม่ได้ตั้งเครื่องรูดบัตร (ตั้งที่หน้า "เครื่องของร้าน")',
+  payShowQr: 'แสดง QR ให้ลูกค้าสแกน',
+  payStartCard: 'ส่งยอดไปที่เครื่องรูดบัตร',
+  payScanThis: 'ให้ลูกค้าสแกน QR นี้ด้วยแอปธนาคาร ยอด {amount}',
+  payTapCard: 'ให้ลูกค้าแตะหรือเสียบบัตรที่เครื่องรูดบัตร ยอด {amount}',
+  payWaiting: 'รอลูกค้าชำระเงิน',
+  payQrAlt: 'QR PromptPay สำหรับชำระเงิน',
+  payCancel: 'ยกเลิกการชำระนี้',
+  payResumed: 'บิลนี้มีการชำระที่ยังรออยู่ แสดงต่อให้แล้ว',
+  payFailedWith: 'การชำระไม่สำเร็จ ({reason})',
+  payReview: 'ได้รับเงินแล้วแต่ยอดไม่ตรงกับบิล ห้ามรับเงินซ้ำ ให้ผู้จัดการตรวจสอบในระบบ Stripe และหลังร้าน',
+  receiptPromptPay: 'PromptPay',
+  receiptCard: 'บัตร',
+  err_pay_sync: 'ยังซิงก์รายการของบิลนี้ไม่เสร็จ รอสักครู่แล้วลองใหม่',
+  err_pay_provider: 'ระบบรับชำระเงินไม่ตอบสนอง ลองใหม่ หรือรับเงินสดแทน',
+  err_pay_not_configured: 'ยังไม่ได้ตั้งค่าระบบรับชำระเงิน (Stripe)',
+  err_pay_pending: 'บิลนี้มีการชำระที่ยังค้างอยู่ ยกเลิกก่อนแล้วลองใหม่',
+  err_pay_offline: 'ต้องต่อเน็ตจึงรับ PromptPay หรือบัตรได้',
 };
 
 export type Dict = { [K in keyof typeof th]: string };
@@ -1362,7 +1388,7 @@ const en = {
   // ── paying with cash, receipts ────────────────────────────────────────────
   langName: 'English',
   payButton: 'Take payment',
-  payTitle: 'Cash payment',
+  payTitle: 'Payment',
   payDue: 'Amount due',
   payRounding: 'Rounding',
   payReceived: 'Cash received (baht)',
@@ -1401,6 +1427,33 @@ const en = {
   receiptNotPaid: 'This bill has not been paid yet.',
   receiptWaiting: 'Waiting to sync',
   err_pay_failed: "Payment didn't go through. Check the amount and try again.",
+
+  // ── PromptPay QR / card reader ────────────────────────────────────────────
+  deviceReaderId: 'Stripe card reader ID (tmr_…)',
+  deviceReaderSave: 'Save card reader',
+  payTabCash: 'Cash',
+  payTabPromptPay: 'PromptPay QR',
+  payTabCard: 'Card',
+  payOnlineOnly: 'PromptPay and card need an internet connection.',
+  payNoReader: 'This device has no card reader set up (do it on the "Shop devices" page).',
+  payShowQr: 'Show QR for the guest to scan',
+  payStartCard: 'Send the amount to the card reader',
+  payScanThis: 'Ask the guest to scan this QR with their banking app. Amount {amount}',
+  payTapCard: 'Ask the guest to tap or insert their card on the reader. Amount {amount}',
+  payWaiting: 'Waiting for the guest to pay',
+  payQrAlt: 'PromptPay QR code for this payment',
+  payCancel: 'Cancel this payment',
+  payResumed: 'This bill already had a payment waiting. Showing it again.',
+  payFailedWith: 'The payment did not go through ({reason})',
+  payReview:
+    'Money was received but the amount does not match the bill. Do not take payment again — ask a manager to check in Stripe and the back office.',
+  receiptPromptPay: 'PromptPay',
+  receiptCard: 'Card',
+  err_pay_sync: 'This bill is still syncing. Wait a moment and try again.',
+  err_pay_provider: 'The payment service did not answer. Try again, or take cash instead.',
+  err_pay_not_configured: 'The payment service (Stripe) is not set up yet.',
+  err_pay_pending: 'This bill already has a payment waiting. Cancel it first, then try again.',
+  err_pay_offline: 'PromptPay and card need an internet connection.',
 } satisfies Dict;
 
 export const dict: Record<Lang, Dict> = { th, en };

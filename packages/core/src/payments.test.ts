@@ -5,6 +5,7 @@ import {
   closeOrder,
   closePayload,
   formatReceiptNumber,
+  onlineSnapshot,
   payBlockers,
   quickCashAmounts,
   receiptLines,
@@ -277,5 +278,31 @@ describe('receiptFromRows (what another tablet reads back)', () => {
     ).toEqual([]);
     expect(receiptFromRows({ ...row, total: 'lots' }, [])).toBeNull();
     expect(receiptFromRows({}, [])).toBeNull();
+  });
+});
+
+describe('onlineSnapshot', () => {
+  it("is the bill as shown, exact to the satang (no cash rounding), with the shop's rates", () => {
+    const o = order();
+    const s = onlineSnapshot({
+      order: o,
+      bill: orderBill(o, cfg),
+      billConfig: cfg,
+      tender: 'promptpay',
+      deviceId: 'dev',
+      staffId: 'st1',
+      lang: 'th',
+    });
+    expect(s).toMatchObject({
+      order_id: 'o1',
+      tender: 'promptpay',
+      subtotal: 18000,
+      total: 18000,
+      payable: 18000,
+      rounding: 0,
+      vat_bps: 700,
+      service_bps: 0,
+      price_mode: 'inclusive',
+    });
   });
 });

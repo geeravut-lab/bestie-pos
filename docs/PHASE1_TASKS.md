@@ -35,8 +35,8 @@ Work top to bottom. One PR per task. Tick when merged.
 - [x] Cafe: counter / takeaway orders from `/sell` with the same item grid; the order number (A001…) is the queue number. _(call screen = §4)_
 - [x] Order entry with modifiers (min/max checked), notes, quantity, sold-out items, send to kitchen / bar (lines become history once sent; cancelling a sent line needs `order.void` + a reason, audited)
 - [ ] Split bill (by item / amount / seat)
-- [ ] Payments UI: ~~cash with change~~ **done** (`Take payment`: due with cash rounding, quick amounts, change, works offline), Dynamic PromptPay QR (amount locked), gateway card (+ Stripe Terminal), Credit, Points, split tender — _next PRs_
-- [ ] PromptPay auto-confirm via PSP webhook → bill auto-closes (choose PSP; log in DECISIONS.md)
+- [ ] Payments UI: ~~cash with change~~ **done**, ~~Dynamic PromptPay QR~~ and ~~card reader (Stripe Terminal, server-driven)~~ **code done, needs a Stripe test-mode run** — (`Take payment`: due with cash rounding, quick amounts, change, works offline), Dynamic PromptPay QR (amount locked), gateway card (+ Stripe Terminal), Credit, Points, split tender — _next PRs_
+- [x] PromptPay auto-confirm via Stripe webhook → bill auto-closes (signature-checked, amount / currency / bill re-checked, mismatches parked for review; PSP logged in DECISIONS.md). **Cannot be exercised from the build sandbox: run it once in Stripe test mode before pilots (docs/ENVIRONMENT.md).**
 - [ ] Receipt printing: **on-screen receipt + browser print (80 mm) done** — seller, tax ID, branch, POS ID, number, VAT breakdown, cash / change, Thai or English chosen per receipt, list of today's receipts, reprint from any tablet. Still to do: ESC/POS over network / Bluetooth (needs the printer model from the hardware list)
 - [ ] Shift open/close with cash count
 - [ ] Offline: full order flow works with network off; sync + conflict handling tested — **foundation done** (`@bestie/offline`: IndexedDB outbox with client uuids, ordered replay, retry/backoff, dead-letter, conflict rules per table, cached reads incl. the signed-in user's shop data); each order / payment screen below plugs into it

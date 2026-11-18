@@ -30,7 +30,7 @@ Server only (Vercel Functions in `apps/*/api`, code in `functions/`) — **never
 | `SUPABASE_URL` | same URL, read by server functions |
 | `SUPABASE_SERVICE_ROLE_KEY` | bypasses RLS. SSO exchange, webhooks, cron only. Never logged, never returned. |
 | `LINE_CHANNEL_SECRET`, `LINE_CHANNEL_ACCESS_TOKEN`, `LINE_BASIC_ID`, `LINE_CODE_SECRET` | LINE webhook signature, push, OA id for links, HMAC key for link codes (random, **not** the channel secret). Webhook URL to register: `https://bestie-pos.vercel.app/api/line/webhook` |
-| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe payment gateway (cards + PromptPay QR; the signed webhook confirms payment and closes the bill). Already set by the owner; used by the payments task. |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe payment gateway (PromptPay QR + card reader). The secret key must be an `sk_` / `rk_` key (a publishable `pk_` key is refused). **Stripe Dashboard → Developers → Webhooks → add endpoint `https://bestie-pos.vercel.app/api/stripe/webhook`** with events `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`; its signing secret is `STRIPE_WEBHOOK_SECRET`. Use test keys first. |
 | *(later)* `CRON_SECRET` | authenticates scheduled-function calls (constant-time compare) |
 | `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY` (alias `GOOGLE_AI_API_KEY` accepted) | AI assistant providers. Set as *Sensitive* in Vercel. **Never use a free-tier key with real customer data.** The admin screen shows only set / missing. |
 | `AIVORA_APP_SLUG`, `AIVORA_HUB_EXCHANGE_URL`, `SITE_HOST` | SSO exchange function (`/api/sso-exchange`); slug **needed from the owner** |
@@ -71,3 +71,23 @@ The first production deploy happens when a PR is merged into `main`. The build w
 - Asset paths absolute + `base: '/'`; the SPA rewrite excludes `api/`, `assets/` and anything with a file extension so a missing JS/CSS is a 404, not `index.html` with status 200 (SSO doc, step 1).
 - Never read the service_role key in browser code; never exchange SSO tickets from the browser.
 - Migrations and deploys are not atomic: code must tolerate a column that does not exist yet (`42703` / `PGRST204` / `23514`).
+
+## 6. Stripe test-mode run (do this once before any pilot shop takes a real payment)
+
+The build environment cannot reach Stripe, so the PromptPay / card-reader code is covered by tests with a fake Stripe, not by a
+real run. With **test** keys in Vercel (`STRIPE_SECRET_KEY=sk_test_…`, `STRIPE_WEBHOOK_SECRET=whsec_…` of a test-mode endpoint):
+
+1. Stripe Dashboard (test mode) → Developers → Webhooks → endpoint `https://bestie-pos.vercel.app/api/stripe/webhook`, events
+   `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`.
+2. Enable **PromptPay** under Settings → Payment methods (Thai account). For cards: order / register a Terminal reader and put its id
+   (`tmr_…`) in Back office → Shop devices → the till's "Stripe card reader ID".
+3. On a bound tablet: open a bill → **Take payment → PromptPay QR**. Expect a QR image. In test mode use Stripe's test payment tools
+   to complete it → the screen should switch to the receipt by itself and the receipt number should look like `A+000001`.
+4. Cancel a QR: the attempt becomes `canceled`, the next QR works, and no receipt number is skipped.
+5. Pay with cash on the same bill after cancelling: receipt `A-00000N` (offline series) as before.
+6. Try a mismatch on purpose (add an item while the QR is open, then complete the payment): the attempt must become `needs_review`,
+   the bill stays open, and an audit line `payment.tender` with `review: true` appears.
+7. Card reader (if you have one): **Take payment → Card → send the amount**; tap a test card; same receipt / series behaviour.
+
+If a step differs from what Stripe actually returns (field names, the PromptPay e-mail rule, reader availability in Thailand),
+fix `functions/src/stripe.ts` and its tests — nothing else depends on Stripe's wire format.

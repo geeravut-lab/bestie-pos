@@ -93,6 +93,14 @@ export function ReceiptView({
             </div>
           </>
         ) : null}
+        {receipt.payments
+          .filter((p) => p.tender === 'promptpay' || p.tender === 'gateway')
+          .map((p) => (
+            <div key={p.id}>
+              <dt>{p.tender === 'promptpay' ? d.receiptPromptPay : d.receiptCard}</dt>
+              <dd>{money(p.amount)}</dd>
+            </div>
+          ))}
         {cash.length > 0 ? (
           <>
             <div>

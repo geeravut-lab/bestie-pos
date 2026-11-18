@@ -216,3 +216,38 @@ export const receiptLines = (o: OrderDoc): ReceiptLine[] =>
     lineTotal: l.unitPrice * l.quantity,
     options: l.modifiers.map((m) => m.name),
   }));
+
+/** Digital tenders the till may ASK for (the server confirms them; the till never closes these bills itself). */
+export type OnlineTender = 'promptpay' | 'gateway';
+
+/**
+ * What the till shows the guest and sends with "start an online payment": the bill exactly as on screen, no cash rounding
+ * (a QR or card payment is charged to the satang). The server re-checks it against the order's lines.
+ */
+export function onlineSnapshot(p: {
+  order: OrderDoc;
+  bill: BillBreakdown;
+  billConfig: BillConfig;
+  tender: OnlineTender;
+  deviceId: string;
+  staffId: string | null;
+  lang: Lang;
+}): Record<string, unknown> {
+  return {
+    order_id: p.order.id,
+    device_id: p.deviceId,
+    staff_id: p.staffId,
+    tender: p.tender,
+    lang: p.lang,
+    subtotal: p.bill.subtotal,
+    service_charge: p.bill.serviceCharge,
+    vat: p.bill.vat,
+    net_before_vat: p.bill.netBeforeVat,
+    total: p.bill.total,
+    rounding: 0,
+    payable: p.bill.total,
+    vat_bps: p.billConfig.vatBps,
+    service_bps: p.billConfig.serviceChargeBps,
+    price_mode: p.billConfig.priceMode,
+  };
+}

@@ -20,6 +20,7 @@ const device = {
   role: 'cashier',
   station: null,
   revenue_pos_id: 'POS-001',
+  stripe_reader_id: null,
   active: true,
 };
 const ctx = (client: unknown, over: Partial<PageContext> = {}): PageContext => ({
@@ -157,5 +158,40 @@ describe('<DevicesPage> binding this tablet', () => {
     mount(ctx(fakeDb({ devices: [{ ...device, active: false }], stores }).client));
     await screen.findByText('Counter iPad');
     expect(screen.queryByRole('button', { name: 'Use this tablet as this device' })).toBeNull();
+  });
+});
+
+describe('<DevicesPage> card reader', () => {
+  it('saves a Stripe reader id (and a bound tablet then offers Card), refuses a malformed one, and an empty value clears it', async () => {
+    const db = fakeDb({ devices: [device], stores });
+    mount(ctx(db.client));
+    await screen.findByText('Counter iPad');
+    const li = screen.getByText('Counter iPad').closest('li') as HTMLElement;
+    const input = within(li).getByLabelText('Stripe card reader ID (tmr_…)') as HTMLInputElement;
+    await userEvent.type(input, 'not a reader');
+    await userEvent.click(within(li).getByRole('button', { name: 'Save card reader' }));
+    await within(li).findByText(/device details are not valid/);
+    expect(db.writes).toHaveLength(0);
+    await userEvent.clear(input);
+    await userEvent.type(input, 'tmr_ABC123xyz');
+    await userEvent.click(within(li).getByRole('button', { name: 'Save card reader' }));
+    await waitFor(() => expect(db.writes).toHaveLength(1));
+    expect(db.writes[0]).toMatchObject({
+      table: 'devices',
+      values: { stripe_reader_id: 'tmr_ABC123xyz' },
+    });
+    await userEvent.clear(input);
+    await userEvent.click(within(li).getByRole('button', { name: 'Save card reader' }));
+    await waitFor(() => expect(db.writes).toHaveLength(2));
+    expect(db.writes[1]!.values).toEqual({ stripe_reader_id: null });
+  });
+
+  it('binding a tablet remembers whether the device has a reader', async () => {
+    mount(
+      ctx(fakeDb({ devices: [{ ...device, stripe_reader_id: 'tmr_ABC123xyz' }], stores }).client),
+    );
+    await screen.findByText('Counter iPad');
+    await userEvent.click(screen.getByRole('button', { name: 'Use this tablet as this device' }));
+    expect(JSON.parse(localStorage.getItem('bestie-device')!)).toMatchObject({ reader: true });
   });
 });

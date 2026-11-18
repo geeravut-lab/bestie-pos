@@ -69,7 +69,7 @@ Work top to bottom. One PR per task. Tick when merged.
 - [x] Card illustrations: 30 built-in SVGs in the Island Breeze palette; `RoleHome` already accepts per-card `imageUrls`
 - [ ] Admin upload override per card (Storage bucket `card-images` + `home_card_images` table + admin screen)
 - [x] Navigation feedback: progress bar + spinner on the tapped item while the next screen loads
-- [ ] Branding admin (BRANDING-KNOWLEDGE): upload logo/icon, rename app, `/brand/logo` + `/brand/favicon` functions, dynamic manifest + `<title>`, defaults = designed logo
+- [x] Branding admin (BRANDING-KNOWLEDGE): upload logo/icon, rename app (TH/EN), `/brand/logo` + `/brand/favicon` + dynamic web manifest via `/api/brand`, tab title/icon follow the brand live, defaults = the designed logo/favicon
 - [ ] Per-store 5-colour theme with contrast validation
 
 ## 10. Live sync  _(LIVE-SYNC-KNOWLEDGE)_

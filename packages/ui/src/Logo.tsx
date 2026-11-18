@@ -1,5 +1,13 @@
+import { createContext, useContext } from 'react';
+import type { ReactNode } from 'react';
 import { fmt, useI18n } from '@bestie/i18n';
 import defaultMark from '../brand/logo-mark.svg';
+
+/** Where the admin-uploaded logo lives (`/brand/logo?v=…`). Absent = the built-in Bestie mark. */
+const BrandContext = createContext<{ logoSrc?: string }>({});
+export function BrandProvider({ logoSrc, children }: { logoSrc?: string; children: ReactNode }) {
+  return <BrandContext.Provider value={{ logoSrc }}>{children}</BrandContext.Provider>;
+}
 
 /**
  * The platform logo. Always render the brand through this component (never a raw <img src>)
@@ -9,10 +17,11 @@ import defaultMark from '../brand/logo-mark.svg';
  */
 export function LogoMark({ src, size = 40 }: { src?: string; size?: number }) {
   const { t } = useI18n();
+  const ctx = useContext(BrandContext);
   return (
     <img
       className="brand-mark"
-      src={src ?? defaultMark}
+      src={src ?? ctx.logoSrc ?? defaultMark}
       width={size}
       height={size}
       alt={fmt(t.logoAlt, { name: t.appName })}

@@ -6,3 +6,6 @@ export { SsoError, exchangeTicket, parseHubPayload, syntheticEmail } from './sso
 export type { ExchangeResult, HubUser, Session, SsoAdmin, SsoConfig, SsoErrorCode } from './sso.js';
 export { createSupabaseSsoAdmin } from './sso-admin.js';
 export { ssoExchangeResponse } from './sso-handler.js';
+export { brandResponse, buildManifest, createSupabaseBrandStore } from './brand.js';
+export type { BrandStore } from './brand.js';
+export { brandHandler } from './brand-handler.js';

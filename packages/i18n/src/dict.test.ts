@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { AppError, LANGS, dict, errorText, fmt, isErrorKey, isLang, toErrorCode } from './dict';
+import {
+  AppError,
+  LANGS,
+  brandedDict,
+  dict,
+  errorText,
+  fmt,
+  isErrorKey,
+  isLang,
+  toErrorCode,
+} from './dict';
 
 const placeholders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
 
@@ -64,5 +74,21 @@ describe('AppError / toErrorCode', () => {
     expect(toErrorCode(new TypeError('Failed to fetch'))).toBe('err_network');
     expect(toErrorCode(new Error('boom'))).toBe('err_unknown');
     expect(toErrorCode('weird')).toBe('err_unknown');
+  });
+});
+
+describe('brandedDict', () => {
+  it('is the plain dictionary when no name is configured', () => {
+    expect(brandedDict('en', undefined)).toBe(dict.en);
+    expect(brandedDict('th', {})).toBe(dict.th);
+  });
+  it('swaps the product name in every string of that language only', () => {
+    const t = brandedDict('en', { nameEn: 'Island Shop' });
+    expect(t.appName).toBe('Island Shop');
+    expect(t.logoAlt).toBe('{name} logo'); // placeholders untouched
+    expect(brandedDict('th', { nameEn: 'Island Shop' }).appName).toBe(dict.th.appName);
+  });
+  it('caches per language + name', () => {
+    expect(brandedDict('en', { nameEn: 'A' })).toBe(brandedDict('en', { nameEn: 'A' }));
   });
 });

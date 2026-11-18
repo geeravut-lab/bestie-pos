@@ -30,6 +30,8 @@
 
 - 2026-11-17 — Audit trail: the org owner/admin can switch auditing off and untick event types (stored as "only what is off"). **35 event types; 14 are `critical`** (refund, void, Credit/Points ledger changes, staff role/deactivation, POS ID, module toggles, legal sign-off, audit settings, audit export, password change) and are always recorded — the switches cannot hide them. Proposal from KNOWLEDGE-MAPPING §A, implemented; the owner may change the list of critical events.
 
+- 2026-11-18 — Branding: platform admin edits name (TH/EN), logo (≤ 1 MB raster) and tab/app icon (square PNG 192–1024 px). Images live in a private bucket and are served by `/api/brand` (ETag per version, defaults as fallback); the web manifest is dynamic; the product name is written once in the dictionary and swapped at read time. Vercel Functions that need shared code import it by relative path (workspace packages pointing at `.ts` do not resolve in the Lambda).
+
 ## Proposed (confirm)
 - Offline-first on Supabase (Firestore's built-in offline cache is gone): IndexedDB (Dexie) local store + an outbox of client-generated-UUID writes replayed to Supabase with per-entity conflict rules. Needed before task "Offline: full order flow works with network off".
 - Live sync = Supabase Realtime "ping" topics + refetch, per docs/LIVE-SYNC-KNOWLEDGE.md (adapted from Next.js `router.refresh()` to React Query/refetch).

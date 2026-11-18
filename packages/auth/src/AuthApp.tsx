@@ -16,6 +16,7 @@ import {
   SsoCallbackPage,
 } from './components';
 import { AuthProvider, useAuth } from './context';
+import { useBrand } from './useBrand';
 import { appRoleFor, pickStore } from './myContext';
 
 /** What a back-office page needs to know about who is looking at it and where. */
@@ -73,6 +74,7 @@ function Inner({
 }) {
   const auth = useAuth();
   const { my } = auth;
+  const brand = useBrand(auth.client, auth.status === 'signedIn');
   const public_ = app === 'guest'; // guest pages need no account
 
   const gate = useCallback(
@@ -122,6 +124,7 @@ function Inner({
   return (
     <AppRoot
       app={app}
+      brand={brand}
       live={live}
       gate={gate}
       renderPage={({ path, navigate }) => {

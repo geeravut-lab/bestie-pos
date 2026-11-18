@@ -4,19 +4,50 @@
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm build",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/((?!api/|assets/|.*\\..*).*)", "destination": "/index.html" }],
+  "rewrites": [
+    {
+      "source": "/brand/logo",
+      "destination": "/api/brand?kind=logo"
+    },
+    {
+      "source": "/brand/favicon",
+      "destination": "/api/brand?kind=favicon"
+    },
+    {
+      "source": "/manifest.webmanifest",
+      "destination": "/api/brand?kind=manifest"
+    },
+    {
+      "source": "/((?!api/|assets/|.*\\..*).*)",
+      "destination": "/index.html"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        }
       ]
     },
     {
       "source": "/assets/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { DEFAULT_LANG, LANG_STORAGE_KEY, dict, fmt, isLang } from './dict';
+import type { Brand } from '@bestie/core';
+import { DEFAULT_LANG, LANG_STORAGE_KEY, brandedDict, fmt, isLang } from './dict';
 import type { Dict, Lang } from './dict';
 
 type I18nValue = {
@@ -33,9 +34,12 @@ function writeStoredLang(lang: Lang): void {
 export function I18nProvider({
   children,
   initialLang,
+  brand,
 }: {
   children: ReactNode;
   initialLang?: Lang;
+  /** Admin-chosen product name (BRANDING-KNOWLEDGE). Absent = Bestie POS. */
+  brand?: Brand;
 }) {
   const [lang, setLangState] = useState<Lang>(
     () => initialLang ?? readStoredLang() ?? DEFAULT_LANG,
@@ -51,7 +55,12 @@ export function I18nProvider({
     writeStoredLang(next);
   }, []);
 
-  const value = useMemo<I18nValue>(() => ({ lang, t: dict[lang], setLang, fmt }), [lang, setLang]);
+  const nameTh = brand?.nameTh;
+  const nameEn = brand?.nameEn;
+  const value = useMemo<I18nValue>(
+    () => ({ lang, t: brandedDict(lang, { nameTh, nameEn }), setLang, fmt }),
+    [lang, setLang, nameTh, nameEn],
+  );
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 

@@ -6,7 +6,7 @@ export { AsyncButton } from './AsyncButton';
 export { Icon } from './Icons';
 export { Illustration } from './Illustration';
 export { LangSwitch } from './LangSwitch';
-export { Brand, LogoMark } from './Logo';
+export { Brand, BrandProvider, LogoMark } from './Logo';
 export * from './nav';
 export { BackLink, PageSoon } from './PageSoon';
 export { RoleHome } from './RoleHome';

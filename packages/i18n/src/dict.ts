@@ -9,6 +9,9 @@
  * - Plain TypeScript, no React import — usable from functions, metadata and tests.
  */
 
+import { DEFAULT_BRAND_NAME, applyBrandNames, brandName } from '@bestie/core';
+import type { Brand } from '@bestie/core';
+
 export type Lang = 'th' | 'en';
 export const LANGS: readonly Lang[] = ['th', 'en'];
 export const DEFAULT_LANG: Lang = 'th';
@@ -232,6 +235,32 @@ const th = {
   auditEvt_audit_settings_change: 'แก้ตั้งค่า Audit trail',
   auditEvt_export_audit: 'ส่งออก Audit trail',
   auditEvt_export_report: 'ส่งออกรายงาน',
+
+  // ── branding ──────────────────────────────────────────────────────────
+  brandTitle: 'แบรนด์ของแพลตฟอร์ม',
+  brandNames: 'ชื่อแอป',
+  brandNameTh: 'ชื่อ (ไทย)',
+  brandNameEn: 'ชื่อ (อังกฤษ)',
+  brandNameHint: 'แสดงทุกที่ ตั้งแต่หน้าเว็บ ชื่อแท็บ ไปจนถึงข้อความ LINE',
+  brandSaveNames: 'บันทึกชื่อ',
+  brandLogo: 'โลโก้',
+  brandLogoHint: 'ไฟล์ PNG, JPEG หรือ WebP ไม่เกิน 1 MB (ไม่รับ SVG)',
+  brandIcon: 'ไอคอนแท็บและไอคอนติดตั้งแอป',
+  brandIconHint: 'PNG สี่เหลี่ยมจัตุรัส 192–1024 px ไม่เกิน 512 KB',
+  brandChoose: 'เลือกไฟล์',
+  brandUpload: 'อัปโหลด',
+  brandUseDefault: 'ใช้ของระบบ',
+  brandCurrent: 'ปัจจุบัน',
+  brandDefaultBadge: 'ของระบบ',
+  brandSaved: 'บันทึกแล้ว มีผลภายในประมาณหนึ่งนาที',
+  brandAdminOnly: 'หน้านี้สำหรับผู้ดูแลระบบเท่านั้น',
+  err_brand_too_big: 'ไฟล์ใหญ่เกินกำหนด',
+  err_brand_bad_type: 'รับเฉพาะรูป PNG, JPEG หรือ WebP',
+  err_brand_not_png: 'ไอคอนต้องเป็นไฟล์ PNG',
+  err_brand_not_square: 'ไอคอนต้องเป็นสี่เหลี่ยมจัตุรัส',
+  err_brand_too_small: 'ไอคอนเล็กเกินไป (อย่างน้อย 192 px)',
+  err_brand_too_large: 'ไอคอนใหญ่เกินไป (ไม่เกิน 1024 px)',
+  err_brand_name_invalid: 'ชื่อต้องมี 1–40 ตัวอักษร บรรทัดเดียว และห้ามมี < >',
 
   // ── common ───────────────────────────────────────────────────────────────
   loading: 'กำลังดำเนินการ',
@@ -480,6 +509,31 @@ const en = {
   auditEvt_export_audit: 'Audit trail exported',
   auditEvt_export_report: 'Report exported',
 
+  brandTitle: 'Platform branding',
+  brandNames: 'App name',
+  brandNameTh: 'Name (Thai)',
+  brandNameEn: 'Name (English)',
+  brandNameHint: 'Shown everywhere: pages, the browser tab and LINE messages',
+  brandSaveNames: 'Save name',
+  brandLogo: 'Logo',
+  brandLogoHint: 'PNG, JPEG or WebP up to 1 MB (SVG is not accepted)',
+  brandIcon: 'Tab & app icon',
+  brandIconHint: 'Square PNG, 192–1024 px, up to 512 KB',
+  brandChoose: 'Choose a file',
+  brandUpload: 'Upload',
+  brandUseDefault: 'Use the default',
+  brandCurrent: 'Current',
+  brandDefaultBadge: 'Default',
+  brandSaved: 'Saved. It takes effect within about a minute.',
+  brandAdminOnly: 'This page is for platform admins only',
+  err_brand_too_big: 'The file is too big.',
+  err_brand_bad_type: 'Only PNG, JPEG or WebP images are accepted.',
+  err_brand_not_png: 'The icon must be a PNG file.',
+  err_brand_not_square: 'The icon must be square.',
+  err_brand_too_small: 'The icon is too small (at least 192 px).',
+  err_brand_too_large: 'The icon is too large (1024 px at most).',
+  err_brand_name_invalid: 'The name must be 1–40 characters, one line, without < or >.',
+
   loading: 'Working on it',
   langGroup: 'Language',
   langTh: 'ไทย',
@@ -511,6 +565,25 @@ const en = {
 } satisfies Dict;
 
 export const dict: Record<Lang, Dict> = { th, en };
+
+/**
+ * The dictionary with the admin's product name swapped in (BRANDING-KNOWLEDGE §3.4). Strings are WRITTEN with the default
+ * name and replaced when read, so the new name reaches every screen from one place. Cached per language + name.
+ */
+const brandedCache = new Map<string, Dict>();
+export function brandedDict(lang: Lang, brand: Brand | undefined): Dict {
+  const names = brandName(lang, brand ?? {});
+  if (names === DEFAULT_BRAND_NAME) return dict[lang];
+  const key = `${lang}|${names}`;
+  const hit = brandedCache.get(key);
+  if (hit) return hit;
+  const out = Object.fromEntries(
+    Object.entries(dict[lang]).map(([k, v]) => [k, applyBrandNames(v, lang, brand ?? {})]),
+  ) as Dict;
+  if (brandedCache.size >= 8) brandedCache.clear();
+  brandedCache.set(key, out);
+  return out;
+}
 
 export const isLang = (v: unknown): v is Lang =>
   typeof v === 'string' && (LANGS as readonly string[]).includes(v);

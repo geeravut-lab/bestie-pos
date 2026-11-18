@@ -116,6 +116,7 @@ describe('<BillingPage> store billing', () => {
         bill_options: { serviceChargeBase: 'before_discounts' },
         rounding: { cash: 'nearest-25' },
         shift_required: false,
+        qr_auto_send: false,
       },
     });
     expect(await screen.findByText('Saved.')).toBeTruthy();
@@ -230,6 +231,25 @@ describe('<BillingPage> shift switch', () => {
             u.table === 'stores' &&
             (u.values as { shift_required?: boolean }).shift_required === true,
         ),
+      ).toBe(true),
+    );
+  });
+});
+
+describe('<BillingPage> QR auto-send switch', () => {
+  it('lets the owner send guest QR orders straight to the kitchen', async () => {
+    const { client, updates } = fakeClient();
+    mount(ctx(client));
+    await screen.findByRole('heading', { name: 'Billing & points' });
+    const sw = screen.getByRole('switch', {
+      name: /Orders from guests by QR go straight to the kitchen/,
+    }) as HTMLInputElement;
+    expect(sw.checked).toBe(false);
+    await userEvent.click(sw);
+    await userEvent.click(screen.getByRole('button', { name: 'Save billing settings' }));
+    await waitFor(() =>
+      expect(
+        updates.some((u) => (u.values as { qr_auto_send?: boolean }).qr_auto_send === true),
       ).toBe(true),
     );
   });

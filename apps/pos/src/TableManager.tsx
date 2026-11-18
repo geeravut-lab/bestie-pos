@@ -6,6 +6,7 @@ import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
 import type { OrderDoc } from '@bestie/core';
 import type { PosTable } from './posData';
+import { TableQr } from './TableQr';
 
 const writeError = (code: string | undefined): ErrorKey =>
   code === '42501'
@@ -113,6 +114,7 @@ function TableRow({
         <button type="button" className="btn btn-secondary" onClick={() => setEditing(!editing)}>
           {t.menuEdit}
         </button>
+        <TableQr ctx={ctx} table={table} />
         <AsyncButton variant="secondary" onClick={remove}>
           {t.tableRemove}
         </AsyncButton>

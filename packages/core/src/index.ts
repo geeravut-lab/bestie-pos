@@ -33,3 +33,4 @@ export * from './split';
 export * from './shifts';
 export * from './kitchen';
 export * from './reports';
+export * from './guestCart';

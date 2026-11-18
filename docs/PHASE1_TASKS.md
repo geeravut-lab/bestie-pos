@@ -46,7 +46,7 @@ Work top to bottom. One PR per task. Tick when merged.
 - [x] Queue for the cafe: staff board (`/queue`: Preparing / Ready to collect, Handed over) and the customer-facing call screen (`/queue/display`: big numbers, full screen, chime when a number becomes ready); counter bills only
 
 ## 5. Guest QR ordering (apps/guest)
-- [ ] Table QR → menu in EN/TH → order → appears on POS/KDS
+- [x] Table QR → menu in EN/TH → order → appears on POS/KDS: each table has a random QR token (`/tables` → table → **Ordering QR**: show, print, create a new code); the guest page `/t/<token>` (`packages/guest-ui`, mounted in apps/pos and apps/guest) needs no account; the database prices the order and checks options / availability / the `order.qr` module; guest lines wait on the bill as unsent lines (**Guest order** badge) or go straight to the kitchen when the shop switches on auto-send (Billing & points); retries never order twice; 12 orders per table per 10 min. The guest sees what is on the table and its kitchen state (refreshed every 10 s)
 - [ ] Pay at table via PromptPay QR
 
 ## 6. Customers, Credit & Points
@@ -79,7 +79,7 @@ Work top to bottom. One PR per task. Tick when merged.
 - [x] Wired to: roles / modules / store settings of the signed-in user (all open screens of an org update by themselves), audit history
 - [x] Wired to: floor plan, order list, order screen (tables / orders / lines ping `store:<id>`; the till pulls the shop's orders when nothing is waiting to be sent)
 - [x] Wired to: KDS, pick-up list, queue board (store topic ping + fast refresh)
-- [ ] Still to wire: guest "order ready" (§5)
+- [x] Guest "order ready" (§5): the guest page re-reads the table's bill every 10 s while visible (a guest has no account, so no Realtime channel)
 - [x] Interplay with the offline outbox: sync indicator in the top bar (offline / syncing / N waiting / needs attention) driven by the local queue
 
 ## 11. Audit trail  _(AUDIT-TRAIL-KNOWLEDGE + admin switches, see KNOWLEDGE-MAPPING §A)_

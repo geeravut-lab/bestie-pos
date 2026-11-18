@@ -68,6 +68,9 @@ export function OrdersPage({ ctx, mode }: { ctx: PageContext; mode: 'sell' | 'li
                     ? fmt(t.orderAtTable, { name: tableName(o.tableId) ?? '—' })
                     : channelText(t, o.channel)}
                 </span>
+                {o.lines.some((l) => l.status === 'new' && l.createdBy === null) ? (
+                  <span className="badge badge-warn">{t.orderGuestTag}</span>
+                ) : null}
                 <span className="muted tabular">
                   {itemCount(o)} ·{' '}
                   {formatTHB(orderBill(o, billConfigFor(config, o.channel)).total, locale)}

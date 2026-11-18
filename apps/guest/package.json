@@ -13,6 +13,7 @@
   "dependencies": {
     "@bestie/auth": "workspace:*",
     "@bestie/core": "workspace:*",
+    "@bestie/guest-ui": "workspace:*",
     "@bestie/i18n": "workspace:*",
     "@bestie/supabase": "workspace:*",
     "@bestie/ui": "workspace:*",

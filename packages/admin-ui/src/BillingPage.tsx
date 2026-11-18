@@ -25,6 +25,8 @@ import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
 import { useRemote } from './useRemote';
 
+type DeviceOption = { id: string; store_id: string; name: string };
+
 type StoreRow = {
   id: string;
   name: string;
@@ -36,6 +38,7 @@ type StoreRow = {
   bill_options: unknown;
   shift_required?: boolean;
   qr_auto_send?: boolean;
+  qr_pay_device?: string | null;
 };
 
 const tx = (t: Dict, key: string, fallback = key): string =>
@@ -55,20 +58,27 @@ export function BillingPage({ ctx }: { ctx: PageContext }) {
   const { t } = useI18n();
   const canEdit = ctx.isOwner || ctx.permissions.includes('settings.manage');
   const { status, data, reload } = useRemote(async () => {
-    const [stores, org] = await Promise.all([
+    const [stores, org, devices] = await Promise.all([
       ctx.client
         .from('stores')
         .select(
-          'id, name, vat_registered, vat_bps, service_charge_bps, price_mode, rounding, bill_options, shift_required, qr_auto_send',
+          'id, name, vat_registered, vat_bps, service_charge_bps, price_mode, rounding, bill_options, shift_required, qr_auto_send, qr_pay_device',
         )
         .eq('org_id', ctx.orgId)
         .is('deleted_at', null)
         .order('created_at'),
       ctx.client.from('orgs').select('points_rule').eq('id', ctx.orgId).maybeSingle(),
+      ctx.client
+        .from('devices')
+        .select('id, store_id, name')
+        .eq('org_id', ctx.orgId)
+        .eq('active', true)
+        .order('created_at'),
     ]);
     if (stores.error || org.error) throw new Error('load');
     return {
       stores: (stores.data ?? []) as StoreRow[],
+      devices: (devices.error ? [] : (devices.data ?? [])) as DeviceOption[],
       points: parsePointsRule((org.data as { points_rule?: unknown } | null)?.points_rule),
     };
   }, ctx.orgId);
@@ -93,7 +103,13 @@ export function BillingPage({ ctx }: { ctx: PageContext }) {
     <div className="admin-page">
       <h1>{t.billingTitle}</h1>
       <Notice kind="info">{t.billingIntro}</Notice>
-      <StoreBilling ctx={ctx} stores={data.stores} canEdit={canEdit} onSaved={reload} />
+      <StoreBilling
+        ctx={ctx}
+        stores={data.stores}
+        devices={data.devices}
+        canEdit={canEdit}
+        onSaved={reload}
+      />
       <PointsRuleCard ctx={ctx} rule={data.points} canEdit={canEdit} onSaved={reload} />
     </div>
   );
@@ -102,11 +118,13 @@ export function BillingPage({ ctx }: { ctx: PageContext }) {
 function StoreBilling({
   ctx,
   stores,
+  devices,
   canEdit,
   onSaved,
 }: {
   ctx: PageContext;
   stores: StoreRow[];
+  devices: DeviceOption[];
   canEdit: boolean;
   onSaved: () => void;
 }) {
@@ -116,6 +134,7 @@ function StoreBilling({
   const [vatRegistered, setVatRegistered] = useState(store.vat_registered);
   const [shiftRequired, setShiftRequired] = useState(store.shift_required === true);
   const [qrAutoSend, setQrAutoSend] = useState(store.qr_auto_send === true);
+  const [qrPayDevice, setQrPayDevice] = useState(store.qr_pay_device ?? '');
   const [vat, setVat] = useState(pct(store.vat_bps || 700));
   const [service, setService] = useState(pct(store.service_charge_bps));
   const [priceMode, setPriceMode] = useState(store.price_mode);
@@ -136,6 +155,7 @@ function StoreBilling({
     setOpts(parseBillOptions(s.bill_options));
     setShiftRequired(s.shift_required === true);
     setQrAutoSend(s.qr_auto_send === true);
+    setQrPayDevice(s.qr_pay_device ?? '');
     setCashRule(parseRoundingConfig(s.rounding).cash ?? 'none');
     setSaved(false);
     setError(null);
@@ -175,6 +195,7 @@ function StoreBilling({
         bill_options: billOptionsToColumn(opts),
         shift_required: shiftRequired,
         qr_auto_send: qrAutoSend,
+        qr_pay_device: qrPayDevice || null,
         rounding: roundingToColumn(rounding),
       })
       .eq('id', store.id)
@@ -273,6 +294,31 @@ function StoreBilling({
         />
         <span className="switch-text">{t.billingQrAutoSend}</span>
       </label>
+      <div className="form-row">
+        <label className="label" htmlFor="bill-qr-pay">
+          {t.billingQrPayDevice}
+        </label>
+        <select
+          id="bill-qr-pay"
+          className="field"
+          value={qrPayDevice}
+          disabled={!canEdit}
+          onChange={(e) => {
+            setQrPayDevice(e.target.value);
+            setSaved(false);
+          }}
+        >
+          <option value="">{t.billingQrPayOff}</option>
+          {devices
+            .filter((d) => d.store_id === store.id)
+            .map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+        </select>
+        <p className="muted hint">{t.billingQrPayNote}</p>
+      </div>
       <div className="filters">
         <div className="form-row">
           <label className="label" htmlFor="bill-vat">

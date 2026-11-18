@@ -50,6 +50,7 @@ describe('GET /api/guest/menu', () => {
         json({ store_name: 'Acme', table_name: 'T1', qr_enabled: true, auto_send: true }),
       guest_menu: () => json({ categories: [], items: [], groups: [] }),
       guest_bill: () => json({ order_id: null, lines: [] }),
+      guest_pay_context: () => json(null),
     });
     const r = await guestMenuResponse(get(TOKEN, '1.1.1.3'), env, { fetchImpl: f });
     const body = (await r.json()) as Record<string, unknown>;

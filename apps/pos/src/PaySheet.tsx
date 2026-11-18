@@ -6,14 +6,15 @@ import {
   priceInputValue,
   quickCashAmounts,
 } from '@bestie/core';
-import type { OnlineTender, RoundingRule, Satang } from '@bestie/core';
+import type { OnlineTender, RoundingRule, Satang, SplitLeg } from '@bestie/core';
 import { errorText, fmt, useI18n } from '@bestie/i18n';
 import type { ErrorKey } from '@bestie/i18n';
 import { AsyncButton, Spinner } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { Charge, OnlinePay } from './onlinePay';
+import { SplitPane } from './SplitPane';
 
-type Tab = 'cash' | OnlineTender;
+type Tab = 'cash' | 'split' | OnlineTender;
 
 /** Choose how the guest pays: cash (works offline), PromptPay QR or the card reader (both need the network). */
 export function PaySheet({
@@ -23,6 +24,8 @@ export function PaySheet({
   shiftBlocked = false,
   onOpenShift,
   onPay,
+  onSplitPay,
+  splitCredit = null,
   onClose,
 }: {
   /** The bill total BEFORE cash rounding. */
@@ -33,6 +36,10 @@ export function PaySheet({
   shiftBlocked?: boolean;
   onOpenShift?: () => void;
   onPay: (tendered: Satang) => Promise<ErrorKey | null>;
+  /** Several payers, cash and / or Credit, one receipt (online). */
+  onSplitPay?: (legs: SplitLeg[]) => Promise<ErrorKey | null>;
+  /** The customer on the bill and their Credit here; null = Credit not usable. */
+  splitCredit?: { name: string; balance: Satang } | null;
   onClose: () => void;
 }) {
   const { t, lang } = useI18n();
@@ -47,6 +54,7 @@ export function PaySheet({
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'cash', label: t.payTabCash },
+    ...(onSplitPay ? [{ id: 'split' as const, label: t.paySplitTab }] : []),
     { id: 'promptpay', label: t.payTabPromptPay },
     { id: 'gateway', label: t.payTabCard },
   ];
@@ -89,7 +97,17 @@ export function PaySheet({
             </div>
             {tab === 'cash' ? (
               <CashPane total={total} rule={rule} locale={locale} onPay={onPay} onClose={onClose} />
-            ) : (
+            ) : tab === 'split' && onSplitPay ? (
+              <SplitPane
+                total={total}
+                rule={rule}
+                locale={locale}
+                online={online.available}
+                credit={splitCredit}
+                onPay={onSplitPay}
+                onClose={onClose}
+              />
+            ) : tab === 'split' ? null : (
               <OnlinePane
                 key={tab}
                 tender={tab}

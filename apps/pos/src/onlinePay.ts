@@ -1,5 +1,12 @@
-import { hasUnsent, onlineSnapshot, orderBill, payBlockers, sendNew } from '@bestie/core';
-import type { BillConfig, Lang, OnlineTender } from '@bestie/core';
+import {
+  hasUnsent,
+  onlineSnapshot,
+  orderBill,
+  payBlockers,
+  planSplit,
+  sendNew,
+} from '@bestie/core';
+import type { BillConfig, Lang, OnlineTender, RoundingRule, Satang, SplitLeg } from '@bestie/core';
 import type { ErrorKey } from '@bestie/i18n';
 import { flush, getOrder, outboxCounts, pullOrderNow } from '@bestie/offline';
 import type { PageContext } from '@bestie/auth';
@@ -153,3 +160,70 @@ export async function findLiveAttempt(client: Client, orderId: string): Promise<
 
 export const finishOnlinePayment = (client: Client, orderId: string): Promise<boolean> =>
   pullOrderNow(client as never, orderId);
+
+/**
+ * Several payers, cash and / or Bestie Credit, one receipt: the server closes the bill in one transaction
+ * (`close_order_tenders`) and numbers the receipt. Online only. Like a PromptPay start, everything unsent goes to the
+ * kitchen first and the queue is flushed, so the server sees the bill exactly as it is on screen.
+ */
+export async function closeSplitPayment(p: {
+  client: Client;
+  orderId: string;
+  binding: DeviceBinding;
+  billConfig: BillConfig;
+  rule: RoundingRule;
+  legs: SplitLeg[];
+  creditBalance: Satang | null;
+  staffId?: string;
+  lang: Lang;
+}): Promise<ErrorKey | null> {
+  if (globalThis.navigator?.onLine === false) return 'err_pay_offline';
+  const first = await getOrder(p.orderId);
+  if (!first) return 'err_order_failed';
+  if (payBlockers(first).some((b) => b !== 'unsent'))
+    return first.status === 'paid' ? 'err_order_closed' : 'err_pay_failed';
+  if (hasUnsent(first)) {
+    const err = await changeOrder(p.orderId, (o) => sendNew(o, Date.now()).order);
+    if (err) return err;
+  }
+  await flush(p.client as never);
+  if ((await outboxCounts()).pending > 0) return 'err_pay_sync';
+  const order = await getOrder(p.orderId);
+  if (!order) return 'err_order_failed';
+
+  const bill = orderBill(order, p.billConfig);
+  const plan = planSplit({
+    total: bill.total,
+    rule: p.rule,
+    legs: p.legs,
+    creditBalance: p.creditBalance,
+  });
+  if (plan.problems.length > 0) return 'err_pay_failed';
+  const { error } = await p.client.rpc('close_order_tenders', {
+    p: {
+      order_id: order.id,
+      device_id: p.binding.deviceId,
+      staff_id: p.staffId ?? null,
+      issued_at: new Date().toISOString(),
+      lang: p.lang,
+      subtotal: bill.subtotal,
+      service_charge: bill.serviceCharge,
+      vat: bill.vat,
+      net_before_vat: bill.netBeforeVat,
+      total: bill.total,
+      rounding: plan.rounding,
+      payable: plan.payable,
+      vat_bps: p.billConfig.vatBps,
+      service_bps: p.billConfig.serviceChargeBps,
+      price_mode: p.billConfig.priceMode,
+      payments: plan.payments.map((x) => ({ id: crypto.randomUUID(), ...x })),
+    },
+  });
+  if (error) {
+    if (error.code === '42501') return 'err_forbidden';
+    if (error.code === '55000') return 'err_pay_sync';
+    return 'err_pay_failed';
+  }
+  await pullOrderNow(p.client as never, p.orderId);
+  return null;
+}

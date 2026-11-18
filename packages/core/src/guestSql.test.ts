@@ -24,3 +24,26 @@ describe('order.qr in the database mirrors the registry', () => {
     expect(marker![2]!.split(',').sort()).toEqual(allowed.sort());
   });
 });
+
+/** Same idea for Bestie Credit: the database decides on its own, so the SQL copy of the registry entry is checked here. */
+describe('tender.credit in the database mirrors the registry', () => {
+  const dir = new URL('../../../supabase/migrations/', import.meta.url);
+  const file = readdirSync(dir).find((f) => f.endsWith('_credit_ledger.sql')) ?? '';
+  const sql = readFileSync(new URL(file, dir), 'utf8');
+  const marker = /-- registry:tender\.credit profiles=([a-z,]*) plan=([a-z,]+)/.exec(sql);
+  const m = MODULE_BY_ID['tender.credit'];
+
+  it('is off for every profile by default (the lawyer has not confirmed the structure)', () => {
+    expect(m.defaultProfiles).toEqual([]);
+    expect(marker![1]).toBe('');
+  });
+  it('same plan tiers', () => {
+    const allowed = (Object.keys(PLAN_RANK) as (keyof typeof PLAN_RANK)[]).filter(
+      (p) => PLAN_RANK[p] >= PLAN_RANK[m.plan],
+    );
+    expect(marker![2]!.split(',').sort()).toEqual(allowed.sort());
+  });
+  it('has no cash-out and no crypto funding in the ledger definition', () => {
+    expect(sql).not.toMatch(/'cash_out'|'refund'|'crypto'/);
+  });
+});

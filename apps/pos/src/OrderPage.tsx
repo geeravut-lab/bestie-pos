@@ -30,9 +30,12 @@ import { changeOrder, mergeBills, payCash, splitBill } from './orderActions';
 import { SplitSheet } from './SplitSheet';
 import { LoadFailed, Loading, Page } from './PosBits';
 import { ModifierSheet } from './ModifierSheet';
+import { OrderCustomer } from './OrderCustomer';
 import { PaySheet } from './PaySheet';
+import { useSplitInfo } from './useSplitInfo';
 import {
   cancelOnlinePayment,
+  closeSplitPayment,
   findLiveAttempt,
   finishOnlinePayment,
   readAttempt,
@@ -81,6 +84,7 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
   const [cat, setCat] = useState('');
   const [picking, setPicking] = useState<{ item: Item; groups: OrderGroupInput[] } | null>(null);
   const [paying, setPaying] = useState(false);
+  const splitInfo = useSplitInfo(ctx, orderId, netUp, paying);
   const [splitting, setSplitting] = useState(false);
   const [mergeInto, setMergeInto] = useState('');
   const { binding } = usePosStore(ctx);
@@ -156,6 +160,7 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
         {tableName ? fmt(t.orderAtTable, { name: tableName }) : channelText(t, order.channel)}
         {pending > 0 ? ` · ${t.orderWaitingSync}` : ''}
       </p>
+      <OrderCustomer ctx={ctx} orderId={order.id} open={open} online={netUp} />
       {siblings.length > 0 ? (
         <div className="chips" role="group" aria-label={t.splitSiblings}>
           {siblings.map((o) => (
@@ -407,6 +412,24 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
             () => ctx.navigate(`/receipt/${order.id}`),
           )}
           onClose={() => setPaying(false)}
+          splitCredit={
+            splitInfo.data ? { name: splitInfo.data.name, balance: splitInfo.data.balance } : null
+          }
+          onSplitPay={async (legs) => {
+            const err = await closeSplitPayment({
+              client: ctx.client,
+              orderId: order.id,
+              binding,
+              billConfig: billConfigFor(config, order.channel),
+              rule: config.cashRounding,
+              legs,
+              creditBalance: splitInfo.data ? splitInfo.data.balance : null,
+              staffId: ctx.staffId,
+              lang: config.defaultLang,
+            });
+            if (!err) ctx.navigate(`/receipt/${order.id}`);
+            return err;
+          }}
           onPay={async (tendered) => {
             const err = await payCash({
               orderId: order.id,

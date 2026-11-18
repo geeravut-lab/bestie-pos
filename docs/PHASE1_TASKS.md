@@ -47,14 +47,14 @@ Work top to bottom. One PR per task. Tick when merged.
 
 ## 5. Guest QR ordering (apps/guest)
 - [x] Table QR → menu in EN/TH → order → appears on POS/KDS: each table has a random QR token (`/tables` → table → **Ordering QR**: show, print, create a new code); the guest page `/t/<token>` (`packages/guest-ui`, mounted in apps/pos and apps/guest) needs no account; the database prices the order and checks options / availability / the `order.qr` module; guest lines wait on the bill as unsent lines (**Guest order** badge) or go straight to the kitchen when the shop switches on auto-send (Billing & points); retries never order twice; 12 orders per table per 10 min. The guest sees what is on the table and its kitchen state (refreshed every 10 s)
-- [ ] Pay at table via PromptPay QR
+- [x] Pay at table via PromptPay QR: the guest page shows the bill total (computed by the server with the till's own billing code), starts a Stripe PromptPay QR through the same payment-attempt machinery, polls its status and shows "paid" + the online receipt number when the signed webhook closes the bill. The owner picks which device's A+ receipt series / POS ID guest payments use (Billing & points; off by default); lines still waiting for staff confirmation block payment; ordering is locked while a QR is waiting. **Needs a Stripe test-mode run (docs/ENVIRONMENT.md §6).**
 
 ## 6. Customers, Credit & Points
-- [ ] Customer lookup by phone / member QR
-- [ ] Tender framework: cash, PromptPay, gateway, Credit, Points, split tender; per-store tender toggles
+- [x] Customer lookup by phone / member code / name (`/customers`, and **Add a customer to this bill** on the order screen): create a member, see the Bestie Points balance and history. _(A scanner that types the member code works today; a camera QR scanner is later.)_
+- [ ] Tender framework: cash, PromptPay, gateway, Credit — **done**; **split tender done** (`Split` tab: N payers, equal shares or any amounts, each cash or Bestie Credit, one receipt, server-numbered `X+…`, online) — still to do: Points as a bill discount, PromptPay / card legs inside a split, per-store tender toggles screen
 - [ ] Payment gateway adapter (card / e-wallets) behind an interface so providers can be swapped
-- [ ] Bestie Credit ledger (double-entry, scoped to issuerEntityId): top-up by cash / PromptPay / gateway, spend, void, liability report
-- [ ] Bestie Points ledger: earn on paid bill, redeem as discount (never purchasable)
+- [ ] Bestie Credit ledger (double-entry, scoped to the issuing legal entity): **cash top-up, balance, history, manager correction, liability report per company, drawer count — done** (`tender.credit` module, off by default; append-only; no cash-out kind; no crypto funding). **spending Credit on a bill is done** (split tender). Still to do: PromptPay / card top-ups
+- [ ] Bestie Points ledger: ~~earn on paid bill~~ **done** (append-only `points_ledger`, earned once per bill from baht spend only, manager corrections with a reason, audited), redeem as discount — _next PR_
 - [ ] Module stub `credit.topup.crypto` (disabled; blocked unless org.legalSignOff.cryptoTopup) — build in Phase 3
 
 ## 7. Reports

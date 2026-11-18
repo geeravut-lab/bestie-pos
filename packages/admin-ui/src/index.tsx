@@ -1,6 +1,8 @@
 export { AuditPage } from './AuditPage';
 export { BillingPage } from './BillingPage';
 export { BrandingPage } from './BrandingPage';
+export { CustomerPicker } from './CustomerPicker';
+export { CustomersPage } from './CustomersPage';
 export { DevicesPage } from './DevicesPage';
 export { MenuPage } from './MenuPage';
 export { ModulesPage } from './ModulesPage';
@@ -16,6 +18,7 @@ import { AuditPage } from './AuditPage';
 import { AiPromptsPage, AiSettingsPage } from './AiPages';
 import { BillingPage } from './BillingPage';
 import { BrandingPage } from './BrandingPage';
+import { CustomersPage } from './CustomersPage';
 import { DevicesPage } from './DevicesPage';
 import { MenuPage } from './MenuPage';
 import { ModulesPage } from './ModulesPage';
@@ -36,6 +39,7 @@ export function adminPages(ctx: PageContext): ReactNode | null {
   if (ctx.path === '/menu') return <MenuPage ctx={ctx} />;
   if (ctx.path === '/modules') return <ModulesPage ctx={ctx} />;
   if (ctx.path === '/staff') return <StaffPage ctx={ctx} />;
+  if (ctx.path === '/customers') return <CustomersPage ctx={ctx} />;
   if (ctx.path === '/reports') return <ReportsPage ctx={ctx} />;
   if (ctx.path === '/devices') return <DevicesPage ctx={ctx} />;
   return null;

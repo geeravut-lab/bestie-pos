@@ -91,3 +91,11 @@ real run. With **test** keys in Vercel (`STRIPE_SECRET_KEY=sk_test_…`, `STRIPE
 
 If a step differs from what Stripe actually returns (field names, the PromptPay e-mail rule, reader availability in Thailand),
 fix `functions/src/stripe.ts` and its tests — nothing else depends on Stripe's wire format.
+
+### Guest PromptPay at the table (add to the test-mode run)
+1. In **Billing & points** choose the device whose receipts guest payments use.
+2. Open a table's QR page (`/t/<token>`) on a phone, order, let staff send the lines, press **Pay with PromptPay**: a QR appears.
+3. Pay it with a Stripe test PromptPay payment; within ~3 s the page shows **Paid** and the receipt number `X+000001`; the bill is closed on the till.
+4. Press **Cancel payment** on a second attempt: the QR disappears and the intent is cancelled in the Stripe dashboard.
+5. Reload the page while a QR is live: the same QR returns (no second intent).
+

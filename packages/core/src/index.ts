@@ -34,3 +34,5 @@ export * from './shifts';
 export * from './kitchen';
 export * from './reports';
 export * from './guestCart';
+export * from './customers';
+export * from './splitTender';

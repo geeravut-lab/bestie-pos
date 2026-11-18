@@ -32,6 +32,13 @@ Everything marked **(owner)** needs the shop owner's own accounts or paperwork. 
 - [ ] Menu check: every required option group has at least as many options as its minimum (the editor warns)
 - [ ] **Tables** (restaurant): `/tables` → rename / add the real tables and zones
 
+## 2b. Table QR ordering (restaurant, optional)
+
+- [ ] `/modules`: **QR order** switched on (Pro plan)
+- [ ] `/tables` → each table → **Ordering QR** → print, stick on the table. Test one with your own phone
+- [ ] **Billing & points**: decide whether guest orders go straight to the kitchen (otherwise staff press Send) and whether guests may pay by phone (pick the device whose A+ receipts they use; confirm with the accountant)
+- [ ] If a QR photo leaks, press **Create a new code** on that table
+
 ## 3. People
 
 - [ ] **Staff** (`/staff`): invite each person with the right role (manager, cashier, waiter, kitchen). Give them the one-time code; they sign up and enter it on the first screen

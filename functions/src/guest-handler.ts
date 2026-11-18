@@ -162,6 +162,7 @@ type PayCtx = {
   enabled: boolean;
   device_id: string | null;
   order_id: string | null;
+  points_discount?: number;
   config: { vat_bps: number; service_bps: number; price_mode: PriceMode; bill_options: unknown };
   unsent: boolean;
   lines: { unit_price: number; quantity: number }[];
@@ -181,6 +182,7 @@ function billOf(c: PayCtx): BillBreakdown | null {
   try {
     return computeBill({
       lines: c.lines.map((l) => ({ unitPrice: l.unit_price, quantity: l.quantity })),
+      pointsDiscount: Math.max(0, c.points_discount ?? 0),
       priceMode: c.config.price_mode === 'exclusive' ? 'exclusive' : 'inclusive',
       vatBps: c.config.vat_bps,
       serviceChargeBps: c.config.service_bps,
@@ -206,6 +208,7 @@ function payInfo(c: PayCtx | null, stripeReady: boolean) {
   return {
     enabled: !!c && c.enabled && stripeReady,
     total: bill?.total ?? 0,
+    pointsDiscount: bill?.pointsDiscount ?? 0,
     unconfirmed: !!c?.unsent,
     live,
   };
@@ -271,6 +274,7 @@ export async function guestPayResponse(
       tender: 'promptpay',
       lang,
       subtotal: bill.subtotal,
+      points_discount: bill.pointsDiscount,
       service_charge: bill.serviceCharge,
       vat: bill.vat,
       net_before_vat: bill.netBeforeVat,

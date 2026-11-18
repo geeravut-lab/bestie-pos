@@ -357,6 +357,12 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
             <p className="muted">{t.gsPayUnconfirmed}</p>
           ) : (
             <>
+              {data.pay.pointsDiscount > 0 ? (
+                <p className="guest-total">
+                  <span>{t.gsPointsDiscount}</span>
+                  <strong className="tabular">−{money(data.pay.pointsDiscount)}</strong>
+                </p>
+              ) : null}
               <p className="guest-total">
                 <span>{t.gsPayTotal}</span>
                 <strong className="tabular">{money(data.pay.total)}</strong>

@@ -66,6 +66,8 @@ export function receiptFromRows(r: Row, payments: readonly Row[]): ReceiptDoc | 
     serviceBps: serviceBps!,
     priceMode: r.price_mode === 'exclusive' ? 'exclusive' : 'inclusive',
     subtotal: subtotal!,
+    pointsDiscount: int(r.points_discount) ?? 0,
+    pointsUsed: int(r.points_used) ?? 0,
     serviceCharge: serviceCharge!,
     vat: vat!,
     netBeforeVat: netBeforeVat!,

@@ -48,6 +48,13 @@ grant execute on function t_val(uuid, text, text, text) to authenticated, servic
 
 
 
+
+-- the shop's calendar day (Bangkok) moves every day: the fixtures are placed relative to TODAY so this test never goes stale
+create or replace function t_d(n int) returns date language sql as $$ select (now() at time zone 'Asia/Bangkok')::date + n $$;
+create or replace function t_ds(n int) returns text language sql as $$ select ((now() at time zone 'Asia/Bangkok')::date + n)::text $$;
+create or replace function t_ts(n int, hhmm text) returns timestamptz language sql as $$ select (((now() at time zone 'Asia/Bangkok')::date + n)::text || ' ' || hhmm || ':00+07')::timestamptz $$;
+grant execute on function t_d(int), t_ds(int), t_ts(int, text) to anon, authenticated, service_role;
+
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-0000000000a1', 'owner@example.test'),
   ('00000000-0000-0000-0000-0000000000b2', 'manager@example.test'),
@@ -76,11 +83,11 @@ select t_val('00000000-0000-0000-0000-0000000000d4', 'authenticated', 'mgr_staff
 -- C001 17 Nov 12:05 (Beach Cafe): Latte 55.00 = 55.00 gateway
 -- A004: void bill, must not count
 select t_rows(null, 'service_role', $$insert into public.orders (id, org_id, store_id, number, business_date, channel, status) values
-  ('10000000-0000-4000-8000-000000000001', (select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), 'A001', date '2026-11-16', 'takeaway', 'paid'),
-  ('10000000-0000-4000-8000-000000000002', (select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), 'A002', date '2026-11-16', 'takeaway', 'paid'),
-  ('10000000-0000-4000-8000-000000000003', (select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), 'A003', date '2026-11-17', 'takeaway', 'paid'),
-  ('10000000-0000-4000-8000-000000000004', (select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store2'), 'B001', date '2026-11-17', 'takeaway', 'paid'),
-  ('10000000-0000-4000-8000-000000000005', (select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), 'A004', date '2026-11-17', 'takeaway', 'void')$$, 5, 'orders');
+  ('10000000-0000-4000-8000-000000000001', (select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), 'A001', t_d(-2), 'takeaway', 'paid'),
+  ('10000000-0000-4000-8000-000000000002', (select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), 'A002', t_d(-2), 'takeaway', 'paid'),
+  ('10000000-0000-4000-8000-000000000003', (select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), 'A003', t_d(-1), 'takeaway', 'paid'),
+  ('10000000-0000-4000-8000-000000000004', (select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store2'), 'B001', t_d(-1), 'takeaway', 'paid'),
+  ('10000000-0000-4000-8000-000000000005', (select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), 'A004', t_d(-1), 'takeaway', 'void')$$, 5, 'orders');
 select t_rows(null, 'service_role', $$insert into public.order_lines (org_id, store_id, order_id, name, unit_price, quantity, status, sent_at) values
   ((select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), '10000000-0000-4000-8000-000000000001', '{"th":"ผัดไทย","en":"Pad Thai"}', 9000, 2, 'sent', now()),
   ((select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), '10000000-0000-4000-8000-000000000001', '{"th":"ชา","en":"Tea"}', 3000, 1, 'sent', now()),
@@ -91,10 +98,10 @@ select t_rows(null, 'service_role', $$insert into public.order_lines (org_id, st
   ((select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), '10000000-0000-4000-8000-000000000005', '{"th":"ผัดไทย","en":"Pad Thai"}', 9000, 9, 'sent', now())$$, 7, 'lines');
 select t_rows(null, 'service_role', $$update public.order_lines set status = 'void', void_reason = 'test' where name ->> 'en' = 'Soup' returning id$$, 1, 'one line is cancelled');
 select t_rows(null, 'service_role', $$insert into public.receipts (org_id, store_id, order_id, number, device_id, staff_id, issued_at, seller_name, branch_code, vat_registered, vat_bps, service_bps, price_mode, subtotal, service_charge, vat, net_before_vat, total, payable) values
-  ((select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), '10000000-0000-4000-8000-000000000001', 'A-000001', (select v::uuid from t_out where k='dev'), (select v::uuid from t_out where k='cash_staff'), timestamptz '2026-11-16 10:15:00+07', 'Acme Co', '00000', true, 700, 0, 'inclusive', 21000, 0, 1374, 19626, 21000, 21000),
-  ((select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), '10000000-0000-4000-8000-000000000002', 'A-000002', (select v::uuid from t_out where k='dev'), (select v::uuid from t_out where k='mgr_staff'), timestamptz '2026-11-16 19:40:00+07', 'Acme Co', '00000', true, 700, 0, 'inclusive', 18000, 0, 1178, 16822, 18000, 18000),
-  ((select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), '10000000-0000-4000-8000-000000000003', 'A-000003', (select v::uuid from t_out where k='dev'), (select v::uuid from t_out where k='cash_staff'), timestamptz '2026-11-17 10:50:00+07', 'Acme Co', '00000', true, 700, 0, 'inclusive', 9000, 0, 589, 8411, 9000, 9000),
-  ((select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store2'), '10000000-0000-4000-8000-000000000004', 'B-000001', (select v::uuid from t_out where k='dev2'), null, timestamptz '2026-11-17 12:05:00+07', 'Acme Co', '00001', true, 700, 0, 'inclusive', 5500, 0, 360, 5140, 5500, 5500)$$, 4, 'receipts');
+  ((select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), '10000000-0000-4000-8000-000000000001', 'A-000001', (select v::uuid from t_out where k='dev'), (select v::uuid from t_out where k='cash_staff'), t_ts(-2, '10:15'), 'Acme Co', '00000', true, 700, 0, 'inclusive', 21000, 0, 1374, 19626, 21000, 21000),
+  ((select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), '10000000-0000-4000-8000-000000000002', 'A-000002', (select v::uuid from t_out where k='dev'), (select v::uuid from t_out where k='mgr_staff'), t_ts(-2, '19:40'), 'Acme Co', '00000', true, 700, 0, 'inclusive', 18000, 0, 1178, 16822, 18000, 18000),
+  ((select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), '10000000-0000-4000-8000-000000000003', 'A-000003', (select v::uuid from t_out where k='dev'), (select v::uuid from t_out where k='cash_staff'), t_ts(-1, '10:50'), 'Acme Co', '00000', true, 700, 0, 'inclusive', 9000, 0, 589, 8411, 9000, 9000),
+  ((select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store2'), '10000000-0000-4000-8000-000000000004', 'B-000001', (select v::uuid from t_out where k='dev2'), null, t_ts(-1, '12:05'), 'Acme Co', '00001', true, 700, 0, 'inclusive', 5500, 0, 360, 5140, 5500, 5500)$$, 4, 'receipts');
 select t_rows(null, 'service_role', $$insert into public.payments (org_id, store_id, order_id, tender, amount, tendered, change) values
   ((select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), '10000000-0000-4000-8000-000000000001', 'cash', 21000, 50000, 29000),
   ((select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), '10000000-0000-4000-8000-000000000002', 'promptpay', 18000, null, 0),
@@ -107,16 +114,16 @@ $$;
 grant execute on function t_rep(text, text, text) to authenticated, service_role;
 
 -- ── who may read ──
-select t_err('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$select public.sales_report(t_rep('', '2026-11-16', '2026-11-17'))$$, '42501', 'a cashier (no report.view) cannot read reports');
-select t_err('00000000-0000-0000-0000-0000000000e5', 'authenticated', $$select public.sales_report(t_rep('', '2026-11-16', '2026-11-17'))$$, '42501', 'another org cannot');
-select t_err(null, 'anon', $$select public.sales_report(t_rep('', '2026-11-16', '2026-11-17'))$$, '42501', 'anon cannot');
-select t_err('00000000-0000-0000-0000-0000000000b2', 'authenticated', $$select public.sales_report(t_rep('', '2026-11-17', '2026-11-16'))$$, '22023', 'an upside-down range is refused');
-select t_err('00000000-0000-0000-0000-0000000000b2', 'authenticated', $$select public.sales_report(t_rep('', '2020-01-01', '2026-11-16'))$$, '22023', 'a range longer than a year is refused');
+select t_err('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$select public.sales_report(t_rep('', t_ds(-2), t_ds(-1)))$$, '42501', 'a cashier (no report.view) cannot read reports');
+select t_err('00000000-0000-0000-0000-0000000000e5', 'authenticated', $$select public.sales_report(t_rep('', t_ds(-2), t_ds(-1)))$$, '42501', 'another org cannot');
+select t_err(null, 'anon', $$select public.sales_report(t_rep('', t_ds(-2), t_ds(-1)))$$, '42501', 'anon cannot');
+select t_err('00000000-0000-0000-0000-0000000000b2', 'authenticated', $$select public.sales_report(t_rep('', t_ds(-1), t_ds(-2)))$$, '22023', 'an upside-down range is refused');
+select t_err('00000000-0000-0000-0000-0000000000b2', 'authenticated', $$select public.sales_report(t_rep('', '2020-01-01', t_ds(-2)))$$, '22023', 'a range longer than a year is refused');
 
 -- ── all shops, both days ──
-select t_val('00000000-0000-0000-0000-0000000000b2', 'authenticated', 'all', $$select public.sales_report(t_rep('', '2026-11-16', '2026-11-17'))::text$$);
+select t_val('00000000-0000-0000-0000-0000000000b2', 'authenticated', 'all', $$select public.sales_report(t_rep('', t_ds(-2), t_ds(-1)))::text$$);
 select t_rows(null, 'service_role', $$select 1 from t_out where k='all' and (v::jsonb #>> '{totals,bills}') = '4' and (v::jsonb #>> '{totals,payable}') = '53500' and (v::jsonb #>> '{totals,vat}') = '3501' and (v::jsonb #>> '{totals,average}') = '13375'$$, 1, 'all shops: 4 bills, 535.00 payable, VAT 35.01, average 133.75 (the void bill is not counted)');
-select t_rows(null, 'service_role', $$select 1 from t_out where k='all' and jsonb_array_length(v::jsonb -> 'by_day') = 2 and (v::jsonb #>> '{by_day,0,date}') = '2026-11-16' and (v::jsonb #>> '{by_day,0,payable}') = '39000' and (v::jsonb #>> '{by_day,1,payable}') = '14500'$$, 1, 'by day: 390.00 on the 16th, 145.00 on the 17th');
+select t_rows(null, 'service_role', $$select 1 from t_out where k='all' and jsonb_array_length(v::jsonb -> 'by_day') = 2 and (v::jsonb #>> '{by_day,0,date}') = t_ds(-2) and (v::jsonb #>> '{by_day,0,payable}') = '39000' and (v::jsonb #>> '{by_day,1,payable}') = '14500'$$, 1, 'by day: 390.00 on the 16th, 145.00 on the 17th');
 select t_rows(null, 'service_role', $$select 1 from t_out where k='all' and (v::jsonb #>> '{by_hour,0,hour}') = '10' and (v::jsonb #>> '{by_hour,0,bills}') = '2' and jsonb_array_length(v::jsonb -> 'by_hour') = 3$$, 1, 'by hour in Bangkok time: two bills in the 10 o''clock hour');
 select t_rows(null, 'service_role', $$select 1 from t_out where k='all' and (v::jsonb #>> '{by_tender,0,tender}') = 'cash' and (v::jsonb #>> '{by_tender,0,amount}') = '30000' and jsonb_array_length(v::jsonb -> 'by_tender') = 3$$, 1, 'by tender: cash first with 300.00, then promptpay and card');
 select t_rows(null, 'service_role', $$select 1 from t_out where k='all' and (v::jsonb #>> '{by_item,0,name_th}') = 'ผัดไทย' and (v::jsonb #>> '{by_item,0,quantity}') = '3' and (v::jsonb #>> '{by_item,0,revenue}') = '27000' and (v::jsonb #>> '{by_item,0,name_en}') = 'Pad Thai'$$, 1, 'by item: Pad Thai 3 sold, 270.00 (the void bill''s 9 are not counted)');
@@ -125,8 +132,8 @@ select t_rows(null, 'service_role', $$select 1 from t_out where k='all' and json
 select t_rows(null, 'service_role', $$select 1 from t_out where k='all' and (v::jsonb -> 'by_staff') @> '[{"name":"Cashier","bills":2,"payable":30000}]' and (v::jsonb -> 'by_staff') @> '[{"name":"Manager","bills":1,"payable":18000}]'$$, 1, 'by staff: Cashier 2 bills 300.00, Manager 1 bill 180.00 (and the till-only bill has no name)');
 
 -- ── one shop, one day ──
-select t_val('00000000-0000-0000-0000-0000000000b2', 'authenticated', 'one', $$select public.sales_report(t_rep((select v from t_out where k='store2'), '2026-11-17', '2026-11-17'))::text$$);
+select t_val('00000000-0000-0000-0000-0000000000b2', 'authenticated', 'one', $$select public.sales_report(t_rep((select v from t_out where k='store2'), t_ds(-1), t_ds(-1)))::text$$);
 select t_rows(null, 'service_role', $$select 1 from t_out where k='one' and (v::jsonb #>> '{totals,bills}') = '1' and (v::jsonb #>> '{totals,payable}') = '5500' and jsonb_array_length(v::jsonb -> 'by_store') = 1$$, 1, 'one shop, one day: only its bill');
-select t_val('00000000-0000-0000-0000-0000000000b2', 'authenticated', 'empty', $$select public.sales_report(t_rep('', '2026-01-01', '2026-01-02'))::text$$);
+select t_val('00000000-0000-0000-0000-0000000000b2', 'authenticated', 'empty', $$select public.sales_report(t_rep('', '2020-01-01', '2020-01-02'))::text$$);
 select t_rows(null, 'service_role', $$select 1 from t_out where k='empty' and (v::jsonb #>> '{totals,bills}') = '0' and (v::jsonb #>> '{totals,average}') = '0' and (v::jsonb -> 'by_day') = '[]'::jsonb$$, 1, 'an empty range gives zeros and empty lists, not an error');
 \echo ALL REPORT TESTS PASSED

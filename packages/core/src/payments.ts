@@ -37,6 +37,9 @@ export type ReceiptDoc = {
   serviceBps: number;
   priceMode: 'inclusive' | 'exclusive';
   subtotal: Satang;
+  /** Bestie Points used as a discount on this bill (satang) and how many points that was. */
+  pointsDiscount?: Satang;
+  pointsUsed?: number;
   serviceCharge: Satang;
   vat: Satang;
   netBeforeVat: Satang;
@@ -120,6 +123,8 @@ export function buildCashReceipt(p: {
     serviceBps: p.billConfig.serviceChargeBps,
     priceMode: p.billConfig.priceMode,
     subtotal: p.bill.subtotal,
+    pointsDiscount: p.bill.pointsDiscount,
+    pointsUsed: p.order.pointsUsed ?? 0,
     serviceCharge: p.bill.serviceCharge,
     vat: p.bill.vat,
     netBeforeVat: p.bill.netBeforeVat,
@@ -180,6 +185,7 @@ export function closePayload(
     issued_at: r.issuedAt,
     lang: r.lang,
     subtotal: r.subtotal,
+    points_discount: r.pointsDiscount ?? 0,
     service_charge: r.serviceCharge,
     vat: r.vat,
     net_before_vat: r.netBeforeVat,
@@ -240,6 +246,7 @@ export function onlineSnapshot(p: {
     tender: p.tender,
     lang: p.lang,
     subtotal: p.bill.subtotal,
+    points_discount: p.bill.pointsDiscount,
     service_charge: p.bill.serviceCharge,
     vat: p.bill.vat,
     net_before_vat: p.bill.netBeforeVat,

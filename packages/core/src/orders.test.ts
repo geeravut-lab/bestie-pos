@@ -173,6 +173,32 @@ describe('orderBill', () => {
     expect(bill.serviceCharge).toBe(2500);
     expect(bill.total).toBe(27500);
   });
+  it('a Points discount (reserved by the server) lowers the bill before service charge and VAT', () => {
+    const o = { ...add(empty(), 'l1', ['mild'], 2), pointsUsed: 30, pointsDiscount: 3000 }; // 160.00 − 30.00
+    const bill = orderBill(o, { priceMode: 'inclusive', vatBps: 700, serviceChargeBps: 1000 });
+    expect(bill.pointsDiscount).toBe(3000);
+    expect(bill.discountedSubtotal).toBe(13000);
+    expect(bill.serviceCharge).toBe(1300);
+    expect(bill.total).toBe(14300);
+  });
+  it('the discount can never exceed what is left on the bill (lines were removed)', () => {
+    const o = { ...add(empty(), 'l1', ['mild'], 1), pointsUsed: 500, pointsDiscount: 50000 };
+    const bill = orderBill(o, { priceMode: 'inclusive', vatBps: 0, serviceChargeBps: 0 });
+    expect(bill.pointsDiscount).toBe(8000);
+    expect(bill.total).toBe(0);
+  });
+  it('the points columns come from the server and are never written back by the till', () => {
+    const o = { ...add(empty(), 'l1', ['mild']), pointsUsed: 10, pointsDiscount: 1000 };
+    const row = orderToRow(o);
+    expect(row).not.toHaveProperty('points_used');
+    expect(row).not.toHaveProperty('points_discount');
+    expect(row).not.toHaveProperty('customer_id');
+    const back = rowsToOrder(
+      { ...orderToRow(o), customer_id: 'c1', points_used: 10, points_discount: 1000 },
+      [],
+    )!;
+    expect(back).toMatchObject({ customerId: 'c1', pointsUsed: 10, pointsDiscount: 1000 });
+  });
   it('an empty order is zero', () => {
     expect(
       orderBill(empty(), { priceMode: 'inclusive', vatBps: 0, serviceChargeBps: 0 }).total,

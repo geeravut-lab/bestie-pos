@@ -5,6 +5,7 @@ import { orderPayload } from '@bestie/core';
 export type GuestPayInfo = {
   enabled: boolean;
   total: number;
+  pointsDiscount: number;
   unconfirmed: boolean;
   live: { attemptId: string; amount: number; qrImageUrl: string } | null;
 };
@@ -67,6 +68,7 @@ function parsePay(raw: unknown): GuestPayInfo {
   return {
     enabled: p.enabled === true,
     total: typeof p.total === 'number' ? Math.round(p.total) : 0,
+    pointsDiscount: typeof p.pointsDiscount === 'number' ? Math.round(p.pointsDiscount) : 0,
     unconfirmed: p.unconfirmed === true,
     live:
       typeof live.attemptId === 'string' && typeof live.qrImageUrl === 'string'

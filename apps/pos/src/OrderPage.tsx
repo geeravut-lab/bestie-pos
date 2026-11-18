@@ -254,8 +254,14 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
           <dl className="preview-list tabular">
             <div>
               <dt>{t.previewSubtotal}</dt>
-              <dd>{formatTHB(bill.discountedSubtotal, locale)}</dd>
+              <dd>{formatTHB(bill.discountedSubtotal + bill.pointsDiscount, locale)}</dd>
             </div>
+            {bill.pointsDiscount > 0 ? (
+              <div>
+                <dt>{t.previewPoints}</dt>
+                <dd>−{formatTHB(bill.pointsDiscount, locale)}</dd>
+              </div>
+            ) : null}
             {bill.serviceCharge > 0 ? (
               <div>
                 <dt>{t.previewService}</dt>

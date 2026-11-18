@@ -58,7 +58,7 @@ Work top to bottom. One PR per task. Tick when merged.
 - [ ] Module stub `credit.topup.crypto` (disabled; blocked unless org.legalSignOff.cryptoTopup) — build in Phase 3
 
 ## 7. Reports
-- [ ] Daily sales, by item, by hour, payment mix, staff; export CSV
+- [x] Reports (`/reports`): daily sales, by item, by hour, payment mix, staff, by shop; one shop or all shops, date presets, CSV export (audited as `export.report`). Numbers come from one database function `sales_report()` (paid bills only, Bangkok business day), needs `report.view`.
 
 ## 8. Pilot readiness
 - [ ] Seed script with demo restaurant + cafe

@@ -18,6 +18,8 @@ export type ProviderDef = {
   label: string;
   /** Name of the SERVER environment variable that holds the key (the value is never shown anywhere). */
   envKey: string;
+  /** Other accepted names for the same key (e.g. Google AI Studio calls it GOOGLE_AI_API_KEY in some setups). */
+  envKeyAliases?: readonly string[];
   capabilities: readonly Capability[];
   /** Locked: requests only ever go to the provider itself, never to a configurable base URL (key-exfiltration guard). */
   baseUrl: string;
@@ -35,6 +37,7 @@ export const PROVIDERS: Readonly<Record<ProviderId, ProviderDef>> = {
     id: 'google',
     label: 'Google Gemini',
     envKey: 'GOOGLE_API_KEY',
+    envKeyAliases: ['GOOGLE_AI_API_KEY'],
     capabilities: ['text', 'images', 'pdf', 'audio'],
     baseUrl: 'https://generativelanguage.googleapis.com',
   },

@@ -398,6 +398,20 @@ const SCENES: Record<ArtId, { tone: Tone; art: ReactNode }> = {
       </>
     ),
   },
+  billing: {
+    tone: 'sun',
+    art: (
+      <>
+        <path className="il-white il-edge" d="M48 10h64v82l-11-8-11 8-11-8-11 8-11-8-9 6z" />
+        <rect className="il-line-fill" x="58" y="22" width="44" height="6" rx="3" />
+        <rect className="il-line-fill" x="58" y="34" width="34" height="6" rx="3" />
+        <circle className="il-accent il-edge" cx="116" cy="38" r="14" />
+        <path className="il-edge-line" d="M110 44l12-12" />
+        <circle className="il-sun il-edge" cx="40" cy="64" r="12" />
+        <path className="il-edge-line" d="M34 64h12" />
+      </>
+    ),
+  },
   account: {
     tone: 'sky',
     art: (

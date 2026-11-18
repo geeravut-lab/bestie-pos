@@ -38,6 +38,8 @@
 
 - 2026-11-18 — Security: Supabase grants EXECUTE on new functions to `anon`/`authenticated` by default, which left internal SECURITY DEFINER functions (e.g. `audit_record`, `live_ping`) callable from the browser with only the public anon key (anyone could have written audit events). Found with the Supabase security advisor right after the first deploys; fixed by migration 8 (applied) with tests; new functions now get no grants by default. No data had been written through this path (the project had no users yet).
 
+- 2026-11-18 — Billing & points are **owner-selectable options**, not constants: per store — VAT registered / rate, service charge %, menu prices incl./excl. VAT, service charge taxable or not, computed before or after discounts, cash rounding (none / 25 / 50 satang / baht / floor); per org — Points rule (baht per point, value per point, max % of a bill, whether Credit spend earns points). Stored as data (`stores.bill_options`, `stores.rounding`, `orgs.points_rule`), shape-guarded in the database, audited as `settings.change`, previewed live on a sample bill. The ban on buying / cashing out points is deliberately not an option.
+
 ## Proposed (confirm)
 - Offline-first on Supabase (Firestore's built-in offline cache is gone): IndexedDB (Dexie) local store + an outbox of client-generated-UUID writes replayed to Supabase with per-entity conflict rules. Needed before task "Offline: full order flow works with network off".
 - Live sync = Supabase Realtime "ping" topics + refetch, per docs/LIVE-SYNC-KNOWLEDGE.md (adapted from Next.js `router.refresh()` to React Query/refetch).
@@ -60,7 +62,7 @@
 - AI assistant: which providers/models to enable by default and who pays for usage (platform key vs. each org's own key)?
 - Landing/role home: confirm the list of roles (owner, manager, cashier, waiter/staff, kitchen/KDS, guest) and which cards each sees by default.
 - Audit trail: confirm retention period (the knowledge file uses 4 years; Thai accounting-record retention is commonly cited as 5 years — verify with the accountant/lawyer before fixing the number).
-- ACCOUNTING: confirm bill maths — is the 10 % service charge subject to VAT (we assume yes), is it computed after discounts (we assume yes), and which cash rounding (none / 25 satang / baht) pilot shops use. Defaults live in `packages/core` (`computeBill`, `DEFAULT_ROUNDING`).
-- LOYALTY: confirm default Points rule (1 point per THB 25 spent, 1 point = THB 1, max 50 % of bill) and whether spending Bestie Credit earns points (we assume yes).
+- ACCOUNTING (now selectable by the owner at Billing & points — still ask the shop's accountant to confirm the CHOICE for each pilot shop): defaults are service charge on the discounted subtotal and part of the VAT base, cash exact to the satang.
+- LOYALTY (now selectable by the owner): defaults 1 point per THB 25, 1 point = THB 1, max 50 % of a bill, Credit spend earns points. Points can never be bought or cashed out — that part is not an option.
 - AUTH EMAIL: Supabase's built-in mailer is rate-limited (a few e-mails per hour) and sends from a shared address. Before pilots sign up, configure custom SMTP (e.g. Resend / SES) in Supabase → Auth → SMTP, and decide whether e-mail confirmation stays on.
 

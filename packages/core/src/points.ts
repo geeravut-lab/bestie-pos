@@ -18,12 +18,15 @@ export type PointsRule = {
   redeemSatangPerPoint: number;
   /** Max share of a bill that points may cover, in bps (e.g. 5000 = 50 %). */
   maxRedeemBps: number;
+  /** Does paying with Bestie Credit earn points? (Credit is prepaid money: the spend happens when it is used.) */
+  creditEarnsPoints: boolean;
 };
 
 export const DEFAULT_POINTS_RULE: PointsRule = {
   earnSatangPerPoint: 2500,
   redeemSatangPerPoint: 100,
   maxRedeemBps: 5000,
+  creditEarnsPoints: true,
 };
 
 /**
@@ -39,9 +42,15 @@ const EARNING_TENDERS: ReadonlySet<TenderKind> = new Set([
 
 export function eligibleSpend(
   payments: readonly { tender: TenderKind; amount: Satang; status: string }[],
+  rule: Pick<PointsRule, 'creditEarnsPoints'> = DEFAULT_POINTS_RULE,
 ): Satang {
   return payments
-    .filter((p) => p.status === 'confirmed' && EARNING_TENDERS.has(p.tender))
+    .filter(
+      (p) =>
+        p.status === 'confirmed' &&
+        EARNING_TENDERS.has(p.tender) &&
+        (rule.creditEarnsPoints || p.tender !== 'credit'),
+    )
     .reduce((sum, p) => {
       assertNonNegative(p.amount, 'payment amount');
       return sum + p.amount;
@@ -134,3 +143,56 @@ export function validatePointsEntry(
 
 export const pointsBalance = (entries: readonly Pick<PointsLedgerEntry, 'points'>[]): number =>
   entries.reduce((sum, e) => sum + e.points, 0);
+
+// ── owner-editable rule ─────────────────────────────────────────────────────
+export const POINTS_RULE_LIMITS = {
+  earnSatangPerPoint: { min: 100, max: 1_000_000 }, // THB 1 … THB 10,000 per point
+  redeemSatangPerPoint: { min: 1, max: 10_000 }, // THB 0.01 … THB 100 per point
+  maxRedeemBps: { min: 0, max: 10_000 },
+} as const;
+
+const inRange = (v: unknown, r: { min: number; max: number }): v is number =>
+  typeof v === 'number' && Number.isSafeInteger(v) && v >= r.min && v <= r.max;
+
+/** Lenient: any field that is missing or out of range falls back to the default (a bad row never stops a sale). */
+export function parsePointsRule(raw: unknown): PointsRule {
+  const o = (raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}) as Record<
+    string,
+    unknown
+  >;
+  return {
+    earnSatangPerPoint: inRange(o.earnSatangPerPoint, POINTS_RULE_LIMITS.earnSatangPerPoint)
+      ? o.earnSatangPerPoint
+      : DEFAULT_POINTS_RULE.earnSatangPerPoint,
+    redeemSatangPerPoint: inRange(o.redeemSatangPerPoint, POINTS_RULE_LIMITS.redeemSatangPerPoint)
+      ? o.redeemSatangPerPoint
+      : DEFAULT_POINTS_RULE.redeemSatangPerPoint,
+    maxRedeemBps: inRange(o.maxRedeemBps, POINTS_RULE_LIMITS.maxRedeemBps)
+      ? o.maxRedeemBps
+      : DEFAULT_POINTS_RULE.maxRedeemBps,
+    creditEarnsPoints:
+      typeof o.creditEarnsPoints === 'boolean'
+        ? o.creditEarnsPoints
+        : DEFAULT_POINTS_RULE.creditEarnsPoints,
+  };
+}
+
+/** Strict check for the settings form: returns the field names that are out of range. */
+export function pointsRuleProblems(rule: PointsRule): (keyof PointsRule)[] {
+  const bad: (keyof PointsRule)[] = [];
+  if (!inRange(rule.earnSatangPerPoint, POINTS_RULE_LIMITS.earnSatangPerPoint))
+    bad.push('earnSatangPerPoint');
+  if (!inRange(rule.redeemSatangPerPoint, POINTS_RULE_LIMITS.redeemSatangPerPoint))
+    bad.push('redeemSatangPerPoint');
+  if (!inRange(rule.maxRedeemBps, POINTS_RULE_LIMITS.maxRedeemBps)) bad.push('maxRedeemBps');
+  return bad;
+}
+
+/** Store only what differs from the default. */
+export function pointsRuleToColumn(rule: PointsRule): Record<string, number | boolean> {
+  const out: Record<string, number | boolean> = {};
+  (Object.keys(DEFAULT_POINTS_RULE) as (keyof PointsRule)[]).forEach((k) => {
+    if (rule[k] !== DEFAULT_POINTS_RULE[k]) out[k] = rule[k];
+  });
+  return out;
+}

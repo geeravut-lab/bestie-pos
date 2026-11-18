@@ -2,6 +2,14 @@ import { readServerEnv } from './env.js';
 import { createSupabaseSsoAdmin } from './sso-admin.js';
 import { SsoError, exchangeTicket } from './sso.js';
 
+/** Exchange endpoint: explicit AIVORA_HUB_EXCHANGE_URL, else derived from the hub base AIVORA_HUB_URL, else the default hub. */
+export function hubExchangeUrl(env: Record<string, string | undefined>): string {
+  const explicit = env.AIVORA_HUB_EXCHANGE_URL?.trim();
+  if (explicit) return explicit;
+  const base = env.AIVORA_HUB_URL?.trim().replace(/\/+$/, '');
+  return `${base || 'https://aivora-lc.netlify.app'}/api/public/sso/exchange`;
+}
+
 const JSON_HEADERS = {
   'Content-Type': 'application/json',
   'Cache-Control': 'no-store',

@@ -912,3 +912,39 @@ a.nav-card[aria-busy='true'] {
   user-select: all;
   text-align: center;
 }
+
+/* ── billing settings ────────────────────────────────────────────────────── */
+.radio-group {
+  display: grid;
+  gap: 0.1rem;
+}
+.check-row input[type='radio'] {
+  width: 1.3rem;
+  height: 1.3rem;
+  accent-color: var(--bp-primary);
+  flex: none;
+}
+.preview-box {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-radius: var(--bp-radius-control);
+  background: var(--bp-sky);
+}
+.preview-list {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+}
+.preview-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.preview-list dt {
+  color: var(--bp-muted);
+}
+.preview-list dd {
+  margin: 0;
+  font-weight: 800;
+}

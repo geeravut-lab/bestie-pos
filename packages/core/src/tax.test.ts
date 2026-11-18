@@ -128,3 +128,67 @@ describe('computeBill — invariants and validation', () => {
     expect(() => computeBill({ ...ok, vatBps: -1, lines: [] })).toThrow();
   });
 });
+
+describe('computeBill — owner-selectable accounting options', () => {
+  const lines = [line(100, 2, 20), line(50)]; // subtotal 250, after line discount 230
+  const base = {
+    lines,
+    billDiscount: { type: 'percent' as const, bps: 1000 },
+    priceMode: 'exclusive' as const,
+    vatBps: 700,
+    serviceChargeBps: 1000,
+  };
+
+  it('default = service charge on the discounted subtotal and part of the VAT base', () => {
+    const b = computeBill(base); // discounted 207 → service 20.70 → base 227.70 → VAT 15.94
+    expect(b.discountedSubtotal).toBe(baht(207));
+    expect(b.serviceCharge).toBe(2070);
+    expect(b.vat).toBe(1594);
+    expect(computeBill({ ...base, options: {} })).toEqual(b);
+  });
+
+  it('service charge not taxable: VAT only on the goods', () => {
+    const b = computeBill({ ...base, options: { serviceChargeVat: 'not_taxable' } });
+    expect(b.serviceCharge).toBe(2070);
+    expect(b.vat).toBe(1449); // 207 × 7 %
+    expect(b.total).toBe(b.discountedSubtotal + b.serviceCharge + b.vat);
+  });
+
+  it('service charge on the FULL subtotal (before discounts)', () => {
+    const b = computeBill({ ...base, options: { serviceChargeBase: 'before_discounts' } });
+    expect(b.serviceCharge).toBe(baht(25)); // 10 % of 250
+    expect(b.discountedSubtotal).toBe(baht(207));
+  });
+
+  it('VAT-inclusive prices with a non-taxable service charge extract VAT from the goods only', () => {
+    const b = computeBill({
+      lines: [line(107)],
+      priceMode: 'inclusive',
+      vatBps: 700,
+      serviceChargeBps: 1000,
+      options: { serviceChargeVat: 'not_taxable' },
+    });
+    expect(b.serviceCharge).toBe(1070);
+    expect(b.vat).toBe(700); // VAT contained in the 107 of goods
+    expect(b.total).toBe(baht(107) + 1070);
+    expect(b.netBeforeVat + b.vat).toBe(b.total);
+  });
+
+  it('every combination keeps the invariants', () => {
+    for (const serviceChargeVat of ['taxable', 'not_taxable'] as const)
+      for (const serviceChargeBase of ['after_discounts', 'before_discounts'] as const)
+        for (const priceMode of ['inclusive', 'exclusive'] as const) {
+          const b = computeBill({
+            ...base,
+            priceMode,
+            options: { serviceChargeVat, serviceChargeBase },
+          });
+          const goodsAndService = b.discountedSubtotal + b.serviceCharge;
+          expect(b.total).toBe(
+            priceMode === 'inclusive' ? goodsAndService : goodsAndService + b.vat,
+          );
+          expect(b.netBeforeVat + b.vat).toBe(b.total);
+          expect(b.vat).toBeGreaterThanOrEqual(0);
+        }
+  });
+});

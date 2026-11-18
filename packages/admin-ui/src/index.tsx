@@ -1,4 +1,5 @@
 export { AuditPage } from './AuditPage';
+export { BillingPage } from './BillingPage';
 export { BrandingPage } from './BrandingPage';
 export { AiPromptsPage, AiSettingsPage } from './AiPages';
 export { useRemote } from './useRemote';
@@ -6,6 +7,7 @@ import type { ReactNode } from 'react';
 import type { PageContext } from '@bestie/auth';
 import { AuditPage } from './AuditPage';
 import { AiPromptsPage, AiSettingsPage } from './AiPages';
+import { BillingPage } from './BillingPage';
 import { BrandingPage } from './BrandingPage';
 
 /** Back-office pages by path. Mounted by apps/pos and apps/admin through `AuthApp pages={adminPages}`. */
@@ -18,5 +20,6 @@ export function adminPages(ctx: PageContext): ReactNode | null {
     return <AiSettingsPage ctx={ctx} onNavigate={ctx.navigate} />;
   if (ctx.path === '/admin/ai/prompts')
     return <AiPromptsPage ctx={ctx} onNavigate={ctx.navigate} />;
+  if (ctx.path === '/settings/billing') return <BillingPage ctx={ctx} />;
   return null;
 }

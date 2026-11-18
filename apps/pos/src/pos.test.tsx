@@ -163,10 +163,27 @@ describe('<OrdersPage>', () => {
 
   it('lists what is open, with table name or channel and the total', async () => {
     bindTablet();
-    await seed({}, 2);
+    const o = await seed({}, 2);
+    await saveOrder(null, { ...o, lines: o.lines.map((l) => ({ ...l, createdBy: 'staff-1' })) });
     mountEn(<OrdersPage ctx={pageCtx(posClient(baseTables()), { path: '/orders' })} mode="list" />);
     const row = await screen.findByText('A001');
     expect(row.closest('button')!.textContent).toContain('Table T1');
+    expect(row.closest('button')!.textContent).not.toContain('Guest order'); // lines typed by staff carry their name
+  });
+
+  it('marks a bill that has lines a guest ordered from the table QR and nobody has sent yet', async () => {
+    bindTablet();
+    const o = await seed({}, 1);
+    const guest = {
+      ...o.lines[0]!,
+      id: 'g1',
+      createdBy: null,
+      status: 'new' as const,
+    };
+    await saveOrder(null, { ...o, lines: [...o.lines, guest] });
+    mountEn(<OrdersPage ctx={pageCtx(posClient(baseTables()), { path: '/orders' })} mode="list" />);
+    const row = await screen.findByText('A001');
+    expect(row.closest('button')!.textContent).toContain('Guest order');
   });
 });
 

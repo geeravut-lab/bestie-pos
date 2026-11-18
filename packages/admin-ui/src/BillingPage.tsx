@@ -35,6 +35,7 @@ type StoreRow = {
   rounding: unknown;
   bill_options: unknown;
   shift_required?: boolean;
+  qr_auto_send?: boolean;
 };
 
 const tx = (t: Dict, key: string, fallback = key): string =>
@@ -58,7 +59,7 @@ export function BillingPage({ ctx }: { ctx: PageContext }) {
       ctx.client
         .from('stores')
         .select(
-          'id, name, vat_registered, vat_bps, service_charge_bps, price_mode, rounding, bill_options, shift_required',
+          'id, name, vat_registered, vat_bps, service_charge_bps, price_mode, rounding, bill_options, shift_required, qr_auto_send',
         )
         .eq('org_id', ctx.orgId)
         .is('deleted_at', null)
@@ -114,6 +115,7 @@ function StoreBilling({
   const store = stores.find((s) => s.id === storeId) ?? stores[0]!;
   const [vatRegistered, setVatRegistered] = useState(store.vat_registered);
   const [shiftRequired, setShiftRequired] = useState(store.shift_required === true);
+  const [qrAutoSend, setQrAutoSend] = useState(store.qr_auto_send === true);
   const [vat, setVat] = useState(pct(store.vat_bps || 700));
   const [service, setService] = useState(pct(store.service_charge_bps));
   const [priceMode, setPriceMode] = useState(store.price_mode);
@@ -133,6 +135,7 @@ function StoreBilling({
     setPriceMode(s.price_mode);
     setOpts(parseBillOptions(s.bill_options));
     setShiftRequired(s.shift_required === true);
+    setQrAutoSend(s.qr_auto_send === true);
     setCashRule(parseRoundingConfig(s.rounding).cash ?? 'none');
     setSaved(false);
     setError(null);
@@ -171,6 +174,7 @@ function StoreBilling({
         price_mode: priceMode,
         bill_options: billOptionsToColumn(opts),
         shift_required: shiftRequired,
+        qr_auto_send: qrAutoSend,
         rounding: roundingToColumn(rounding),
       })
       .eq('id', store.id)
@@ -255,6 +259,19 @@ function StoreBilling({
           }}
         />
         <span className="switch-text">{t.billingShiftRequired}</span>
+      </label>
+      <label className="switch-row">
+        <input
+          type="checkbox"
+          role="switch"
+          checked={qrAutoSend}
+          disabled={!canEdit}
+          onChange={(e) => {
+            setQrAutoSend(e.target.checked);
+            setSaved(false);
+          }}
+        />
+        <span className="switch-text">{t.billingQrAutoSend}</span>
       </label>
       <div className="filters">
         <div className="form-row">

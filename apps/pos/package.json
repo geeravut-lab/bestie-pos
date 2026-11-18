@@ -15,10 +15,12 @@
     "@bestie/admin-ui": "workspace:*",
     "@bestie/auth": "workspace:*",
     "@bestie/core": "workspace:*",
+    "@bestie/guest-ui": "workspace:*",
     "@bestie/i18n": "workspace:*",
     "@bestie/offline": "workspace:*",
     "@bestie/supabase": "workspace:*",
     "@bestie/ui": "workspace:*",
+    "qrcode-generator": "2.0.4",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },

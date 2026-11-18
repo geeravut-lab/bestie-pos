@@ -6,6 +6,7 @@ import type { ErrorKey } from '@bestie/i18n';
 import { AsyncButton, Spinner } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
+import { CreditPanel } from './CreditPanel';
 import { CustomerPicker } from './CustomerPicker';
 import { useRemote } from './useRemote';
 
@@ -120,6 +121,7 @@ function CustomerDetail({ ctx, card }: { ctx: PageContext; card: CustomerCard })
           </ul>
         </>
       )}
+      <CreditPanel ctx={ctx} card={card} />
       {canAdjust ? (
         <form className="auth-form" onSubmit={(e) => e.preventDefault()}>
           <h3>{t.custAdjustTitle}</h3>

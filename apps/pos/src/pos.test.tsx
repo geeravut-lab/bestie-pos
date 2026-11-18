@@ -97,6 +97,25 @@ describe('<FloorPlanPage>', () => {
     expect(await listOpenOrders(STORE)).toHaveLength(1);
   });
 
+  it('a table with several bills (after a split) says how many', async () => {
+    bindTablet();
+    await seed({}, 1);
+    await saveOrder(null, {
+      ...newOrder({
+        id: '33333333-3333-4333-8333-333333333333',
+        orgId: ORG,
+        storeId: STORE,
+        number: 'A002',
+        channel: 'dine-in',
+        tableId: 't1',
+        now: Date.now(),
+      }),
+    });
+    mountEn(<FloorPlanPage ctx={pageCtx(posClient(baseTables()))} />);
+    const card = await screen.findByRole('button', { name: /T1/ });
+    await waitFor(() => expect(card.textContent).toContain('2 bills'));
+  });
+
   it('a tablet that is not set up as a device cannot open bills (numbers would clash) and says what to do', async () => {
     mountEn(<FloorPlanPage ctx={pageCtx(posClient(baseTables()))} />);
     await screen.findByRole('heading', { name: 'Terrace' });

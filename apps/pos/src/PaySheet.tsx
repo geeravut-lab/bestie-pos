@@ -20,6 +20,8 @@ export function PaySheet({
   total,
   rule,
   online,
+  shiftBlocked = false,
+  onOpenShift,
   onPay,
   onClose,
 }: {
@@ -27,6 +29,9 @@ export function PaySheet({
   total: Satang;
   rule: RoundingRule;
   online: OnlinePay;
+  /** The shop wants an open cash shift before any payment, and there is none on this device. */
+  shiftBlocked?: boolean;
+  onOpenShift?: () => void;
   onPay: (tendered: Satang) => Promise<ErrorKey | null>;
   onClose: () => void;
 }) {
@@ -56,31 +61,45 @@ export function PaySheet({
         onClick={(e) => e.stopPropagation()}
       >
         <h2>{t.payTitle}</h2>
-        <div className="tabs" role="tablist" aria-label={t.payTitle}>
-          {tabs.map((x) => (
-            <button
-              key={x.id}
-              type="button"
-              role="tab"
-              className="tab"
-              aria-selected={tab === x.id}
-              onClick={() => setTab(x.id)}
-            >
-              {x.label}
-            </button>
-          ))}
-        </div>
-        {tab === 'cash' ? (
-          <CashPane total={total} rule={rule} locale={locale} onPay={onPay} onClose={onClose} />
+        {shiftBlocked ? (
+          <>
+            <Notice kind="info">{t.shiftOpenFirst}</Notice>
+            <div className="actions">
+              <AsyncButton onClick={() => onOpenShift?.()}>{t.shiftGo}</AsyncButton>
+              <button type="button" className="btn btn-secondary" onClick={onClose}>
+                {t.menuCancel}
+              </button>
+            </div>
+          </>
         ) : (
-          <OnlinePane
-            key={tab}
-            tender={tab}
-            total={total}
-            locale={locale}
-            online={online}
-            onClose={onClose}
-          />
+          <>
+            <div className="tabs" role="tablist" aria-label={t.payTitle}>
+              {tabs.map((x) => (
+                <button
+                  key={x.id}
+                  type="button"
+                  role="tab"
+                  className="tab"
+                  aria-selected={tab === x.id}
+                  onClick={() => setTab(x.id)}
+                >
+                  {x.label}
+                </button>
+              ))}
+            </div>
+            {tab === 'cash' ? (
+              <CashPane total={total} rule={rule} locale={locale} onPay={onPay} onClose={onClose} />
+            ) : (
+              <OnlinePane
+                key={tab}
+                tender={tab}
+                total={total}
+                locale={locale}
+                online={online}
+                onClose={onClose}
+              />
+            )}
+          </>
         )}
       </div>
     </div>

@@ -4,6 +4,7 @@ import {
   formatTHB,
   hasUnsent,
   isOrderOpen,
+  setSeat,
   liveLines,
   localizedName,
   moveToTable,
@@ -22,10 +23,11 @@ import type { Dict, ErrorKey } from '@bestie/i18n';
 import { AsyncButton } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
-import { useOnline, useOpenOrders, useOrder, useOutboxCounts } from '@bestie/offline';
+import { useOnline, useOpenOrders, useOpenShift, useOrder, useOutboxCounts } from '@bestie/offline';
 import { billConfigFor, usePosData } from './posData';
 import type { PosTable } from './posData';
-import { changeOrder, payCash } from './orderActions';
+import { changeOrder, mergeBills, payCash, splitBill } from './orderActions';
+import { SplitSheet } from './SplitSheet';
 import { LoadFailed, Loading, Page } from './PosBits';
 import { ModifierSheet } from './ModifierSheet';
 import { PaySheet } from './PaySheet';
@@ -79,7 +81,10 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
   const [cat, setCat] = useState('');
   const [picking, setPicking] = useState<{ item: Item; groups: OrderGroupInput[] } | null>(null);
   const [paying, setPaying] = useState(false);
+  const [splitting, setSplitting] = useState(false);
+  const [mergeInto, setMergeInto] = useState('');
   const { binding } = usePosStore(ctx);
+  const shift = useOpenShift(binding?.deviceId ?? null);
   const [error, setError] = useState<ErrorKey | null>(null);
 
   if (order === undefined || (order && (openOrders === undefined || remote.status === 'loading')))
@@ -108,6 +113,14 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
   const freeTables: PosTable[] = tables.filter(
     (x) => !takenTables.has(x.id) && x.id !== order.tableId,
   );
+
+  const siblings = openOrders.filter(
+    (o) => o.id !== order.id && o.tableId !== null && o.tableId === order.tableId,
+  );
+  const mergeCandidates = openOrders.filter(
+    (o) => o.id !== order.id && o.storeId === order.storeId,
+  );
+  const lineCount = liveLines(order).reduce((a, l) => a + l.quantity, 0);
 
   const apply = async (fn: (o: OrderDoc) => OrderDoc) => {
     setError(null);
@@ -143,6 +156,20 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
         {tableName ? fmt(t.orderAtTable, { name: tableName }) : channelText(t, order.channel)}
         {pending > 0 ? ` · ${t.orderWaitingSync}` : ''}
       </p>
+      {siblings.length > 0 ? (
+        <div className="chips" role="group" aria-label={t.splitSiblings}>
+          {siblings.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              className="chip"
+              onClick={() => ctx.navigate(`/order/${o.id}`)}
+            >
+              {o.number}
+            </button>
+          ))}
+        </div>
+      ) : null}
       {stale ? <Notice kind="info">{t.orderStale}</Notice> : null}
       {!open ? (
         <Notice kind="info">{t.orderClosed}</Notice>
@@ -211,6 +238,7 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
                   canEdit={canEdit}
                   canVoid={canVoid}
                   apply={apply}
+                  seatsOn={canEdit}
                 />
               ))}
           </ul>
@@ -262,6 +290,47 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
               >
                 {hasUnsent(order) ? t.orderSend : t.orderSendNothing}
               </AsyncButton>
+              {lineCount >= 2 ? (
+                <AsyncButton variant="secondary" onClick={() => setSplitting(true)}>
+                  {t.splitButton}
+                </AsyncButton>
+              ) : null}
+              {mergeCandidates.length > 0 && lineCount >= 1 ? (
+                <div className="form-row">
+                  <label className="label" htmlFor="order-merge">
+                    {t.mergeTitle}
+                  </label>
+                  <select
+                    id="order-merge"
+                    className="field"
+                    value={mergeInto}
+                    onChange={(e) => setMergeInto(e.target.value)}
+                  >
+                    <option value="">—</option>
+                    {mergeCandidates.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.number}
+                        {o.tableId
+                          ? ` · ${tables.find((x) => x.id === o.tableId)?.name ?? ''}`
+                          : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {mergeInto ? <p className="muted">{t.mergeNote}</p> : null}
+                  {mergeInto ? (
+                    <AsyncButton
+                      variant="danger"
+                      onClick={async () => {
+                        const err = await mergeBills({ sourceId: order.id, targetId: mergeInto });
+                        if (err) return setError(err);
+                        ctx.navigate(`/order/${mergeInto}`);
+                      }}
+                    >
+                      {t.mergeConfirm}
+                    </AsyncButton>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="filters">
                 {order.channel === 'dine-in' ? (
                   <div className="form-row">
@@ -309,8 +378,23 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
         </section>
       </div>
 
+      {splitting && binding ? (
+        <SplitSheet
+          order={order}
+          onClose={() => setSplitting(false)}
+          onSplit={async (picks) => {
+            const r = await splitBill({ orderId: order.id, picks, binding, staffId: ctx.staffId });
+            if ('error' in r) return r.error;
+            setSplitting(false);
+            ctx.navigate(`/order/${r.id}`);
+            return null;
+          }}
+        />
+      ) : null}
       {paying && binding ? (
         <PaySheet
+          shiftBlocked={config.shiftRequired && shift === null}
+          onOpenShift={() => ctx.navigate('/shift')}
           total={bill.total}
           rule={config.cashRounding}
           online={onlinePay(
@@ -377,12 +461,14 @@ function LineRow({
   canEdit,
   canVoid,
   apply,
+  seatsOn,
 }: {
   line: LineDoc;
   locale: 'th-TH' | 'en-GB';
   canEdit: boolean;
   canVoid: boolean;
   apply: (fn: (o: OrderDoc) => OrderDoc) => Promise<void>;
+  seatsOn: boolean;
 }) {
   const { t, lang } = useI18n();
   const name = localizedName(line.name, lang);
@@ -406,6 +492,29 @@ function LineRow({
           {formatTHB(line.unitPrice * line.quantity, locale)}
         </span>
       </div>
+      {seatsOn ? (
+        <div className="form-row">
+          <label className="label" htmlFor={`seat-${line.id}`}>
+            {fmt(t.orderSeat, { name })}
+          </label>
+          <select
+            id={`seat-${line.id}`}
+            className="field"
+            value={line.seat ?? ''}
+            onChange={(e) => {
+              const v = e.target.value; // read NOW (the select is controlled)
+              void apply((o) => setSeat(o, line.id, v === '' ? null : Number(v)));
+            }}
+          >
+            <option value="">{t.orderSeatNone}</option>
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
       {line.modifiers.length > 0 ? (
         <p className="muted">{line.modifiers.map((m) => localizedName(m.name, lang)).join(', ')}</p>
       ) : null}

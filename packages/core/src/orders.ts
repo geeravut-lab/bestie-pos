@@ -58,7 +58,7 @@ export const MAX_QTY = 99;
 
 export class OrderError extends Error {
   constructor(
-    readonly code: 'closed' | 'selection' | 'quantity' | 'not_found' | 'sent_locked',
+    readonly code: 'closed' | 'selection' | 'quantity' | 'not_found' | 'sent_locked' | 'split',
     message?: string,
   ) {
     super(message ?? code);
@@ -451,8 +451,8 @@ export function diffOrder(prev: OrderDoc | null, next: OrderDoc): OutboxOp[] {
     if (old.status === 'new') {
       if (old.quantity !== l.quantity) values.quantity = l.quantity;
       if (old.note !== l.note) values.note = l.note;
-      if (old.seat !== l.seat) values.seat = l.seat;
     }
+    if (old.seat !== l.seat) values.seat = l.seat; // who a line is for can be set at any time
     if (old.status !== l.status) values.status = l.status;
     if (old.sentAt !== l.sentAt) values.sent_at = l.sentAt;
     if (old.voidReason !== l.voidReason) values.void_reason = l.voidReason;

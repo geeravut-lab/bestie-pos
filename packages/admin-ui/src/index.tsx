@@ -2,6 +2,7 @@ export { AuditPage } from './AuditPage';
 export { BillingPage } from './BillingPage';
 export { BrandingPage } from './BrandingPage';
 export { DevicesPage } from './DevicesPage';
+export { MenuPage } from './MenuPage';
 export { ModulesPage } from './ModulesPage';
 export { StaffPage } from './StaffPage';
 export { AiPromptsPage, AiSettingsPage } from './AiPages';
@@ -13,6 +14,7 @@ import { AiPromptsPage, AiSettingsPage } from './AiPages';
 import { BillingPage } from './BillingPage';
 import { BrandingPage } from './BrandingPage';
 import { DevicesPage } from './DevicesPage';
+import { MenuPage } from './MenuPage';
 import { ModulesPage } from './ModulesPage';
 import { StaffPage } from './StaffPage';
 
@@ -27,6 +29,7 @@ export function adminPages(ctx: PageContext): ReactNode | null {
   if (ctx.path === '/admin/ai/prompts')
     return <AiPromptsPage ctx={ctx} onNavigate={ctx.navigate} />;
   if (ctx.path === '/settings/billing') return <BillingPage ctx={ctx} />;
+  if (ctx.path === '/menu') return <MenuPage ctx={ctx} />;
   if (ctx.path === '/modules') return <ModulesPage ctx={ctx} />;
   if (ctx.path === '/staff') return <StaffPage ctx={ctx} />;
   if (ctx.path === '/devices') return <DevicesPage ctx={ctx} />;

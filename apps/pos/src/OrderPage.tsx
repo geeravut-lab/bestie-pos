@@ -30,6 +30,7 @@ import { changeOrder, mergeBills, payCash, splitBill } from './orderActions';
 import { SplitSheet } from './SplitSheet';
 import { LoadFailed, Loading, Page } from './PosBits';
 import { ModifierSheet } from './ModifierSheet';
+import { OrderCustomer } from './OrderCustomer';
 import { PaySheet } from './PaySheet';
 import {
   cancelOnlinePayment,
@@ -156,6 +157,7 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
         {tableName ? fmt(t.orderAtTable, { name: tableName }) : channelText(t, order.channel)}
         {pending > 0 ? ` · ${t.orderWaitingSync}` : ''}
       </p>
+      <OrderCustomer ctx={ctx} orderId={order.id} open={open} online={netUp} />
       {siblings.length > 0 ? (
         <div className="chips" role="group" aria-label={t.splitSiblings}>
           {siblings.map((o) => (

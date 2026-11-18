@@ -50,11 +50,11 @@ Work top to bottom. One PR per task. Tick when merged.
 - [x] Pay at table via PromptPay QR: the guest page shows the bill total (computed by the server with the till's own billing code), starts a Stripe PromptPay QR through the same payment-attempt machinery, polls its status and shows "paid" + the online receipt number when the signed webhook closes the bill. The owner picks which device's A+ receipt series / POS ID guest payments use (Billing & points; off by default); lines still waiting for staff confirmation block payment; ordering is locked while a QR is waiting. **Needs a Stripe test-mode run (docs/ENVIRONMENT.md §6).**
 
 ## 6. Customers, Credit & Points
-- [ ] Customer lookup by phone / member QR
+- [x] Customer lookup by phone / member code / name (`/customers`, and **Add a customer to this bill** on the order screen): create a member, see the Bestie Points balance and history. _(A scanner that types the member code works today; a camera QR scanner is later.)_
 - [ ] Tender framework: cash, PromptPay, gateway, Credit, Points, split tender; per-store tender toggles
 - [ ] Payment gateway adapter (card / e-wallets) behind an interface so providers can be swapped
 - [ ] Bestie Credit ledger (double-entry, scoped to issuerEntityId): top-up by cash / PromptPay / gateway, spend, void, liability report
-- [ ] Bestie Points ledger: earn on paid bill, redeem as discount (never purchasable)
+- [ ] Bestie Points ledger: ~~earn on paid bill~~ **done** (append-only `points_ledger`, earned once per bill from baht spend only, manager corrections with a reason, audited), redeem as discount — _next PR_
 - [ ] Module stub `credit.topup.crypto` (disabled; blocked unless org.legalSignOff.cryptoTopup) — build in Phase 3
 
 ## 7. Reports

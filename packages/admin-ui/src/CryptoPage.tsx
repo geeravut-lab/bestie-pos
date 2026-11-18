@@ -403,8 +403,8 @@ function ReviewQueue({
                   <option value="" />
                   {cands.map((r) => (
                     <option key={r.id} value={r.id}>
-                      {formatUnits(r.amount_units)} USDT · {(r.thb_amount / 100).toLocaleString()}{' '}
-                      THB · {r.status}
+                      {formatUnits(r.amount_units)} USDT ·{' '}
+                      {formatTHB(r.thb_amount, lang === 'th' ? 'th-TH' : 'en-GB')} · {r.status}
                     </option>
                   ))}
                 </select>

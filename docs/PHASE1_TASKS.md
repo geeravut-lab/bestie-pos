@@ -61,8 +61,8 @@ Work top to bottom. One PR per task. Tick when merged.
 - [x] Reports (`/reports`): daily sales, by item, by hour, payment mix, staff, by shop; one shop or all shops, date presets, CSV export (audited as `export.report`). Numbers come from one database function `sales_report()` (paid bills only, Bangkok business day), needs `report.view`.
 
 ## 8. Pilot readiness
-- [ ] Seed script with demo restaurant + cafe
-- [ ] Onboarding checklist for pilot shops (hardware, printer, POS ID registration)
+- [x] Demo data: `seed_demo_menu(store)` (empty restaurant → 4 categories, 13 dishes, option groups, 10 tables; empty cafe → 3 categories, 10 items, milk / sweetness / shot options) with a **Load demo menu** button on `/menu`; needs `menu.edit`, never touches a shop that has a menu, audited
+- [x] Onboarding checklist for pilot shops: docs/PILOT-CHECKLIST.md (hardware, accounts, billing, menu, staff and PINs, devices, POS ID, Stripe test, dry run, go-live)
 
 ## 9. UX shell, role home & branding  _(design: docs/UX-DESIGN.md)_
 - [x] App shell: sidebar (desktop) / rail (tablet) / bottom bar + "More" sheet (phone), one nav list, safe-area, back links, Playwright 390×844 + 1280×800 + axe

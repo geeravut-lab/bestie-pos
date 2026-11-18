@@ -320,3 +320,38 @@ describe('<MenuPage> add-on options', () => {
     expect(db.writes[0]!.values).toHaveProperty('deleted_at');
   });
 });
+
+describe('<MenuPage> demo menu', () => {
+  const emptyShop = (profile: string) => ({
+    ...tables(),
+    stores: [{ id: 's1', name: 'Acme', profile }],
+    menu_categories: [],
+    menu_items: [],
+    modifier_groups: [],
+    modifier_options: [],
+  });
+
+  it('offers the demo menu on an empty restaurant and calls the server function for that shop', async () => {
+    const db = fakeDb(emptyShop('restaurant'), {
+      rpc: { seed_demo_menu: { data: { items: 13 } } },
+    });
+    mount(ctx(db.client));
+    await userEvent.click(await screen.findByRole('button', { name: 'Load demo menu' }));
+    await waitFor(() => expect(db.rpcs).toHaveLength(1));
+    expect(db.rpcs[0]).toEqual({ fn: 'seed_demo_menu', args: { p_store: 's1' } });
+  });
+
+  it('is not offered when the shop has a menu, no edit right, or another profile', async () => {
+    mount(ctx(fakeDb(tables()).client));
+    await ready();
+    expect(screen.queryByRole('button', { name: 'Load demo menu' })).toBeNull();
+    cleanup();
+    mount(ctx(fakeDb(emptyShop('restaurant')).client, { isOwner: false, permissions: [] }));
+    await screen.findByRole('heading', { name: 'Menu & prices' });
+    expect(screen.queryByRole('button', { name: 'Load demo menu' })).toBeNull();
+    cleanup();
+    mount(ctx(fakeDb(emptyShop('salon')).client));
+    await screen.findByRole('heading', { name: 'Menu & prices' });
+    expect(screen.queryByRole('button', { name: 'Load demo menu' })).toBeNull();
+  });
+});

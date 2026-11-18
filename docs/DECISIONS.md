@@ -70,6 +70,8 @@
 
 - 2026-11-18 — **Reports**: every number comes from one read-only database function `sales_report(p jsonb)` over the frozen history (paid orders joined to their receipts, confirmed payments, non-cancelled lines), by Bangkok business date, for one shop or every shop the person may open; it needs `report.view`, refuses ranges over 366 days and returns one jsonb document, so the screen, the CSV files and (later) "Ask my shop" read the same figures. Void bills and cancelled lines never count. Items are grouped by Thai name. CSV amounts are plain baht decimals (spreadsheet-friendly) with the formula-injection guard; each export writes the critical audit event `export.report`.
 
+- 2026-11-18 — **Demo data is a server function, not a seed file**: `seed_demo_menu(store)` fills an EMPTY restaurant / cafe shop of the caller (needs `menu.edit`; refuses any shop that already has categories or items), so a demo or pilot shop starts from realistic Thai / English data and the same guards as hand-typed rows apply. Nothing is ever overwritten. Pilot onboarding steps live in docs/PILOT-CHECKLIST.md.
+
 ## Proposed (confirm)
 - Live sync = Supabase Realtime "ping" topics + refetch, per docs/LIVE-SYNC-KNOWLEDGE.md (adapted from Next.js `router.refresh()` to React Query/refetch).
 - Vercel layout: ONE Vercel project rooted at `apps/pos` serves `bestie-pos.vercel.app` (login, role home, POS, SSO callback). `apps/admin` and `apps/guest` get their own Vercel projects/URLs later (or are folded in as routes) — see Open questions.

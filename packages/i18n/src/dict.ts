@@ -569,6 +569,12 @@ const th = {
   menuIntro:
     'จัดหมวด เมนู ราคาตามช่องทาง และตัวเลือกเสริม แก้แล้วหน้าจอขายของทุกเครื่องในร้านอัปเดตเอง บิลเก่าไม่ถูกแก้เพราะเก็บชื่อและราคาตอนที่ขายไว้แล้ว',
   menuStore: 'ร้าน',
+  menuDemoTitle: 'เริ่มจากเมนูตัวอย่าง',
+  menuDemoRestaurant:
+    'ยังไม่มีเมนู โหลดเมนูร้านอาหารตัวอย่าง (4 หมวด 13 เมนู ตัวเลือกเพิ่มเติม และผังโต๊ะ 10 โต๊ะ) แล้วแก้ราคาเป็นของร้านได้ทันที',
+  menuDemoCafe:
+    'ยังไม่มีเมนู โหลดเมนูคาเฟ่ตัวอย่าง (3 หมวด 10 เมนู ตัวเลือกนม ความหวาน เพิ่มช็อต) แล้วแก้ราคาเป็นของร้านได้ทันที',
+  menuDemoLoad: 'โหลดเมนูตัวอย่าง',
   menuReadOnly: 'คุณดูเมนูได้อย่างเดียว ผู้ที่มีสิทธิ์แก้เมนูเป็นผู้แก้ไข',
   menuTabItems: 'เมนู',
   menuTabOptions: 'ตัวเลือกเสริม',
@@ -1405,6 +1411,12 @@ const en = {
   menuIntro:
     'Organise categories, items, prices per channel and add-on options. Every till in the shop updates by itself. Old bills are never changed because they keep the name and price at the time of sale.',
   menuStore: 'Shop',
+  menuDemoTitle: 'Start from a demo menu',
+  menuDemoRestaurant:
+    'No menu yet. Load a sample restaurant menu (4 categories, 13 dishes, add-on options and a 10-table floor plan), then change the prices to your own.',
+  menuDemoCafe:
+    'No menu yet. Load a sample cafe menu (3 categories, 10 items, milk / sweetness / extra-shot options), then change the prices to your own.',
+  menuDemoLoad: 'Load demo menu',
   menuReadOnly: 'View only. People with the menu-edit permission change the menu.',
   menuTabItems: 'Items',
   menuTabOptions: 'Add-on options',

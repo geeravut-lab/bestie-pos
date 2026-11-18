@@ -6,6 +6,8 @@ export type DeviceBinding = {
   storeId: string;
   orgId: string;
   name: string;
+  /** 1–2 letters, unique per shop: the prefix of this tablet's order numbers (A001, A002 …). */
+  code: string;
   role: DeviceRole;
   station: 'kitchen' | 'bar' | null;
   posId: string | null;
@@ -22,6 +24,8 @@ const isBinding = (v: unknown): v is DeviceBinding => {
     typeof b.storeId === 'string' &&
     typeof b.orgId === 'string' &&
     typeof b.name === 'string' &&
+    typeof b.code === 'string' &&
+    /^[A-Z]{1,2}$/.test(b.code) &&
     (b.role === 'cashier' || b.role === 'staff' || b.role === 'kds') &&
     (b.station === null || b.station === 'kitchen' || b.station === 'bar') &&
     (b.posId === null || typeof b.posId === 'string')

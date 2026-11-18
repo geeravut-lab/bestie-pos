@@ -23,7 +23,8 @@ function* walk(dir) {
 }
 
 const rel = (f) => relative(ROOT, f).split(sep).join('/');
-const isTest = (r) => /\.(test|spec)\.(ts|tsx)$/.test(r);
+// test files and their shared fixtures (a file named testKit.ts[x] holds fixtures such as Thai menu names)
+const isTest = (r) => /\.(test|spec)\.(ts|tsx)$/.test(r) || /(^|\/)testKit\.(ts|tsx)$/.test(r);
 
 const HEX = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b(?![\w-])/;
 const COLOR_FN = /\b(?:rgb|rgba|hsl|hsla)\(\s*\d/;

@@ -13,6 +13,7 @@ type DeviceRow = {
   id: string;
   store_id: string;
   name: string;
+  code: string | null;
   role: DeviceRole;
   station: KdsStation | null;
   revenue_pos_id: string | null;
@@ -33,7 +34,7 @@ export function DevicesPage({ ctx }: { ctx: PageContext }) {
     const [devices, stores] = await Promise.all([
       ctx.client
         .from('devices')
-        .select('id, store_id, name, role, station, revenue_pos_id, active')
+        .select('id, store_id, name, code, role, station, revenue_pos_id, active')
         .eq('org_id', ctx.orgId)
         .order('created_at'),
       ctx.client
@@ -192,6 +193,7 @@ function DeviceItem({
                           storeId: device.store_id,
                           orgId: ctx.orgId,
                           name: device.name,
+                          code: device.code ?? 'A',
                           role: device.role,
                           station: device.station,
                           posId: device.revenue_pos_id,

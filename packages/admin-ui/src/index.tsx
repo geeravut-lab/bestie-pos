@@ -7,6 +7,8 @@ export { ModulesPage } from './ModulesPage';
 export { StaffPage } from './StaffPage';
 export { AiPromptsPage, AiSettingsPage } from './AiPages';
 export { useRemote } from './useRemote';
+export { loadMenu } from './menuData';
+export type { Cat, Group, Item, Menu, Opt } from './menuData';
 import type { ReactNode } from 'react';
 import type { PageContext } from '@bestie/auth';
 import { AuditPage } from './AuditPage';

@@ -22,6 +22,7 @@ const binding: DeviceBinding = {
   storeId: 's1',
   orgId: 'o1',
   name: 'Counter iPad',
+  code: 'A',
   role: 'cashier',
   station: null,
   posId: null,

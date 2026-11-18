@@ -28,3 +28,4 @@ export { LiveSyncController, isUserBusy } from './liveSync';
 export type { LiveSyncOptions } from './liveSync';
 export { useLiveSync } from './useLiveSync';
 export { useBrand } from './useBrand';
+export { NotificationBell, NotificationsPage } from './Notifications';

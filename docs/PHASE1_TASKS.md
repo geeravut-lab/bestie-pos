@@ -107,8 +107,8 @@ Work top to bottom. One PR per task. Tick when merged.
 ## 14. LINE notifications  _(LINE-ACCOUNT-LINKING, LINE-NOTIFICATIONS, LINE-FLEX-CARD)_
 - [x] LINE OA webhook (signature over the raw body, 20-event cap, rate limit, always 200) + one-time-code account linking (only the HMAC stored, 30 min, one LINE account per user) + "Connect LINE" card on the account page (4 steps, polls every 4 s, test card, disconnect) — **needs the OA credentials in Vercel to go live**
 - [x] Flex bubble builder in Bestie colours (title → ≤ 8 label/value lines → one "Open the app" button), rich `altText`, every field truncated, internal links only, TH/EN by recipient; `notifyLine` pushes with retry key and maps LINE errors
-- [ ] `notify()` writer: in-app inbox + LINE **queue**, dedupe keys, monthly quota with reserve, cron tick + retry table, per-user opt-in — build with the first real notice
-- [ ] First notices: PromptPay paid, order ready, low stock, shift variance, daily summary — need orders/payments (§3, §6)
+- [x] `notify()` writer: one database function `notify_user` (never raises) writes the in-app inbox **and** a LINE queue row (dedupe keys, per-person opt-in: money / orders on, reminders off), `notify_claim` / `notify_report` give the monthly cap with an urgent reserve, 3 tries, 24 h expiry and a 6 h halt when LINE rejects the token; `/api/notify/tick` delivers (**needs a scheduler + the LINE credentials, ENVIRONMENT §8**); bell + `/notifications` inbox + LINE preferences on every app
+- [x] First notices: PromptPay / card paid, a payment that needs review (urgent), order ready for the waiter who opened it, shift closed with a cash difference, daily sales summary. _(Low stock arrives with the stock module.)_
 
 ## 15. AI for customers & Karaoke  _(design: docs/AI-CUSTOMER-ASSISTANT.md, docs/KARAOKE-AI.md — proposal, waiting for the owner)_
 - [ ] Owner confirms the open questions in AI-CUSTOMER-ASSISTANT §7 (who pays for guest AI, therapist sign-off for spa rules, languages, hair photos)

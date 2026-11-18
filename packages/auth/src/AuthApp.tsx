@@ -16,6 +16,7 @@ import {
   SsoCallbackPage,
 } from './components';
 import { AuthProvider, useAuth } from './context';
+import { NotificationBell, NotificationsPage } from './Notifications';
 import { useBrand } from './useBrand';
 import { appRoleFor, pickStore } from './myContext';
 import { effectiveActing, withActing } from './acting';
@@ -175,6 +176,7 @@ function Inner({
       renderPage={({ path, navigate }) => {
         if (!live || !my.data) return null;
         if (path === '/account') return <AccountPage />;
+        if (path === '/notifications') return <NotificationsPage />;
         const ctx = pageContext(path, navigate);
         return ctx ? (pages?.(ctx) ?? null) : null;
       }}
@@ -182,6 +184,7 @@ function Inner({
         live ? (
           <>
             {deviceMode?.headerExtra}
+            <NotificationBell />
             <AccountLink />
           </>
         ) : null

@@ -20,6 +20,8 @@ class OfflineDb extends Dexie {
   cache!: Table<CacheRow, string>;
   kv!: Table<KvRow, string>;
   orders!: Table<OrderRow, string>;
+  /** Numbers that must never go backwards (receipt series). NOT cleared at sign-out. */
+  counters!: Table<{ key: string; value: number }, string>;
   constructor() {
     super('bestie-offline');
     this.version(1).stores({
@@ -33,6 +35,13 @@ class OfflineDb extends Dexie {
       kv: 'key',
       orders: 'id, storeId, status, businessDate, tableId',
     });
+    this.version(3).stores({
+      outbox: 'id, status, createdAt',
+      cache: 'key',
+      kv: 'key',
+      orders: 'id, storeId, status, businessDate, tableId',
+      counters: 'key',
+    });
   }
 }
 
@@ -40,5 +49,11 @@ export const db = new OfflineDb();
 
 /** Test helper: wipe everything (a real device never does this except at sign-out of the whole tablet). */
 export async function resetOfflineDb(): Promise<void> {
-  await Promise.all([db.outbox.clear(), db.cache.clear(), db.kv.clear(), db.orders.clear()]);
+  await Promise.all([
+    db.outbox.clear(),
+    db.cache.clear(),
+    db.kv.clear(),
+    db.orders.clear(),
+    db.counters.clear(),
+  ]);
 }

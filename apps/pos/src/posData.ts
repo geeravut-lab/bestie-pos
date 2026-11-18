@@ -1,16 +1,29 @@
 import { useEffect, useMemo } from 'react';
-import { parseBillOptions } from '@bestie/core';
-import type { BillConfig, Channel } from '@bestie/core';
+import { parseBillOptions, parseRoundingConfig, roundingFor } from '@bestie/core';
+import type { BillConfig, Channel, Lang, RoundingRule } from '@bestie/core';
 import { loadMenu, useRemote } from '@bestie/admin-ui';
 import type { Menu } from '@bestie/admin-ui';
 import { useLiveSync } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
-import { cachedRead, pullOrders, useDeviceBinding, useOnline } from '@bestie/offline';
+import {
+  cachedRead,
+  pullOrders,
+  syncReceiptCounter,
+  useDeviceBinding,
+  useOnline,
+} from '@bestie/offline';
 import type { DeviceBinding } from '@bestie/offline';
 
 export type PosTable = { id: string; name: string; zone: string; seats: number; sort: number };
 export type PosConfig = {
   name: string;
+  /** The legal entity that issues receipts (company name + tax id), and this shop's branch. */
+  sellerName: string;
+  sellerTaxId: string | null;
+  branchCode: string;
+  vatRegistered: boolean;
+  cashRounding: RoundingRule;
+  defaultLang: Lang;
   vatBps: number;
   serviceChargeBps: number;
   priceMode: 'inclusive' | 'exclusive';
@@ -44,13 +57,23 @@ async function loadTables(client: PageContext['client'], storeId: string): Promi
 async function loadConfig(client: PageContext['client'], storeId: string): Promise<PosConfig> {
   const r = await client
     .from('stores')
-    .select('name, vat_registered, vat_bps, service_charge_bps, price_mode, bill_options')
+    .select(
+      'name, vat_registered, vat_bps, service_charge_bps, price_mode, bill_options, rounding, branch_code, default_lang, legal_entities(name, tax_id)',
+    )
     .eq('id', storeId)
     .maybeSingle();
   if (r.error || !r.data) throw new Error('store');
   const s = r.data as unknown as Row;
+  const entity = (Array.isArray(s.legal_entities) ? s.legal_entities[0] : s.legal_entities) as
+    Row | undefined;
   return {
     name: String(s.name ?? ''),
+    sellerName: String(entity?.name ?? s.name ?? ''),
+    sellerTaxId: typeof entity?.tax_id === 'string' ? entity.tax_id : null,
+    branchCode: typeof s.branch_code === 'string' ? s.branch_code : '00000',
+    vatRegistered: s.vat_registered === true,
+    cashRounding: roundingFor('cash', parseRoundingConfig(s.rounding)),
+    defaultLang: s.default_lang === 'en' ? 'en' : 'th',
     vatBps: s.vat_registered === true ? num(s.vat_bps) : 0,
     serviceChargeBps: num(s.service_charge_bps),
     priceMode: s.price_mode === 'exclusive' ? 'exclusive' : 'inclusive',
@@ -119,6 +142,12 @@ export function usePosData(ctx: PageContext, storeId: string | null) {
     refresh();
     await pull();
   });
+  const binding = useDeviceBinding();
+  useEffect(() => {
+    // the receipt series of this tablet must never fall behind what the server already has
+    if (binding && online)
+      void syncReceiptCounter(ctx.client, binding.deviceId, binding.code).catch(() => {});
+  }, [binding, online, ctx.client]);
   useEffect(() => {
     void pull();
     if (!storeId) return;

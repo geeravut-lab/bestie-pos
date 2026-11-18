@@ -27,3 +27,5 @@ export * from './backoffice';
 export * from './menuAdmin';
 export * from './outbox';
 export * from './orders';
+export * from './payments';
+export { receiptFromRows } from './receiptRows';

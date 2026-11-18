@@ -864,3 +864,51 @@ a.nav-card[aria-busy='true'] {
   font-size: 0.8125rem;
   white-space: pre-wrap;
 }
+
+/* ── LINE linking steps ──────────────────────────────────────────────────── */
+.line-steps {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+.line-steps > li {
+  display: grid;
+  gap: 0.5rem;
+  padding-left: 2.75rem;
+  position: relative;
+  counter-increment: step;
+}
+.line-steps > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--bp-sun);
+  color: var(--bp-ink);
+  font-weight: 800;
+}
+.line-step-title {
+  font-weight: 800;
+}
+.line-code {
+  display: block;
+  padding: 0.6rem 0.9rem;
+  border: 2px dashed var(--bp-primary);
+  border-radius: var(--bp-radius-control);
+  background: var(--bp-mint);
+  color: var(--bp-ink);
+  font-family: var(--bp-font-mono);
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.25em;
+  user-select: all;
+  text-align: center;
+}

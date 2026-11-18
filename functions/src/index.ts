@@ -13,3 +13,14 @@ export { AiError, createAnthropicAdapter, createGoogleAdapter } from './ai-adapt
 export type { AiRequest, AiResponse, ProviderAdapter } from './ai-adapters.js';
 export { runAiWith } from './ai-run.js';
 export { aiHandler, keysFrom } from './ai-handler.js';
+export {
+  bindLine,
+  handleLineWebhook,
+  hashCode,
+  notifyLine,
+  pushLine,
+  startLineLink,
+  verifyLineSignature,
+} from './line.js';
+export type { LineConfig, LineStore } from './line.js';
+export { lineConfig, lineLinkResponse, lineWebhookResponse } from './line-handler.js';

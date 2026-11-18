@@ -53,19 +53,26 @@ for (const file of walk(ROOT)) {
   }
 
   // 1. colours: only theme.css may contain them (and tests that verify contrast).
-  // functions/src/brand.ts: the web manifest needs literal hex values (kept equal to the theme tokens by a unit test).
-  if (isCode && r !== 'packages/ui/src/theme.css' && r !== 'functions/src/brand.ts' && !isTest(r)) {
+  // functions/src/brand.ts + core flex.ts: the web manifest / LINE Flex JSON need literal hex values (kept equal to the theme tokens by unit tests).
+  if (
+    isCode &&
+    r !== 'packages/ui/src/theme.css' &&
+    r !== 'functions/src/brand.ts' &&
+    r !== 'packages/core/src/flex.ts' &&
+    !isTest(r)
+  ) {
     lines.forEach((l, i) => {
       if (HEX.test(l) || COLOR_FN.test(l)) add(r, i + 1, 'raw colour value — use a theme token');
     });
   }
 
   // 2. Thai literals in source: only the dictionary and tests may contain them.
-  // aiPrompts.ts holds the prompt screener: its Thai patterns are matching rules, not UI text.
+  // aiPrompts.ts holds the prompt screener (Thai matching patterns); line-messages.ts is the LINE bot's own reply catalogue.
   if (
     isSource &&
     r !== 'packages/i18n/src/dict.ts' &&
     r !== 'packages/core/src/aiPrompts.ts' &&
+    r !== 'functions/src/line-messages.ts' &&
     !isTest(r)
   ) {
     lines.forEach((l, i) => {

@@ -5,6 +5,7 @@ import type { ErrorKey } from '@bestie/i18n';
 import { AsyncButton, Brand, LangSwitch, Spinner } from '@bestie/ui';
 import type { PublicEnv } from '@bestie/supabase';
 import { useAuth } from './context';
+import { LineConnect } from './LineConnect';
 import { authErrorCode, passwordChangeProblem, signUpProblem } from './errors';
 import { aivoraAuthorizeUrl, fetchEnabledProviders } from './providers';
 import type { EnabledProviders } from './providers';
@@ -455,6 +456,7 @@ export function AccountPage() {
           {t.authSignOut}
         </AsyncButton>
       </section>
+      <LineConnect />
       <section className="card auth-card">
         <h2>{t.pwTitle}</h2>
         {hasPassword ? (

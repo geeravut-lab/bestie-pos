@@ -101,8 +101,8 @@ Work top to bottom. One PR per task. Tick when merged.
 - [ ] Usage + cost log per task (tokens are already returned by the adapters)
 
 ## 14. LINE notifications  _(LINE-ACCOUNT-LINKING, LINE-NOTIFICATIONS, LINE-FLEX-CARD)_
-- [ ] LINE OA webhook + one-time-code account linking + status in account page
-- [ ] `notify()` writer: in-app inbox + LINE queue, dedupe keys, quota with reserve, retry table, per-user opt-in
-- [ ] Flex bubble builder in Bestie colours (title → ≤ 8 label/value lines → "Open app"), rich `altText`, TH/EN by recipient
-- [ ] First notices: PromptPay paid, order ready, low stock, shift variance, daily summary
+- [x] LINE OA webhook (signature over the raw body, 20-event cap, rate limit, always 200) + one-time-code account linking (only the HMAC stored, 30 min, one LINE account per user) + "Connect LINE" card on the account page (4 steps, polls every 4 s, test card, disconnect) — **needs the OA credentials in Vercel to go live**
+- [x] Flex bubble builder in Bestie colours (title → ≤ 8 label/value lines → one "Open the app" button), rich `altText`, every field truncated, internal links only, TH/EN by recipient; `notifyLine` pushes with retry key and maps LINE errors
+- [ ] `notify()` writer: in-app inbox + LINE **queue**, dedupe keys, monthly quota with reserve, cron tick + retry table, per-user opt-in — build with the first real notice
+- [ ] First notices: PromptPay paid, order ready, low stock, shift variance, daily summary — need orders/payments (§3, §6)
 

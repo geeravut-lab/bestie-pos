@@ -35,3 +35,13 @@ grant select on realtime.messages to authenticated;
 grant all on realtime.sent to authenticated, service_role;
 grant all on realtime.messages to service_role;
 grant usage on all sequences in schema realtime to service_role, authenticated;
+
+-- Storage look-alike (buckets + objects with RLS).
+create schema if not exists storage;
+create table storage.buckets (id text primary key, name text, public boolean default false, file_size_limit bigint, allowed_mime_types text[]);
+create table storage.objects (id bigserial primary key, bucket_id text references storage.buckets (id), name text);
+alter table storage.objects enable row level security;
+grant usage on schema storage to anon, authenticated, service_role;
+grant select, insert, delete on storage.objects to authenticated;
+grant all on storage.objects, storage.buckets to service_role;
+grant usage on all sequences in schema storage to authenticated, service_role;

@@ -53,7 +53,8 @@ for (const file of walk(ROOT)) {
   }
 
   // 1. colours: only theme.css may contain them (and tests that verify contrast).
-  if (isCode && r !== 'packages/ui/src/theme.css' && !isTest(r)) {
+  // functions/src/brand.ts: the web manifest needs literal hex values (kept equal to the theme tokens by a unit test).
+  if (isCode && r !== 'packages/ui/src/theme.css' && r !== 'functions/src/brand.ts' && !isTest(r)) {
     lines.forEach((l, i) => {
       if (HEX.test(l) || COLOR_FN.test(l)) add(r, i + 1, 'raw colour value — use a theme token');
     });

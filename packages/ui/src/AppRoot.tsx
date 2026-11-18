@@ -1,10 +1,13 @@
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import type { ReactNode } from 'react';
 import { BrowserRouter, useLocation, useNavigate } from 'react-router';
+import { brandImageUrl } from '@bestie/core';
+import type { Brand } from '@bestie/core';
 import { I18nProvider, useI18n } from '@bestie/i18n';
 import type { StoreModuleConfig } from '@bestie/core';
 import { AppShell } from './AppShell';
 import { LangSwitch } from './LangSwitch';
+import { BrandProvider } from './Logo';
 import { NAV_ITEMS, roleLabelKey } from './nav';
 import type { AppRole, NavContext } from './nav';
 import { PageSoon } from './PageSoon';
@@ -25,6 +28,8 @@ export type AppRootProps = {
   renderPage?: (p: { path: string; navigate: (path: string) => void }) => ReactNode | null;
   /** Extra controls on the right of the top bar (account link). */
   headerExtra?: ReactNode;
+  /** Admin-chosen product name / logo / tab icon (BRANDING-KNOWLEDGE). Absent = Bestie defaults. */
+  brand?: Brand;
 };
 
 /** Roles each app can preview until sign-in + roles arrive (Phase 1 §12). First = default. */
@@ -157,10 +162,37 @@ function Frame({ app, live, gate, renderPage, headerExtra }: AppRootProps) {
 /** Whole app frame shared by pos / admin / guest: i18n + router + shell + role home. */
 export function AppRoot(props: AppRootProps) {
   return (
-    <I18nProvider>
-      <BrowserRouter>
-        <Frame {...props} />
-      </BrowserRouter>
+    <I18nProvider brand={props.brand}>
+      <BrandProvider logoSrc={brandImageUrl('logo', props.brand?.logo)}>
+        <DocumentBrand brand={props.brand} />
+        <BrowserRouter>
+          <Frame {...props} />
+        </BrowserRouter>
+      </BrandProvider>
     </I18nProvider>
   );
+}
+
+/** Tab title and tab icon follow the admin's brand (the static index.html carries the defaults). */
+function DocumentBrand({ brand }: { brand?: Brand }) {
+  const { t } = useI18n();
+  const favicon = brandImageUrl('favicon', brand?.favicon);
+  useEffect(() => {
+    document.title = t.appName;
+  }, [t.appName]);
+  useEffect(() => {
+    if (!favicon) return;
+    const links = document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"]');
+    const previous = [...links].map((l) => [l, l.href, l.type] as const);
+    links.forEach((l) => {
+      l.href = favicon;
+      l.type = 'image/png';
+    });
+    return () =>
+      previous.forEach(([l, href, type]) => {
+        l.href = href;
+        l.type = type;
+      });
+  }, [favicon]);
+  return null;
 }

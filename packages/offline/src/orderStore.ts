@@ -313,3 +313,15 @@ export async function saveOrders(
     }
   });
 }
+
+/**
+ * Every bill of a shop that kitchen / queue / pick-up screens care about: the open ones plus the ones paid on or after
+ * `sinceDate` (a cafe bill is often paid before it is made). Cancelled bills are left out.
+ */
+export async function listShopOrders(storeId: string, sinceDate: string): Promise<OrderDoc[]> {
+  const rows = await db.orders.where('storeId').equals(storeId).toArray();
+  return rows
+    .map((r) => r.doc)
+    .filter((o) => o.status !== 'void' && (isOrderOpen(o) || o.businessDate >= sinceDate))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}

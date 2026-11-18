@@ -387,3 +387,19 @@ async function resetQueueDb() {
   const { db } = await import('./db');
   await db.outbox.clear();
 }
+
+describe('listShopOrders (kitchen / queue view)', () => {
+  it('open bills and recently paid ones, never cancelled ones or old paid ones', async () => {
+    const open = base('open', 'A001');
+    const paidToday = { ...base('paid', 'A002'), status: 'paid' as const };
+    const paidOld = { ...base('old', 'A003'), status: 'paid' as const, businessDate: '2026-11-10' };
+    const voided = { ...base('void', 'A004'), status: 'void' as const };
+    const otherShop = base('other', 'A005', 'elsewhere');
+    for (const o of [open, paidToday, paidOld, voided, otherShop]) await saveOrder(null, o);
+    const { listShopOrders } = await import('./index');
+    expect((await listShopOrders('st', '2026-11-17')).map((o) => o.id).sort()).toEqual([
+      'open',
+      'paid',
+    ]);
+  });
+});

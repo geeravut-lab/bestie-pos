@@ -92,6 +92,8 @@ export const PERMISSIONS = [
   'credit.adjust',
   'audit.view',
   'settings.manage',
+  /** Kitchen / bar screens: move sent lines through ready → served. Nothing else. */
+  'kds.use',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 

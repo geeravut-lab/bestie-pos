@@ -1438,3 +1438,109 @@ a.nav-card[aria-busy='true'] {
   border-radius: var(--bp-radius-control);
   background: var(--bp-surface);
 }
+
+/* ── kitchen display, pick-up list, queue board ───────────────────────────── */
+.ticket-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.75rem;
+}
+.ticket {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 3px solid var(--bp-line);
+  border-radius: var(--bp-radius-card);
+  background: var(--bp-surface);
+  color: var(--bp-ink);
+}
+.ticket[data-age='warn'] {
+  border-color: var(--bp-warning-fg);
+  background: var(--bp-warning-bg);
+}
+.ticket[data-age='late'] {
+  border-color: var(--bp-danger-solid);
+  background: var(--bp-danger-bg);
+}
+.ticket-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+}
+.ticket-number {
+  font-size: 1.6rem;
+}
+.ticket-age {
+  margin-left: auto;
+  font-weight: 800;
+}
+.ticket-lines {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 1.15rem;
+}
+.ticket-lines li {
+  display: flex;
+  gap: 0.5rem;
+}
+.ticket-qty {
+  min-width: 2.2rem;
+  font-weight: 800;
+}
+.ticket-note {
+  font-weight: 700;
+}
+.ticket-action {
+  min-height: 3.25rem;
+  font-size: 1.1rem;
+}
+.queue-columns {
+  display: grid;
+  gap: 1rem;
+}
+@media (min-width: 40rem) {
+  .queue-columns {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.queue-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.queue-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.queue-number {
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+.queue-display {
+  display: grid;
+  gap: 1rem;
+  min-height: 80dvh;
+  padding: 1rem;
+  background: var(--bp-bg);
+}
+.queue-list-big .queue-number {
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--bp-radius-card);
+  background: var(--bp-surface);
+  font-size: clamp(2.5rem, 8vw, 6rem);
+}
+.queue-list-big .queue-number-ready {
+  background: var(--bp-primary);
+  color: var(--bp-on-primary);
+}
+.queue-ready-col h2 {
+  color: var(--bp-primary-hover);
+}

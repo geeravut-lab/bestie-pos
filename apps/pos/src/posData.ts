@@ -122,7 +122,7 @@ export const billConfigFor = (c: PosConfig, channel: Channel): BillConfig => ({
  * Menu / tables / shop settings for the till, kept fresh by the live channel, plus the pull of the shop's orders
  * (on open, on every ping, when the network returns, and every 30 s) into this tablet's working copy.
  */
-export function usePosData(ctx: PageContext, storeId: string | null) {
+export function usePosData(ctx: PageContext, storeId: string | null, pullEveryMs = 30_000) {
   const online = useOnline();
   const remote = useRemote(
     () => (storeId ? loadPosData(ctx.client, storeId) : Promise.resolve(null)),
@@ -153,8 +153,8 @@ export function usePosData(ctx: PageContext, storeId: string | null) {
   useEffect(() => {
     void pull();
     if (!storeId) return;
-    const i = setInterval(() => void pull(), 30_000);
+    const i = setInterval(() => void pull(), pullEveryMs);
     return () => clearInterval(i);
-  }, [pull, storeId, online]);
+  }, [pull, storeId, online, pullEveryMs]);
   return remote;
 }

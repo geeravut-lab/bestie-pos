@@ -66,8 +66,18 @@ Decisions log: @docs/DECISIONS.md
 1. **Spinner on every action.** Any button, menu item or submit that triggers work must show a loading
    spinner immediately, stay un-double-clickable, and clear it only when the work is finished (success or
    failure). Use `<AsyncButton>` / `useAsyncAction` from `@bestie/ui`; never wire a bare `onClick` to async work.
-2. **Next steps after every prompt.** When a prompt is finished, list the remaining steps of the current
-   phase (and the next phase) from docs/PHASE1_TASKS.md so the owner can decide what to order next.
+2. **Next steps after every prompt — and say clearly what the owner must ORDER.** When a prompt is finished,
+   list the remaining steps of the current phase (and the next phase) from docs/PHASE1_TASKS.md, but always
+   split the closing report into these three blocks, in this order, in Thai, so the owner never has to guess:
+   - **🟢 สั่งได้เลย (ผมทำต่อได้ทันที)** — work Claude can do now with no input. List as a numbered menu with a
+     recommended order, and say the exact words the owner can reply with (e.g. "สั่ง: ข้อ 1").
+   - **🟡 ต้องรอเจ้าของตัดสินใจ/ลงมือเอง ก่อนผมทำต่อได้** — each item names WHO must act (owner / lawyer /
+     accountant / a pilot shop), WHAT exactly, and which work is blocked until then. If it needs the owner's
+     answer, phrase it as a question with options and a recommendation.
+   - **⚪ แจ้งให้ทราบเฉย ๆ (ไม่ต้องสั่งอะไร)** — facts, risks and things not verified from the sandbox. Nothing here
+     needs a reply; never mix these into the other two blocks.
+   Finish with ONE line telling the owner when they need to speak next ("ต้องตอบก็ต่อเมื่อ …" or "ไม่ต้องตอบ
+   ผมทำข้อ 1 ต่อให้เอง"). Never list the same item under two blocks.
 3. **Reply to the owner in Thai** (code, identifiers and commit messages in English).
 4. **Reuse the knowledge files.** `docs/Knowledge-Index.md` indexes the RooSuk-derived knowledge files
    (branding, live sync, audit trail, AI provider/prompts, LINE linking/flex cards, i18n, typography, responsive,

@@ -9,6 +9,7 @@ export { LangSwitch } from './LangSwitch';
 export { Brand, BrandProvider, LogoMark } from './Logo';
 export * from './nav';
 export { BackLink, PageSoon } from './PageSoon';
+export { QrSvg } from './QrSvg';
 export { RoleHome } from './RoleHome';
 export type { RoleHomeProps } from './RoleHome';
 export { Spinner } from './Spinner';

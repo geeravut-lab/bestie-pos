@@ -1691,3 +1691,35 @@ a.nav-card[aria-busy='true'] {
   margin: 0 auto;
   background: var(--bp-surface);
 }
+
+/* ── crypto top-up request ────────────────────────────────────────────────── */
+.crypto-request {
+  display: grid;
+  gap: 0.75rem;
+}
+.crypto-facts {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+.crypto-facts dt {
+  font-size: 0.85rem;
+  color: var(--bp-muted);
+}
+.crypto-facts dd {
+  margin: 0.15rem 0 0;
+}
+.crypto-big {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+.crypto-address {
+  overflow-wrap: anywhere;
+}
+.crypto-end {
+  font-size: 1.35rem;
+  letter-spacing: 0.04em;
+}
+.crypto-status {
+  font-weight: 800;
+}

@@ -1,6 +1,7 @@
 export { AuditPage } from './AuditPage';
 export { BillingPage } from './BillingPage';
 export { BrandingPage } from './BrandingPage';
+export { CryptoPage } from './CryptoPage';
 export { CustomerPicker } from './CustomerPicker';
 export { CustomersPage } from './CustomersPage';
 export { DevicesPage } from './DevicesPage';
@@ -18,6 +19,7 @@ import { AuditPage } from './AuditPage';
 import { AiPromptsPage, AiSettingsPage } from './AiPages';
 import { BillingPage } from './BillingPage';
 import { BrandingPage } from './BrandingPage';
+import { CryptoPage } from './CryptoPage';
 import { CustomersPage } from './CustomersPage';
 import { DevicesPage } from './DevicesPage';
 import { MenuPage } from './MenuPage';
@@ -39,6 +41,7 @@ export function adminPages(ctx: PageContext): ReactNode | null {
   if (ctx.path === '/menu') return <MenuPage ctx={ctx} />;
   if (ctx.path === '/modules') return <ModulesPage ctx={ctx} />;
   if (ctx.path === '/staff') return <StaffPage ctx={ctx} />;
+  if (ctx.path === '/crypto') return <CryptoPage ctx={ctx} />;
   if (ctx.path === '/customers') return <CustomersPage ctx={ctx} />;
   if (ctx.path === '/reports') return <ReportsPage ctx={ctx} />;
   if (ctx.path === '/devices') return <DevicesPage ctx={ctx} />;

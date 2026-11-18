@@ -1,7 +1,7 @@
 import type { ArtId } from './nav';
 
 /** 24×24 stroke icons for nav items. `currentColor` only — colour comes from the surrounding token. */
-const PATHS: Record<ArtId | 'more' | 'close' | 'back', string[]> = {
+const PATHS: Record<ArtId | 'more' | 'close' | 'back' | 'bell', string[]> = {
   billing: ['M6 3h12v18l-3-2-3 2-3-2-3 2z', 'M9 9l6 6M9.5 9.5h.01M14.5 14.5h.01'],
   account: ['M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M4 21a8 8 0 0 1 16 0'],
   home: ['M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z'],
@@ -64,13 +64,14 @@ const PATHS: Record<ArtId | 'more' | 'close' | 'back', string[]> = {
   more: ['M5 12h.01M12 12h.01M19 12h.01'],
   close: ['M6 6l12 12M18 6L6 18'],
   back: ['M15 5l-7 7 7 7'],
+  bell: ['M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z', 'M10 21h4'],
 };
 
 export function Icon({
   name,
   size = 24,
 }: {
-  name: ArtId | 'more' | 'close' | 'back';
+  name: ArtId | 'more' | 'close' | 'back' | 'bell';
   size?: number;
 }) {
   return (

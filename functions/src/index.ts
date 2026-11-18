@@ -51,3 +51,6 @@ export {
   cryptoRequestResponse,
   pollWallet,
 } from './crypto-handler.js';
+export { createSupabaseNotifyStore, deliverQueue } from './notify-deliver.js';
+export type { DeliverResult, NotifyStore, QueueItem } from './notify-deliver.js';
+export { notifyTickResponse } from './notify-handler.js';

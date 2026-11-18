@@ -112,3 +112,16 @@ Server-only variables (never a public prefix):
 - **Scheduler:** `vercel.json` has **no** cron entry on purpose (a per-minute cron is refused on a Hobby plan and would break the deploy). On a Pro plan add `"crons": [{ "path": "/api/crypto/poll", "schedule": "* * * * *" }]`; otherwise call `GET /api/crypto/poll` with `Authorization: Bearer $CRON_SECRET` from any scheduler (GitHub Actions `schedule`, cron-job.org …). Until then staff use **Check now** on a request (rate limited).
 - **Before real money:** run the whole flow on **Tron Shasta / Ethereum Sepolia** with test USDT; confirm the TronGrid, Etherscan and price-source response shapes (marked ⚠️ in `functions/src/crypto-*.ts`); set the company wallet (read-only address) and print its 6+6-character card for the shop; get the lawyer's file uploaded and `legal_sign_off.cryptoTopup` set by the platform admin.
 
+
+## 8. Notifications (in-app inbox + LINE) — what to set so the LINE messages actually leave
+The in-app bell and inbox (`/notifications`) work with nothing to set up. Delivery to LINE needs:
+
+| Name | Purpose |
+|---|---|
+| `LINE_CHANNEL_SECRET`, `LINE_CHANNEL_ACCESS_TOKEN`, `LINE_CODE_SECRET`, `LINE_BASIC_ID` | the LINE Official Account (same as account linking, §2) |
+| `CRON_SECRET` | secret for `/api/notify/tick` (the same one as the crypto poll can be used) |
+
+- **Scheduler:** call `GET|POST /api/notify/tick` with `Authorization: Bearer $CRON_SECRET` **every 1–5 minutes** (GitHub Actions `schedule`, cron-job.org, or Vercel Cron on a Pro plan). Each call (1) writes the **daily sales summary** from 21:00 Bangkok time on (safe to repeat: one per shop per day), (2) sends what is due to LINE, (3) tidies old rows once an hour. Without a scheduler the inbox still fills; LINE messages simply wait in the queue and expire after 24 hours (a late "order ready" is not news).
+- **Monthly cap:** `notification_settings.line_monthly_cap` (default 200 pushes a month — the free LINE plan) with `line_reserve` (default 20) kept for **urgent** notices (a payment that needs review, a large cash difference). Change them in the database; an admin screen comes later.
+- **If LINE rejects the token (401/403)** the tick stops and holds the queue for 6 hours (`notification_settings.halted_until`), then tries again.
+- Test: link LINE on the account page, take a PromptPay test payment (§6) → the owner gets a "Payment received ฿…" card within one tick.

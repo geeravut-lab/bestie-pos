@@ -1,4 +1,7 @@
 import { useCallback, useMemo } from 'react';
+import type { ReactNode } from 'react';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Permission } from '@bestie/core';
 import { useI18n } from '@bestie/i18n';
 import { createBrowserClient, readPublicEnv } from '@bestie/supabase';
 import type { PublicEnv } from '@bestie/supabase';
@@ -14,6 +17,18 @@ import {
 } from './components';
 import { AuthProvider, useAuth } from './context';
 import { appRoleFor, pickStore } from './myContext';
+
+/** What a back-office page needs to know about who is looking at it and where. */
+export type PageContext = {
+  path: string;
+  navigate: (path: string) => void;
+  client: SupabaseClient;
+  orgId: string;
+  storeId: string | null;
+  permissions: readonly Permission[];
+  isOwner: boolean;
+  isPlatformAdmin: boolean;
+};
 
 function AccountLink() {
   const { t } = useI18n();
@@ -47,7 +62,15 @@ function LoadFailed({ onRetry }: { onRetry: () => Promise<void> }) {
   );
 }
 
-function Inner({ app, env }: { app: AppId; env: PublicEnv | undefined }) {
+function Inner({
+  app,
+  env,
+  pages,
+}: {
+  app: AppId;
+  env: PublicEnv | undefined;
+  pages?: (ctx: PageContext) => ReactNode | null;
+}) {
   const auth = useAuth();
   const { my } = auth;
   const public_ = app === 'guest'; // guest pages need no account
@@ -101,7 +124,24 @@ function Inner({ app, env }: { app: AppId; env: PublicEnv | undefined }) {
       app={app}
       live={live}
       gate={gate}
-      renderPage={({ path }) => (path === '/account' && live ? <AccountPage /> : null)}
+      renderPage={({ path, navigate }) => {
+        if (!live || !my.data) return null;
+        if (path === '/account') return <AccountPage />;
+        const membership = my.data.memberships[0];
+        if (!auth.client || !membership) return null;
+        return (
+          pages?.({
+            path,
+            navigate,
+            client: auth.client,
+            orgId: membership.orgId,
+            storeId: membership.storeId,
+            permissions: membership.permissions,
+            isOwner: membership.roleBuiltIn === 'owner',
+            isPlatformAdmin: my.data.isPlatformAdmin,
+          }) ?? null
+        );
+      }}
       headerExtra={live ? <AccountLink /> : null}
     />
   );
@@ -114,9 +154,11 @@ function Inner({ app, env }: { app: AppId; env: PublicEnv | undefined }) {
 export function AuthApp({
   app,
   rawEnv,
+  pages,
 }: {
   app: AppId;
   rawEnv: Record<string, string | boolean | undefined>;
+  pages?: (ctx: PageContext) => ReactNode | null;
 }) {
   const env = useMemo(() => {
     try {
@@ -129,7 +171,7 @@ export function AuthApp({
   const client = useMemo(() => (env ? createBrowserClient(env) : null), [env]);
   return (
     <AuthProvider client={client}>
-      <Inner app={app} env={env} />
+      <Inner app={app} env={env} pages={pages} />
     </AuthProvider>
   );
 }

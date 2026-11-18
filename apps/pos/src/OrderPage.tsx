@@ -4,6 +4,7 @@ import {
   formatTHB,
   hasUnsent,
   isOrderOpen,
+  liveLines,
   localizedName,
   moveToTable,
   orderBill,
@@ -24,9 +25,11 @@ import type { PageContext } from '@bestie/auth';
 import { useOpenOrders, useOrder, useOutboxCounts } from '@bestie/offline';
 import { billConfigFor, usePosData } from './posData';
 import type { PosTable } from './posData';
-import { changeOrder } from './orderActions';
+import { changeOrder, payCash } from './orderActions';
 import { LoadFailed, Loading, Page } from './PosBits';
 import { ModifierSheet } from './ModifierSheet';
+import { PaySheet } from './PaySheet';
+import { usePosStore } from './posData';
 
 const channelText = (t: Dict, c: Channel): string =>
   (t as Record<string, string>)[`channel_${c.replace('-', '_')}`] ?? c;
@@ -66,6 +69,8 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
   const { pending } = useOutboxCounts();
   const [cat, setCat] = useState('');
   const [picking, setPicking] = useState<{ item: Item; groups: OrderGroupInput[] } | null>(null);
+  const [paying, setPaying] = useState(false);
+  const { binding } = usePosStore(ctx);
   const [error, setError] = useState<ErrorKey | null>(null);
 
   if (order === undefined || (order && (openOrders === undefined || remote.status === 'loading')))
@@ -86,6 +91,8 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
   const open = isOrderOpen(order);
   const canEdit = open && (ctx.isOwner || ctx.permissions.includes('order.create'));
   const canVoid = open && (ctx.isOwner || ctx.permissions.includes('order.void'));
+  const canPay =
+    open && (ctx.isOwner || ctx.permissions.includes('payment.take')) && binding !== null;
   const bill = orderBill(order, billConfigFor(config, order.channel));
   const tableName = tables.find((x) => x.id === order.tableId)?.name;
   const takenTables = new Set(openOrders.filter((o) => o.id !== order.id).map((o) => o.tableId));
@@ -224,9 +231,23 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
               </dd>
             </div>
           </dl>
+          {!open && order.receipt ? (
+            <AsyncButton onClick={() => ctx.navigate(`/receipt/${order.id}`)}>
+              {t.payViewReceipt}
+            </AsyncButton>
+          ) : null}
+          {canPay ? (
+            <AsyncButton
+              disabled={liveLines(order).length === 0 || bill.total === 0}
+              onClick={() => setPaying(true)}
+            >
+              {t.payButton}
+            </AsyncButton>
+          ) : null}
           {canEdit ? (
             <>
               <AsyncButton
+                variant="secondary"
                 disabled={!hasUnsent(order)}
                 onClick={() => apply((o) => sendNew(o, Date.now()).order)}
               >
@@ -279,6 +300,33 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
         </section>
       </div>
 
+      {paying && binding ? (
+        <PaySheet
+          total={bill.total}
+          rule={config.cashRounding}
+          onClose={() => setPaying(false)}
+          onPay={async (tendered) => {
+            const err = await payCash({
+              orderId: order.id,
+              tendered,
+              binding,
+              billConfig: billConfigFor(config, order.channel),
+              roundingRule: config.cashRounding,
+              seller: {
+                sellerName: config.sellerName,
+                sellerTaxId: config.sellerTaxId,
+                branchCode: config.branchCode,
+                vatRegistered: config.vatRegistered,
+              },
+              staffId: ctx.staffId,
+              staffName: ctx.staffName,
+              lang: config.defaultLang,
+            });
+            if (!err) ctx.navigate(`/receipt/${order.id}`);
+            return err;
+          }}
+        />
+      ) : null}
       {picking ? (
         <ModifierSheet
           item={itemInput(picking.item)}

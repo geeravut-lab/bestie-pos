@@ -10,6 +10,8 @@ import { MoneyError } from './money';
 import type { Satang } from './money';
 import type { OutboxOp } from './outbox';
 import type { Channel, ChannelPrices, LocalizedText, OrderStatus } from './types';
+import type { ReceiptDoc } from './payments';
+import { receiptFromRows } from './receiptRows';
 
 export type LineStatus = 'new' | 'sent' | 'ready' | 'served' | 'void';
 export type LineModifier = { id: string; name: LocalizedText; priceDelta: Satang };
@@ -48,6 +50,8 @@ export type OrderDoc = {
   createdAt: string;
   closedAt: string | null;
   lines: LineDoc[];
+  /** Present once the bill is paid. */
+  receipt?: ReceiptDoc | null;
 };
 
 export const MAX_QTY = 99;
@@ -354,7 +358,11 @@ const str = (v: unknown): string | null => (typeof v === 'string' ? v : null);
 const int = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
 /** Lenient read of what the server sent; a damaged row is skipped, never allowed to break the till. */
-export function rowsToOrder(r: Row, lineRows: readonly Row[]): OrderDoc | null {
+export function rowsToOrder(
+  r: Row,
+  lineRows: readonly Row[],
+  paid?: { receipt: Row | null; payments: readonly Row[] },
+): OrderDoc | null {
   const id = str(r.id);
   const orgId = str(r.org_id);
   const storeId = str(r.store_id);
@@ -408,6 +416,7 @@ export function rowsToOrder(r: Row, lineRows: readonly Row[]): OrderDoc | null {
     createdAt: str(r.created_at) ?? new Date(0).toISOString(),
     closedAt: str(r.closed_at),
     lines,
+    receipt: paid?.receipt ? receiptFromRows(paid.receipt, paid.payments) : null,
   };
 }
 
@@ -426,7 +435,8 @@ export function diffOrder(prev: OrderDoc | null, next: OrderDoc): OutboxOp[] {
     if (prev.tableId !== next.tableId) values.table_id = next.tableId;
     if (prev.covers !== next.covers) values.covers = next.covers;
     if (prev.note !== next.note) values.note = next.note;
-    if (prev.status !== next.status) values.status = next.status;
+    // closing is the payment function's job (close_order), never a plain update
+    if (prev.status !== next.status && next.status !== 'paid') values.status = next.status;
     if (Object.keys(values).length > 0)
       ops.push({ kind: 'update', table: 'orders', id: next.id, values });
   }

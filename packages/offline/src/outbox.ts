@@ -6,10 +6,28 @@ import { db } from './db';
 /** The only thing the sync engine needs from Supabase — easy to fake in tests. */
 export type RemoteClient = Pick<SupabaseClient, 'from' | 'rpc'>;
 
+/**
+ * A timestamp strictly after every entry already queued (the replay order IS the creation order, even for two saves in the
+ * same millisecond or a clock that stepped back). Call inside the same transaction that adds the entry.
+ */
+export async function nextStamp(now: () => number = Date.now): Promise<number> {
+  const last = await db.outbox.orderBy('createdAt').last();
+  return Math.max(now(), (last?.createdAt ?? 0) + 1);
+}
+
 /** Store a write locally FIRST; it is replayed to the server in order. Returns the entry id (the idempotency key). */
 export async function enqueue(op: OutboxOp, now: () => number = Date.now): Promise<string> {
   const id = crypto.randomUUID();
-  await db.outbox.add({ id, op, createdAt: now(), attempts: 0, nextTryAt: 0, status: 'pending' });
+  await db.transaction('rw', db.outbox, async () => {
+    await db.outbox.add({
+      id,
+      op,
+      createdAt: await nextStamp(now),
+      attempts: 0,
+      nextTryAt: 0,
+      status: 'pending',
+    });
+  });
   return id;
 }
 

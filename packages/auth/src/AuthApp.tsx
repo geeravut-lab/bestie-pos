@@ -33,6 +33,8 @@ export type PageContext = {
   isPlatformAdmin: boolean;
   /** The person acting right now (the PIN-unlocked staff member on a till, else the signed-in account's own staff row). */
   staffId?: string;
+  /** Display name of that person (for receipts). */
+  staffName?: string;
   /** The shop this person works in (their own, else the org's first) — never null for a signed-in member with a shop. */
   homeStoreId?: string | null;
 };
@@ -108,6 +110,7 @@ function Inner({
             isOwner: membership.roleBuiltIn === 'owner',
             isPlatformAdmin: my.data.isPlatformAdmin,
             staffId: membership.staffId,
+            staffName: membership.displayName,
             homeStoreId: pickStore(my.data, membership)?.id ?? membership.storeId,
           }
         : null,

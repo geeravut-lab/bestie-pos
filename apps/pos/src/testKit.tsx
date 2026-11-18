@@ -40,7 +40,7 @@ export function bindTablet() {
     code: 'A',
     role: 'cashier',
     station: null,
-    posId: null,
+    posId: 'POS-77',
   });
 }
 
@@ -53,6 +53,10 @@ export const baseTables = () => ({
       service_charge_bps: 1000,
       price_mode: 'inclusive',
       bill_options: {},
+      rounding: {},
+      branch_code: '00001',
+      default_lang: 'en',
+      legal_entities: { name: 'Acme Co', tax_id: '0105560123456' },
     },
   ],
   dining_tables: [
@@ -143,6 +147,7 @@ export const pageCtx = (client: unknown, over: Partial<PageContext> = {}): PageC
   homeStoreId: STORE,
   staffId: 'staff-1',
   permissions: ['order.create', 'payment.take'],
+  staffName: 'Nok',
   isOwner: false,
   isPlatformAdmin: false,
   ...over,

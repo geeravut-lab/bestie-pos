@@ -110,3 +110,9 @@ Work top to bottom. One PR per task. Tick when merged.
 - [ ] `notify()` writer: in-app inbox + LINE **queue**, dedupe keys, monthly quota with reserve, cron tick + retry table, per-user opt-in — build with the first real notice
 - [ ] First notices: PromptPay paid, order ready, low stock, shift variance, daily summary — need orders/payments (§3, §6)
 
+## 15. AI for customers & Karaoke  _(design: docs/AI-CUSTOMER-ASSISTANT.md, docs/KARAOKE-AI.md — proposal, waiting for the owner)_
+- [ ] Owner confirms the open questions in AI-CUSTOMER-ASSISTANT §7 (who pays for guest AI, therapist sign-off for spa rules, languages, hair photos)
+- [ ] 5a: food tags on menu items (+ AI drafts, owner confirms), menu translation helper, guest menu advisor on `/t/<token>` (filter by SQL, AI ranks), "Ask my shop"
+- [ ] 5b: concierge basics, feedback intake, hair-style advisor (after appointments), spa / yoga advisor (rules signed by a therapist and the lawyer first)
+- [ ] 5c: karaoke profile + room timer, voice song search, **Bestie Song Bridge** (YouTube Lounge / Cast / HID / IR), standalone "Bestie Karaoke" web app, tours / rentals / resort concierge
+

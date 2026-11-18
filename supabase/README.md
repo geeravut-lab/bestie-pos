@@ -9,6 +9,7 @@ Database, Auth, Storage and Realtime for Bestie POS.
     no self-promotion, legal sign-off server-only).
   - `20261117234934_aivora_links.sql` — `aivora_links` (hub user id ↔ Supabase user), server-only.
   - `20261117235800_audit_trail.sql` — append-only `audit_log`, event catalogue, per-org switches (`set_audit_settings`), `write_audit` RPC, DB triggers on staff / orgs / stores.
+  - `20261118000210_live_sync.sql` — content-free Realtime pings from DB triggers + `live_can_listen` policy on `realtime.messages`.
 - `tests/` — `local_stub.sql` (Supabase look-alike roles + `auth` schema) and `*.test.sql` (RLS / guard assertions).
   Run `pnpm test:db` (needs PostgreSQL 14+ binaries; CI runs it too). The same assertions were dry-run inside a rolled-back
   transaction on the hosted project before applying.
@@ -25,3 +26,5 @@ How a migration reaches the hosted project (done by Claude through the Managemen
 1. write it, add RLS + tests, `pnpm test:db` locally; 2. dry-run on the hosted project inside `begin; … rollback;`;
 3. apply via `POST /v1/projects/<ref>/database/migrations` (records history) and rename the file to the returned version;
 4. never edit an applied migration — add a new one. New tables must `revoke all … from anon, authenticated` and grant only what is needed.
+
+Every new table that a screen shows live needs: `create trigger … after insert or update or delete … execute function public.live_ping_row('store:{store_id}')` (and, if it should be heard org-wide, `'org:{org_id}'`).

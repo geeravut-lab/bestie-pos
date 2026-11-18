@@ -73,10 +73,11 @@ Work top to bottom. One PR per task. Tick when merged.
 - [ ] Per-store 5-colour theme with contrast validation
 
 ## 10. Live sync  _(LIVE-SYNC-KNOWLEDGE)_
-- [ ] Supabase Realtime private channels + `live_ping(topic)` DB trigger helper + policy deciding who may listen (store/org/kds/user topics)
-- [ ] `useLiveSync` hook: refetch on ping, polling fingerprint fallback, pause on hidden tab, never refresh under typing / open payment dialog
-- [ ] Wire to: floor plan, order list, KDS, queue screen, guest "order ready", admin lists
-- [ ] Interplay with the offline outbox (sync indicator: online/offline + queued writes)
+- [x] Supabase Realtime private channels + `live_ping` DB trigger helper + policy (`live_can_listen`) deciding who may listen (platform / org / store / audit / user / admin topics); applied to the hosted project
+- [x] `useLiveSync` hook + `LiveSyncController`: refetch on ping (debounced), polling fallback with backoff, pause on hidden tab + catch-up, never refresh under typing / open dialog, catch-up after reconnect
+- [x] Wired to: roles / modules / store settings of the signed-in user (all open screens of an org update by themselves), audit history
+- [ ] Wire to: floor plan, order list, KDS, queue screen, guest "order ready" — add a `live_ping_row` trigger on each table when those screens are built (§3, §4, §5)
+- [ ] Interplay with the offline outbox (sync indicator: online/offline + queued writes) — with the offline task in §3
 
 ## 11. Audit trail  _(AUDIT-TRAIL-KNOWLEDGE + admin switches, see KNOWLEDGE-MAPPING §A)_
 - [x] `audit_log` (append-only, no PII) + `audit()` helper (never throws) + DB triggers on money/staff tables

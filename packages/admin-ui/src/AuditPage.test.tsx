@@ -39,7 +39,18 @@ function fakeClient(
     chain.maybeSingle = async () => result;
     return chain;
   });
-  return { client: { from, rpc } as never, rpc, from };
+  // Realtime stand-in: subscribing reports "SUBSCRIBED" at once; nothing is ever pushed in these tests.
+  const channel = vi.fn(() => {
+    const ch: Record<string, unknown> = {};
+    ch.on = () => ch;
+    ch.subscribe = (cb?: (s: string) => void) => {
+      cb?.('SUBSCRIBED');
+      return ch;
+    };
+    return ch;
+  });
+  const removeChannel = vi.fn(async () => 'ok');
+  return { client: { from, rpc, channel, removeChannel } as never, rpc, from, channel };
 }
 
 const ctx = (client: unknown, over: Partial<PageContext> = {}): PageContext => ({
@@ -97,6 +108,13 @@ describe('<AuditPage> history', () => {
     expect(screen.getByText('Database')).toBeTruthy();
     expect(screen.getByTitle('Always recorded')).toBeTruthy(); // lock on the refund only
     expect(screen.getAllByTitle('Always recorded')).toHaveLength(1);
+  });
+
+  it('listens to the org audit topic on a private channel so new events appear without refresh', async () => {
+    const { client, channel } = fakeClient();
+    mount(ctx(client));
+    await screen.findByText('No records yet');
+    expect(channel).toHaveBeenCalledWith('audit:org-1', { config: { private: true } });
   });
 
   it('shows the empty state', async () => {

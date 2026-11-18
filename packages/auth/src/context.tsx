@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react';
 import type { Session, SupabaseClient, User } from '@supabase/supabase-js';
 import { loadMyContext } from './myContext';
+import { useLiveSync } from './useLiveSync';
 import type { MyContext } from './myContext';
 
 export type AuthStatus = 'unconfigured' | 'loading' | 'signedOut' | 'signedIn';
@@ -85,6 +86,10 @@ export function AuthProvider({
   const current = userId && result?.userId === userId ? result : null;
   const myState: AuthValue['my']['status'] = !userId ? 'idle' : (current?.status ?? 'loading');
   const myData = current?.data ?? null;
+
+  // Roles, modules and store settings change on one device → every other open screen of the org updates by itself.
+  const liveOrg = myData?.memberships[0]?.orgId;
+  useLiveSync(client, liveOrg ? [`org:${liveOrg}`] : [], load);
 
   const signOut = useCallback(async () => {
     if (!client) return;

@@ -18,7 +18,7 @@ import type { AuditGroup, AuditSettings } from '@bestie/core';
 import { errorText, formatDateTime, useI18n } from '@bestie/i18n';
 import type { Dict, ErrorKey } from '@bestie/i18n';
 import { AsyncButton, Spinner } from '@bestie/ui';
-import { Notice } from '@bestie/auth';
+import { Notice, useLiveSync } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
 import { useRemote } from './useRemote';
 
@@ -119,6 +119,9 @@ function AuditLog({ ctx }: { ctx: PageContext }) {
     if (error) throw new Error(error.code ?? 'query');
     return (rows ?? []) as LogRow[];
   }, `${ctx.orgId}|${group}|${from}|${to}|${pages}`);
+
+  // New audit events (and settings changes) appear without pressing refresh.
+  useLiveSync(ctx.client, [`audit:${ctx.orgId}`], reload);
 
   const exportCsv = async () => {
     setExportError(null);

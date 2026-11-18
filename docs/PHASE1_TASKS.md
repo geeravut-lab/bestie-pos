@@ -55,7 +55,7 @@ Work top to bottom. One PR per task. Tick when merged.
 - [ ] Tender framework: cash, PromptPay, gateway, Credit — **done**; **split tender done** (`Split` tab: N payers, equal shares or any amounts, each cash or Bestie Credit, one receipt, server-numbered `X+…`, online) — still to do: Points as a bill discount, PromptPay / card legs inside a split, per-store tender toggles screen
 - [ ] Payment gateway adapter (card / e-wallets) behind an interface so providers can be swapped
 - [ ] Bestie Credit ledger (double-entry, scoped to the issuing legal entity): **cash top-up, balance, history, manager correction, liability report per company, drawer count — done** (`tender.credit` module, off by default; append-only; no cash-out kind; no crypto funding). **spending Credit on a bill is done** (split tender). Still to do: PromptPay / card top-ups
-- [ ] Bestie Points ledger: ~~earn on paid bill~~ **done** (append-only `points_ledger`, earned once per bill from baht spend only, manager corrections with a reason, audited), redeem as discount — _next PR_
+- [ ] Bestie Points ledger: ~~earn on paid bill~~ **done** (append-only `points_ledger`, earned once per bill from baht spend only, manager corrections with a reason, audited), redeem as discount — **database part done** (`set_order_points`, reservation, receipt columns; tested), the till screen / bill / receipt / guest-bill code is _next_
 - [ ] Module stub `credit.topup.crypto` (disabled; blocked unless org.legalSignOff.cryptoTopup) — build in Phase 3
 
 ## 7. Reports

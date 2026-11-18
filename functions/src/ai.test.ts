@@ -321,6 +321,13 @@ describe('keysFrom', () => {
   it('reads keys from the environment and ignores empty ones', () => {
     expect(keysFrom({ ANTHROPIC_API_KEY: ' a ', GOOGLE_API_KEY: '' })).toEqual({ anthropic: 'a' });
   });
+
+  it('accepts the alternative name GOOGLE_AI_API_KEY for the Google key', () => {
+    expect(keysFrom({ GOOGLE_AI_API_KEY: 'g' })).toEqual({ google: 'g' });
+    expect(keysFrom({ GOOGLE_API_KEY: 'main', GOOGLE_AI_API_KEY: 'alias' })).toEqual({
+      google: 'main',
+    });
+  });
 });
 
 void parseAiSettings;

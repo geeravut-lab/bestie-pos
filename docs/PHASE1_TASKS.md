@@ -23,6 +23,7 @@ Work top to bottom. One PR per task. Tick when merged.
 ## 2. Back office (apps/admin)
 - [x] Database foundation applied to Supabase (orgs, stores, roles, staff, RLS, `create_org()` RPC) — UI for owner signup still to build
 - [ ] Owner signup → create org + store → pick profile → see enabled modules
+- [x] Billing & points settings (owner-selectable VAT / service charge / rounding / Points rule, live sample bill, audited)
 - [ ] Module toggle screen (store level) with dependency warnings
 - [ ] Menu editor: categories, items, modifiers (min/max), channel prices, Thai/English names
 - [ ] Staff & roles, PIN codes

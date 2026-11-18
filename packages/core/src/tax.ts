@@ -17,7 +17,22 @@ export type BillLineInput = {
   discount?: Satang;
 };
 
+/** Accounting choices the OWNER makes (and the accountant confirms) — see billing.ts. */
+export type BillOptions = {
+  /** Is the service charge part of the VAT base? */
+  serviceChargeVat: 'taxable' | 'not_taxable';
+  /** Is the service charge computed on the discounted subtotal or on the full subtotal? */
+  serviceChargeBase: 'after_discounts' | 'before_discounts';
+};
+
+export const DEFAULT_BILL_OPTIONS: BillOptions = {
+  serviceChargeVat: 'taxable',
+  serviceChargeBase: 'after_discounts',
+};
+
 export type BillInput = {
+  /** Omitted = DEFAULT_BILL_OPTIONS. */
+  options?: Partial<BillOptions>;
   lines: readonly BillLineInput[];
   /** Whole-bill discount applied after line discounts. */
   billDiscount?: Discount;
@@ -59,10 +74,11 @@ export function vatOnExclusive(net: Satang, vatBps: number): Satang {
 }
 
 /**
- * Compute a bill. Order of operations (documented so the accountant can confirm it — see
- * DECISIONS.md open question):
+ * Compute a bill. Order of operations (the owner/accountant can choose the two marked options, see
+ * `BillOptions`):
  *   1. line discounts → 2. whole-bill discount → 3. Points discount (capped at what is left)
- *   4. service charge on the discounted subtotal, 5. VAT on (discounted subtotal + service charge).
+ *   4. service charge on the discounted subtotal [or the full subtotal], 5. VAT on (discounted subtotal
+ *   + service charge) [or on the goods only when the service charge is not taxable].
  * `inclusive`: shelf prices already contain VAT, the service charge is added on top and carries VAT
  * itself, so VAT is extracted from the gross. `exclusive`: VAT is added on top.
  */
@@ -101,11 +117,19 @@ export function computeBill(input: BillInput): BillBreakdown {
   const pointsDiscount = Math.min(requestedPoints, afterBill);
 
   const discountedSubtotal = afterBill - pointsDiscount;
-  const serviceCharge = mulBps(discountedSubtotal, input.serviceChargeBps, 'half-up');
+  const opts = { ...DEFAULT_BILL_OPTIONS, ...input.options };
+  const serviceCharge = mulBps(
+    opts.serviceChargeBase === 'before_discounts' ? subtotal : discountedSubtotal,
+    input.serviceChargeBps,
+    'half-up',
+  );
   const base = discountedSubtotal + serviceCharge;
+  // The amount VAT is calculated on: with a non-taxable service charge it is only the goods.
+  const vatBase = opts.serviceChargeVat === 'taxable' ? base : discountedSubtotal;
 
   if (input.priceMode === 'inclusive') {
-    const { net, vat } = vatFromInclusive(base, input.vatBps);
+    const { vat } = vatFromInclusive(vatBase, input.vatBps);
+    const net = base - vat;
     return {
       subtotal,
       lineDiscounts,
@@ -118,7 +142,7 @@ export function computeBill(input: BillInput): BillBreakdown {
       total: base,
     };
   }
-  const vat = vatOnExclusive(base, input.vatBps);
+  const vat = vatOnExclusive(vatBase, input.vatBps);
   return {
     subtotal,
     lineDiscounts,

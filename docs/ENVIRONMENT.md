@@ -31,7 +31,7 @@ Server only (Vercel Functions in `apps/*/api`, code in `functions/`) — **never
 | `SUPABASE_SERVICE_ROLE_KEY` | bypasses RLS. SSO exchange, webhooks, cron only. Never logged, never returned. |
 | `LINE_CHANNEL_SECRET`, `LINE_CHANNEL_ACCESS_TOKEN`, `LINE_BASIC_ID`, `LINE_CODE_SECRET` | LINE webhook signature, push, OA id for links, HMAC key for link codes (random, **not** the channel secret). Webhook URL to register: `https://bestie-pos.vercel.app/api/line/webhook` |
 | *(later)* `CRON_SECRET` | authenticates scheduled-function calls (constant-time compare) |
-| `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY` | AI assistant providers. Set as *Sensitive* in Vercel. **Never use a free-tier key with real customer data.** The admin screen shows only set / missing. |
+| `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY` (alias `GOOGLE_AI_API_KEY` accepted) | AI assistant providers. Set as *Sensitive* in Vercel. **Never use a free-tier key with real customer data.** The admin screen shows only set / missing. |
 | `AIVORA_APP_SLUG`, `AIVORA_HUB_EXCHANGE_URL`, `SITE_HOST` | SSO exchange function (`/api/sso-exchange`); slug **needed from the owner** |
 
 Guards: `packages/supabase` throws on a secret-looking name with a public prefix, and

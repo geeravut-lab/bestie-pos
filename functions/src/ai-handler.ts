@@ -31,7 +31,8 @@ const reply = (body: unknown, status = 200) =>
 export const keysFrom = (env: Env): Partial<Record<ProviderId, string>> => {
   const out: Partial<Record<ProviderId, string>> = {};
   for (const id of PROVIDER_IDS) {
-    const v = env[PROVIDERS[id].envKey]?.trim();
+    const def: { envKey: string; envKeyAliases?: readonly string[] } = PROVIDERS[id];
+    const v = [def.envKey, ...(def.envKeyAliases ?? [])].map((n) => env[n]?.trim()).find(Boolean);
     if (v) out[id] = v;
   }
   return out;

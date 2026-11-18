@@ -63,6 +63,7 @@ export const ART_IDS = [
   'pay',
   'home',
   'account',
+  'billing',
 ] as const;
 export type ArtId = (typeof ART_IDS)[number];
 
@@ -92,6 +93,7 @@ const item = (
 export const NAV_ITEMS: readonly NavItem[] = [
   item('home', '/', 'navHome'),
   item('account', '/account', 'navAccount'),
+  item('billing', '/settings/billing', 'navBilling', 'hintBilling'),
   item('sell', '/sell', 'navSell', 'hintSell'),
   item('tables', '/tables', 'navTables', 'hintTables', ['tables.floorplan']),
   item('queue', '/queue', 'navQueue', 'hintQueue', ['queue.call']),
@@ -167,6 +169,7 @@ export const ROLE_LAYOUT: Readonly<Record<AppRole, RoleLayout>> = {
       'points',
       'ai',
       'reports',
+      'billing',
       'audit',
     ],
   },

@@ -1,8 +1,23 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ssoExchangeResponse } from './sso-handler.js';
+import { hubExchangeUrl, ssoExchangeResponse } from './sso-handler.js';
 
 const post = (body: unknown) =>
   new Request('https://x/api/sso-exchange', { method: 'POST', body: JSON.stringify(body) });
+
+describe('hubExchangeUrl', () => {
+  it('prefers the explicit URL, then derives it from AIVORA_HUB_URL, then the default hub', () => {
+    expect(
+      hubExchangeUrl({
+        AIVORA_HUB_EXCHANGE_URL: 'https://x/exchange',
+        AIVORA_HUB_URL: 'https://hub',
+      }),
+    ).toBe('https://x/exchange');
+    expect(hubExchangeUrl({ AIVORA_HUB_URL: 'https://hub.example/' })).toBe(
+      'https://hub.example/api/public/sso/exchange',
+    );
+    expect(hubExchangeUrl({})).toBe('https://aivora-lc.netlify.app/api/public/sso/exchange');
+  });
+});
 
 describe('ssoExchangeResponse', () => {
   it('only accepts POST', async () => {

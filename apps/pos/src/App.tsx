@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useState } from 'react';
-import { adminPages } from '@bestie/admin-ui';
 import { AuthApp, useAuth } from '@bestie/auth';
 import type { ActingIdentity, DeviceMode } from '@bestie/auth';
 import { useI18n } from '@bestie/i18n';
@@ -7,6 +6,7 @@ import { AsyncButton } from '@bestie/ui';
 import { SyncIndicator, useDeviceBinding, useOutboxSync } from '@bestie/offline';
 import { loadActing, saveActing, useIdleLock } from './acting';
 import { LockScreen } from './LockScreen';
+import { posPages } from './posPages';
 
 /** Sync status + lock button in the top bar (needs the signed-in client, so it lives inside the auth provider). */
 function DeviceBar({ tillMode, onLock }: { tillMode: boolean; onLock: () => void }) {
@@ -68,5 +68,5 @@ export function App() {
     [acting, binding, lock, setupMode],
   );
 
-  return <AuthApp app="pos" rawEnv={import.meta.env} pages={adminPages} deviceMode={deviceMode} />;
+  return <AuthApp app="pos" rawEnv={import.meta.env} pages={posPages} deviceMode={deviceMode} />;
 }

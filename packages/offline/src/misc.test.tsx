@@ -45,6 +45,7 @@ describe('device binding', () => {
     storeId: 's1',
     orgId: 'o1',
     name: 'Counter',
+    code: 'A',
     role: 'cashier' as const,
     station: null,
     posId: 'POS-1',

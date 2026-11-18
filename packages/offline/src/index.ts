@@ -8,3 +8,5 @@ export { getDeviceBinding, setDeviceBinding, subscribeDeviceBinding } from './de
 export type { DeviceBinding } from './deviceBinding';
 export { useDeviceBinding, useOnline, useOutboxCounts, useOutboxSync } from './useSync';
 export { SyncIndicator } from './SyncIndicator';
+export { getOrder, listOpenOrders, nextOrderNumber, pullOrders, saveOrder } from './orderStore';
+export { useOpenOrders, useOrder } from './useOrders';

@@ -16,6 +16,7 @@ const device = {
   id: 'd1',
   store_id: 's1',
   name: 'Counter iPad',
+  code: 'A',
   role: 'cashier',
   station: null,
   revenue_pos_id: 'POS-001',
@@ -143,6 +144,7 @@ describe('<DevicesPage> binding this tablet', () => {
       deviceId: 'd1',
       storeId: 's1',
       orgId: 'o1',
+      code: 'A',
       role: 'cashier',
       posId: 'POS-001',
     });

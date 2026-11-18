@@ -31,6 +31,10 @@ export type PageContext = {
   permissions: readonly Permission[];
   isOwner: boolean;
   isPlatformAdmin: boolean;
+  /** The person acting right now (the PIN-unlocked staff member on a till, else the signed-in account's own staff row). */
+  staffId?: string;
+  /** The shop this person works in (their own, else the org's first) — never null for a signed-in member with a shop. */
+  homeStoreId?: string | null;
 };
 
 /** Tablet mode (apps/pos): a lock screen in front of the app, the acting person's role, extra header controls. */
@@ -103,6 +107,8 @@ function Inner({
             permissions: membership.permissions,
             isOwner: membership.roleBuiltIn === 'owner',
             isPlatformAdmin: my.data.isPlatformAdmin,
+            staffId: membership.staffId,
+            homeStoreId: pickStore(my.data, membership)?.id ?? membership.storeId,
           }
         : null,
     [auth.client, membership, my.data],

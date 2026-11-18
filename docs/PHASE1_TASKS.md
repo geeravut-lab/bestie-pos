@@ -31,9 +31,9 @@ Work top to bottom. One PR per task. Tick when merged.
 
 ## 3. POS app (apps/pos, PWA, offline-first)
 - [x] Device login + staff PIN: a tablet is bound to a registered device (`/devices` → "Use this tablet as this device"), "Who's working?" lock screen, PIN checked by the server or — with no signal — by a salted verifier kept on the tablet, auto-lock after 5 min idle, lock button. The acting person's role replaces the account's role on screen.
-- [ ] Restaurant: floor plan, open table, move/merge tables
-- [ ] Cafe: product grid, queue number
-- [ ] Order entry with modifiers, notes, send to kitchen
+- [x] Restaurant: floor plan by zone (`/tables`), open a bill on a table, continue a busy table, **move table**, add/rename/remove tables (needs `menu.edit`, online). _(merge tables comes with split bill)_
+- [x] Cafe: counter / takeaway orders from `/sell` with the same item grid; the order number (A001…) is the queue number. _(call screen = §4)_
+- [x] Order entry with modifiers (min/max checked), notes, quantity, sold-out items, send to kitchen / bar (lines become history once sent; cancelling a sent line needs `order.void` + a reason, audited)
 - [ ] Split bill (by item / amount / seat)
 - [ ] Payments UI: cash with change, Dynamic PromptPay QR (amount locked), gateway card, Credit, Points, split tender
 - [ ] PromptPay auto-confirm via PSP webhook → bill auto-closes (choose PSP; log in DECISIONS.md)
@@ -77,7 +77,8 @@ Work top to bottom. One PR per task. Tick when merged.
 - [x] Supabase Realtime private channels + `live_ping` DB trigger helper + policy (`live_can_listen`) deciding who may listen (platform / org / store / audit / user / admin topics); applied to the hosted project
 - [x] `useLiveSync` hook + `LiveSyncController`: refetch on ping (debounced), polling fallback with backoff, pause on hidden tab + catch-up, never refresh under typing / open dialog, catch-up after reconnect
 - [x] Wired to: roles / modules / store settings of the signed-in user (all open screens of an org update by themselves), audit history
-- [ ] Wire to: floor plan, order list, KDS, queue screen, guest "order ready" — add a `live_ping_row` trigger on each table when those screens are built (§3, §4, §5)
+- [x] Wired to: floor plan, order list, order screen (tables / orders / lines ping `store:<id>`; the till pulls the shop's orders when nothing is waiting to be sent)
+- [ ] Still to wire: KDS, queue call screen, guest "order ready" (§4, §5)
 - [x] Interplay with the offline outbox: sync indicator in the top bar (offline / syncing / N waiting / needs attention) driven by the local queue
 
 ## 11. Audit trail  _(AUDIT-TRAIL-KNOWLEDGE + admin switches, see KNOWLEDGE-MAPPING §A)_

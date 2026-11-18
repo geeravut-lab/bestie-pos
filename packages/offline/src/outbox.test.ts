@@ -96,7 +96,12 @@ describe('outbox', () => {
 
   it('a duplicate-key answer to an insert means "already there": removed, not retried', async () => {
     await enqueue({ kind: 'insert', table: 'orders', values: { id: 'a' } });
-    const { client } = fake(() => ({ error: { code: '23505' } }));
+    const { client } = fake(() => ({
+      error: {
+        code: '23505',
+        message: 'duplicate key value violates unique constraint "orders_pkey"',
+      },
+    }));
     expect(await flush(client)).toMatchObject({ sent: 1, pending: 0, dead: 0 });
   });
 

@@ -23,9 +23,16 @@ const entry = (over: Partial<OutboxEntry> = {}): OutboxEntry => ({
 });
 
 describe('classifyFailure', () => {
-  it('a replayed insert (duplicate key) counts as already applied — only for inserts', () => {
-    expect(classifyFailure(insert, { code: '23505' })).toBe('applied');
-    expect(classifyFailure(update, { code: '23505' })).toBe('dead');
+  it('a replayed insert (duplicate PRIMARY key) counts as already applied — only for inserts', () => {
+    const pk = 'duplicate key value violates unique constraint "orders_pkey"';
+    expect(classifyFailure(insert, { code: '23505', message: pk })).toBe('applied');
+    expect(classifyFailure(update, { code: '23505', message: pk })).toBe('dead');
+  });
+  it('a duplicate of some OTHER unique rule (two orders, same number) is never swallowed', () => {
+    const num =
+      'duplicate key value violates unique constraint "orders_store_id_business_date_number_key"';
+    expect(classifyFailure(insert, { code: '23505', message: num })).toBe('dead');
+    expect(classifyFailure(insert, { code: '23505' })).toBe('dead');
   });
   it('permission, constraint, data and raised errors are refused for good', () => {
     for (const code of ['42501', '23514', '23503', '22P02', 'P0001', 'PGRST116'])

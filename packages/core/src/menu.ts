@@ -9,6 +9,14 @@ export const itemPrice = (item: Pick<MenuItem, 'prices'>, channel: Channel): Sat
 export const modifierPrice = (m: Modifier, channel: Channel): Satang =>
   m.channelDelta?.[channel] ?? m.priceDelta;
 
+/** What the min/max check needs from a modifier group (a full `ModifierGroup` fits, so does a screen's own shape). */
+export type SelectableGroup = {
+  id: string;
+  min: number;
+  max: number;
+  options: readonly { id: string }[];
+};
+
 export type SelectionProblem = {
   groupId: string;
   problem: 'too_few' | 'too_many' | 'unknown_option';
@@ -16,7 +24,7 @@ export type SelectionProblem = {
 
 /** Min/max rules per modifier group (PRODUCT_SPEC §6). `selected` = option ids chosen for the line. */
 export function validateSelection(
-  groups: readonly ModifierGroup[],
+  groups: readonly SelectableGroup[],
   selected: readonly string[],
 ): SelectionProblem[] {
   const problems: SelectionProblem[] = [];

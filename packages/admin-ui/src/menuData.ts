@@ -3,7 +3,13 @@ import { parseChannelPrices, parseLocalizedText, bySort } from '@bestie/core';
 import type { ChannelPrices, LocalizedText } from '@bestie/core';
 import type { ErrorKey } from '@bestie/i18n';
 
-export type Cat = { id: string; name: LocalizedText; sort: number; created_at: string };
+export type Cat = {
+  id: string;
+  name: LocalizedText;
+  sort: number;
+  active: boolean;
+  created_at: string;
+};
 export type Item = {
   id: string;
   category_id: string;
@@ -29,6 +35,7 @@ export type Opt = {
   name: LocalizedText;
   price_delta: number;
   channel_delta: Record<string, number>;
+  active: boolean;
   sort: number;
   created_at: string;
 };
@@ -48,13 +55,16 @@ export async function loadMenu(client: SupabaseClient, storeId: string): Promise
       .is('deleted_at', null)
       .order('created_at');
   const [cats, items, groups, opts] = await Promise.all([
-    q('menu_categories', 'id, name, sort, created_at'),
+    q('menu_categories', 'id, name, sort, active, created_at'),
     q(
       'menu_items',
       'id, category_id, name, prices, station, modifier_group_ids, available, sort, created_at',
     ),
     q('modifier_groups', 'id, name, min_select, max_select, sort, created_at'),
-    q('modifier_options', 'id, group_id, name, price_delta, channel_delta, sort, created_at'),
+    q(
+      'modifier_options',
+      'id, group_id, name, price_delta, channel_delta, active, sort, created_at',
+    ),
   ]);
   if (cats.error || items.error || groups.error || opts.error) throw new Error('load');
   const rows = (r: { data: unknown }) => (r.data ?? []) as unknown as Row[];
@@ -63,6 +73,7 @@ export async function loadMenu(client: SupabaseClient, storeId: string): Promise
       id: str(r.id),
       name: parseLocalizedText(r.name),
       sort: num(r.sort),
+      active: r.active !== false,
       created_at: str(r.created_at),
     })),
     items: rows(items).flatMap((r) => {
@@ -105,6 +116,7 @@ export async function loadMenu(client: SupabaseClient, storeId: string): Promise
               ),
             )
           : {},
+      active: r.active !== false,
       sort: num(r.sort),
       created_at: str(r.created_at),
     })),

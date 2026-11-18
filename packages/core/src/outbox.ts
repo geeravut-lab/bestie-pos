@@ -47,7 +47,10 @@ export function classifyFailure(op: OutboxOp, err: RemoteError): FailureClass {
   if (!err) return 'retry';
   const code = err.code ?? '';
   if (code === CONFLICT_CODE) return 'dead';
-  if (code === '23505' && op.kind === 'insert') return 'applied';
+  // a replayed insert hits the PRIMARY KEY (same uuid = same write: done). Any OTHER unique rule (e.g. a repeated order
+  // number) means a different row wants the same slot — that must be seen by a person, never swallowed.
+  if (code === '23505' && op.kind === 'insert')
+    return /_pkey/.test(err.message ?? '') ? 'applied' : 'dead';
   if (code === 'PGRST301' || code === 'PGRST303') return 'retry'; // expired session: sign in again, the queue keeps waiting
   if (/^(42|23|22|P0|PGRST1|PGRST2)/.test(code)) return 'dead';
   const status = err.status ?? 0;

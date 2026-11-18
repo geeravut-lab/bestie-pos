@@ -374,3 +374,52 @@ describe('GET /api/guest/menu carries the pay info', () => {
     expect(((await r.json()) as { pay: { enabled: boolean } }).pay.enabled).toBe(false);
   });
 });
+
+describe("a Points discount on the guest's bill", () => {
+  it('lowers the amount the guest pays, exactly as the till computes it, and is told to the page', async () => {
+    const withPoints = ctxOf({ points_discount: 3000 });
+    const { f, calls } = fakeFetch({
+      guest_pay_context: () => json(withPoints),
+      guest_begin_payment: () => json(ATTEMPT),
+      attach_payment_intent: () => json(null),
+    });
+    const { stripe, posts } = fakeStripe();
+    const r = await guestPayResponse(post('pay', { token: TOKEN, lang: 'th' }, '8.0.0.1'), env, {
+      fetchImpl: f,
+      stripe,
+    });
+    const body = (await r.json()) as { amount: number };
+    // lines 210.00, − 30.00 points → 180.00, + 10 % service → 198.00
+    expect(body.amount).toBe(19800);
+    expect(posts[0]!.params).toMatchObject({ amount: 19800 });
+    const snap = calls.find((c) => c.fn === 'guest_begin_payment')!.args.p as Record<
+      string,
+      unknown
+    >;
+    expect(snap).toMatchObject({
+      subtotal: 21000,
+      points_discount: 3000,
+      total: 19800,
+      payable: 19800,
+    });
+  });
+  it('the menu answer carries the discount and the reduced total', async () => {
+    const { f } = fakeFetch({
+      guest_table: () => json({ store_name: 'Acme', table_name: 'T1', qr_enabled: true }),
+      guest_menu: () => json({}),
+      guest_bill: () => json({}),
+      guest_pay_context: () => json(ctxOf({ points_discount: 3000 })),
+    });
+    const r = await guestMenuResponse(
+      new Request(`https://app.test/api/guest/menu?t=${TOKEN}`, {
+        headers: { 'x-forwarded-for': '8.0.0.2' },
+      }),
+      env,
+      { fetchImpl: f },
+    );
+    expect(((await r.json()) as { pay: Record<string, unknown> }).pay).toMatchObject({
+      pointsDiscount: 3000,
+      total: 19800,
+    });
+  });
+});

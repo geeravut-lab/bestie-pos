@@ -62,6 +62,12 @@ export function ReceiptView({
           <dt>{d.receiptSubtotal}</dt>
           <dd>{money(receipt.subtotal)}</dd>
         </div>
+        {(receipt.pointsDiscount ?? 0) > 0 ? (
+          <div>
+            <dt>{fmt(d.receiptPointsDiscount, { n: receipt.pointsUsed ?? 0 })}</dt>
+            <dd>−{money(receipt.pointsDiscount ?? 0)}</dd>
+          </div>
+        ) : null}
         {receipt.serviceCharge > 0 ? (
           <div>
             <dt>{d.receiptService}</dt>

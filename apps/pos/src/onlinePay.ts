@@ -207,6 +207,7 @@ export async function closeSplitPayment(p: {
       issued_at: new Date().toISOString(),
       lang: p.lang,
       subtotal: bill.subtotal,
+      points_discount: bill.pointsDiscount,
       service_charge: bill.serviceCharge,
       vat: bill.vat,
       net_before_vat: bill.netBeforeVat,

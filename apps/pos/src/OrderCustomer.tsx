@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { parseCustomerCard } from '@bestie/core';
+import { formatTHB, parseCustomerCard } from '@bestie/core';
 import { CustomerPicker, useRemote } from '@bestie/admin-ui';
+import { flush, outboxCounts, pullOrderNow } from '@bestie/offline';
 import { errorText, fmt, useI18n } from '@bestie/i18n';
 import type { ErrorKey } from '@bestie/i18n';
 import { AsyncButton } from '@bestie/ui';
@@ -26,8 +27,17 @@ export function OrderCustomer({
 
   const { data, reload } = useRemote(async () => {
     if (!online || !canSee) return null;
-    const o = await ctx.client.from('orders').select('customer_id').eq('id', orderId).maybeSingle();
-    const cid = (o.data as { customer_id?: string | null } | null)?.customer_id;
+    const o = await ctx.client
+      .from('orders')
+      .select('customer_id, points_used, points_discount')
+      .eq('id', orderId)
+      .maybeSingle();
+    const row = o.data as {
+      customer_id?: string | null;
+      points_used?: number;
+      points_discount?: number;
+    } | null;
+    const cid = row?.customer_id;
     if (o.error || !cid) return null;
     const [c, bal] = await Promise.all([
       ctx.client
@@ -38,7 +48,8 @@ export function OrderCustomer({
       ctx.client.rpc('points_balance', { p_customer: cid }),
     ]);
     if (c.error || !c.data) return null;
-    return parseCustomerCard({ ...(c.data as object), balance: Number(bal.data ?? 0) });
+    const card = parseCustomerCard({ ...(c.data as object), balance: Number(bal.data ?? 0) });
+    return card ? { card, used: row?.points_used ?? 0, discount: row?.points_discount ?? 0 } : null;
   }, `${orderId}:${online}:${canSee}`);
 
   if (!online || !canSee) return null;
@@ -58,7 +69,7 @@ export function OrderCustomer({
     <div className="order-customer">
       {data ? (
         <p>
-          {fmt(t.custOnBill, { name: data.name, points: data.points })}{' '}
+          {fmt(t.custOnBill, { name: data.card.name, points: data.card.points })}{' '}
           {open ? (
             <AsyncButton variant="secondary" onClick={() => attach(null)}>
               {t.custRemove}
@@ -70,6 +81,16 @@ export function OrderCustomer({
           {t.custAttach}
         </button>
       ) : null}
+      {data && open ? (
+        <PointsControl
+          ctx={ctx}
+          orderId={orderId}
+          available={data.card.points}
+          used={data.used}
+          discount={data.discount}
+          onChanged={reload}
+        />
+      ) : null}
       {error ? <Notice kind="error">{errorText(error, t)}</Notice> : null}
       {picking && open && !data ? (
         <section className="card admin-card">
@@ -80,5 +101,102 @@ export function OrderCustomer({
         </section>
       ) : null}
     </div>
+  );
+}
+
+/** Use some of the customer's Bestie Points as a discount on this bill (online; the server reserves them and applies the shop's cap). */
+function PointsControl({
+  ctx,
+  orderId,
+  available,
+  used,
+  discount,
+  onChanged,
+}: {
+  ctx: PageContext;
+  orderId: string;
+  available: number;
+  used: number;
+  discount: number;
+  onChanged: () => void;
+}) {
+  const { t, lang } = useI18n();
+  const locale = lang === 'th' ? ('th-TH' as const) : ('en-GB' as const);
+  const [wanted, setWanted] = useState('');
+  const [note, setNote] = useState<'bad' | 'locked' | 'off' | 'capped' | null>(null);
+  const [capNo, setCapNo] = useState(0);
+  const [error, setError] = useState<ErrorKey | null>(null);
+
+  const apply = async (n: number) => {
+    setError(null);
+    setNote(null);
+    // the server must see the bill exactly as the tablet does
+    await flush(ctx.client as never);
+    if ((await outboxCounts()).pending > 0) return setError('err_pay_sync');
+    const { data, error: err } = await ctx.client.rpc('set_order_points', {
+      p_order: orderId,
+      p_wanted: n,
+    });
+    if (err) {
+      if (err.code === '55006') return setNote('locked');
+      if (err.code === '0A000') return setNote('off');
+      return setError(err.code === '42501' ? 'err_forbidden' : 'err_save_failed');
+    }
+    const r = (data ?? {}) as { points_used?: number; cap_points?: number };
+    if (n > 0 && (r.points_used ?? 0) < n && typeof r.cap_points === 'number' && r.cap_points < n) {
+      setCapNo(r.cap_points);
+      setNote('capped');
+    }
+    setWanted('');
+    await pullOrderNow(ctx.client as never, orderId);
+    onChanged();
+  };
+
+  const count = /^\d{1,7}$/.test(wanted.trim()) ? Number(wanted) : null;
+  return (
+    <section className="card admin-card" aria-label={t.ptsUseTitle}>
+      <h3>{t.ptsUseTitle}</h3>
+      {used > 0 ? (
+        <p>
+          <strong>{fmt(t.ptsUsing, { n: used, discount: formatTHB(discount, locale) })}</strong>{' '}
+          <AsyncButton variant="secondary" onClick={() => apply(0)}>
+            {t.ptsUseRemove}
+          </AsyncButton>
+        </p>
+      ) : null}
+      <p className="muted">{fmt(t.ptsUseHint, { n: available + used })}</p>
+      <form className="auth-form" onSubmit={(e) => e.preventDefault()}>
+        <div className="form-row">
+          <label className="label" htmlFor={`pts-${orderId}`}>
+            {t.ptsUseInput}
+          </label>
+          <input
+            id={`pts-${orderId}`}
+            className="field tabular"
+            inputMode="numeric"
+            value={wanted}
+            onChange={(e) => setWanted(e.target.value)}
+          />
+        </div>
+        {note === 'bad' ? <Notice kind="error">{t.ptsBad}</Notice> : null}
+        {note === 'locked' ? <Notice kind="error">{t.ptsLocked}</Notice> : null}
+        {note === 'off' ? <Notice kind="error">{t.ptsOff}</Notice> : null}
+        {note === 'capped' ? <Notice kind="info">{fmt(t.ptsCapped, { n: capNo })}</Notice> : null}
+        {error ? <Notice kind="error">{errorText(error, t)}</Notice> : null}
+        <div className="actions">
+          <AsyncButton
+            onClick={async () => {
+              if (count === null) return setNote('bad');
+              await apply(count);
+            }}
+          >
+            {t.ptsUseApply}
+          </AsyncButton>
+          <AsyncButton variant="secondary" onClick={() => apply(available + used)}>
+            {t.ptsUseMax}
+          </AsyncButton>
+        </div>
+      </form>
+    </section>
   );
 }

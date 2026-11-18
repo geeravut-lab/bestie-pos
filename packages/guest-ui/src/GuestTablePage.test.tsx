@@ -375,4 +375,21 @@ describe('<GuestTablePage> pay at the table', () => {
       vi.useRealTimers();
     }
   });
+
+  it("shows the discount from the customer's points above the amount to pay", async () => {
+    stubFetch({
+      menu: withBill({
+        enabled: true,
+        total: 19800,
+        pointsDiscount: 3000,
+        unconfirmed: false,
+        live: null,
+      }),
+    });
+    mount();
+    const region = await screen.findByRole('region', { name: 'Pay with PromptPay' });
+    expect(within(region).getByText('Discount from your points')).toBeTruthy();
+    expect(within(region).getByText('−฿30')).toBeTruthy();
+    expect(within(region).getByText('฿198')).toBeTruthy();
+  });
 });

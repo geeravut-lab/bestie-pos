@@ -43,6 +43,11 @@ export type OrderDoc = {
   channel: Channel;
   status: OrderStatus;
   tableId: string | null;
+  /** Who the bill belongs to (earns / uses Bestie Points). Set online by the server; never written by the till. */
+  customerId?: string | null;
+  /** Points reserved on this bill and the discount they give (satang). Server-managed (`set_order_points`). */
+  pointsUsed?: number;
+  pointsDiscount?: Satang;
   covers: number | null;
   note: string | null;
   openedBy: string | null;
@@ -300,6 +305,8 @@ export type BillConfig = {
 export function orderBill(o: OrderDoc, cfg: BillConfig): BillBreakdown {
   return computeBill({
     lines: live(o).map((l) => ({ unitPrice: l.unitPrice, quantity: l.quantity })),
+    // Bestie Points redeemed on this bill: a discount (reserved by the server), capped by computeBill at what is left
+    pointsDiscount: o.pointsDiscount ?? 0,
     priceMode: cfg.priceMode,
     vatBps: cfg.vatBps,
     // a takeaway / delivery bill carries no table service charge unless the shop's service-charge module says so
@@ -409,6 +416,9 @@ export function rowsToOrder(
       ? st
       : 'open') as OrderStatus,
     tableId: str(r.table_id),
+    customerId: str(r.customer_id),
+    pointsUsed: int(r.points_used) ?? 0,
+    pointsDiscount: int(r.points_discount) ?? 0,
     covers: int(r.covers),
     note: str(r.note),
     openedBy: str(r.opened_by),

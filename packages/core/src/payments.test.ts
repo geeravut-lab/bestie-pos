@@ -306,3 +306,74 @@ describe('onlineSnapshot', () => {
     });
   });
 });
+
+describe('Points discount on a bill', () => {
+  const discounted = (): OrderDoc => ({
+    ...order(),
+    customerId: 'c1',
+    pointsUsed: 30,
+    pointsDiscount: 3000,
+  });
+  it('the cash receipt records the discount and the amount due is lower', () => {
+    const r = receiptFor(discounted(), 15000);
+    expect(r).toMatchObject({
+      subtotal: 18000,
+      pointsDiscount: 3000,
+      pointsUsed: 30,
+      total: 15000,
+      payable: 15000,
+    });
+    expect(r.payments[0]).toMatchObject({ amount: 15000, tendered: 15000 });
+  });
+  it('the close payload and the online snapshot carry points_discount for the server to check', () => {
+    const o = discounted();
+    expect(closePayload(o, receiptFor(o, 15000), { deviceId: 'dev', staffId: null })).toMatchObject(
+      { points_discount: 3000, total: 15000 },
+    );
+    const s = onlineSnapshot({
+      order: o,
+      bill: orderBill(o, cfg),
+      billConfig: cfg,
+      tender: 'promptpay',
+      deviceId: 'dev',
+      staffId: null,
+      lang: 'th',
+    });
+    expect(s).toMatchObject({
+      points_discount: 3000,
+      subtotal: 18000,
+      total: 15000,
+      payable: 15000,
+    });
+  });
+  it('a bill without points sends 0', () => {
+    const o = order();
+    expect(closePayload(o, receiptFor(o, 18000), { deviceId: 'dev', staffId: null })).toMatchObject(
+      { points_discount: 0 },
+    );
+  });
+  it('another tablet reads the discount back from the receipt row', () => {
+    const o = discounted();
+    const r = receiptFor(o, 15000);
+    const row = {
+      number: r.number,
+      issued_at: r.issuedAt,
+      seller_name: r.sellerName,
+      branch_code: r.branchCode,
+      lang: 'th',
+      subtotal: 18000,
+      service_charge: 0,
+      vat: 981,
+      net_before_vat: 14019,
+      total: 15000,
+      rounding: 0,
+      payable: 15000,
+      vat_bps: 700,
+      service_bps: 0,
+      price_mode: 'inclusive',
+      points_discount: 3000,
+      points_used: 30,
+    };
+    expect(receiptFromRows(row, [])).toMatchObject({ pointsDiscount: 3000, pointsUsed: 30 });
+  });
+});

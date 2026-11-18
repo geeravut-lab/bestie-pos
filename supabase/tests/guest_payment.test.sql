@@ -125,6 +125,11 @@ select t_err(null, 'service_role', $$select public.guest_cancel_payment((select 
 select t_rows(null, 'service_role', $$select 1 where (public.guest_cancel_payment((select v from t_out where k='tok'), (select v::uuid from t_out where k='att')) ->> 'status') = 'canceled'$$, 1, 'the guest cancels');
 select t_rows(null, 'service_role', $$select 1 where public.guest_pay_context((select v from t_out where k='tok')) -> 'live' = 'null'::jsonb or (public.guest_pay_context((select v from t_out where k='tok')) -> 'live') is null$$, 1, 'no live attempt after cancelling');
 
+-- a Points discount on the bill is part of what the guest is asked to pay
+update public.orders set points_used = 10, points_discount = 1000 where id = (select v::uuid from t_out where k='oid');
+select t_rows(null, 'service_role', $$select 1 where (public.guest_pay_context((select v from t_out where k='tok')) ->> 'points_discount') = '1000'$$, 1, 'the pay context tells the handler about the Points discount');
+update public.orders set points_used = 0, points_discount = 0 where id = (select v::uuid from t_out where k='oid');
+
 -- ordering works again, then pay and confirm through the provider path
 select t_rows(null, 'service_role', $$select 1 where (public.guest_place_order(t_order((select v from t_out where k='tok'), '30000000-0000-4000-8000-000000000003',
   format('[{"item_id":"%s","quantity":1,"option_ids":[]}]', (select id::text from public.menu_items where store_id = (select v::uuid from t_out where k='store') and name ->> 'en' = 'Water')))) ->> 'lines') = '1'$$, 1, 'ordering again after the cancel');

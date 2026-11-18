@@ -1,40 +1,15 @@
 import { useState } from 'react';
-import qrcode from 'qrcode-generator';
 import { errorText, fmt, useI18n } from '@bestie/i18n';
 import type { ErrorKey } from '@bestie/i18n';
-import { AsyncButton, Spinner } from '@bestie/ui';
+import { AsyncButton, QrSvg, Spinner } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
 import type { PosTable } from './posData';
 
+export { QrSvg };
+
 /** The address a guest's phone opens. Built from the token only; nothing about the shop is in the link. */
 export const tableLink = (origin: string, token: string): string => `${origin}/t/${token}`;
-
-/** A QR code as plain SVG shapes (no HTML injection): dark modules in ink on a white card. */
-export function QrSvg({ value, label }: { value: string; label: string }) {
-  const qr = qrcode(0, 'M');
-  qr.addData(value);
-  qr.make();
-  const n = qr.getModuleCount();
-  const quiet = 3;
-  const cells: string[] = [];
-  for (let r = 0; r < n; r++)
-    for (let c = 0; c < n; c++)
-      if (qr.isDark(r, c)) cells.push(`M${c + quiet} ${r + quiet}h1v1h-1z`);
-  const size = n + quiet * 2;
-  return (
-    <svg
-      className="qr-svg"
-      role="img"
-      aria-label={label}
-      viewBox={`0 0 ${size} ${size}`}
-      shapeRendering="crispEdges"
-    >
-      <rect width={size} height={size} fill="var(--bp-surface)" />
-      <path d={cells.join('')} fill="var(--bp-ink)" />
-    </svg>
-  );
-}
 
 /** The QR of one table: show, print, and replace the code (the old one stops working at once). */
 export function TableQr({ ctx, table }: { ctx: PageContext; table: PosTable }) {

@@ -118,6 +118,6 @@ Work top to bottom. One PR per task. Tick when merged.
 
 ## 16. Crypto top-up of Bestie Credit  _(spec: docs/modules/CRYPTO_TOPUP.md · knowledge: docs/CRYPTO_TRANSFER_KNOWLEDGE.md)_
 - [x] Data model, rules and server: wallets (2-person change), KYC T1 / T2, payment requests with locked rate + unique amount + 15 min, chain watcher (TronGrid / Etherscan behind an interface), matching, confirmations, review queue, flags, blocklist, AML report, idempotent crediting into the Credit ledger (`funding = crypto`; still no cash-out). Off by default; needs the module, Credit and `legal_sign_off.cryptoTopup`.
-- [ ] Screens: crypto top-up panel on the member page (KYC form, request with QR and 6+6 address, status), review queue + KYC approval + wallet setup + AML export (`/crypto`)
+- [x] Screens: crypto top-up panel on the member page (KYC form T1 / T2 with address checksum, request with big amount + network + 6+6 address + QR + countdown + status + Check now), `/crypto` back office (company wallets with two-person change, KYC approvals, review queue, flags, AML CSV export, audited) — **no screen was run against live TronGrid / Etherscan / prices (see ENVIRONMENT §7)**. Original item: crypto top-up panel on the member page (KYC form, request with QR and 6+6 address, status), review queue + KYC approval + wallet setup + AML export (`/crypto`)
 - [ ] Owner / lawyer actions: legal opinion uploaded and sign-off set; TronGrid / Etherscan keys; scheduler; **Shasta / Sepolia test run**; confirm tiers and limits; company wallet and printed address card
 

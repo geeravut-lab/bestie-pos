@@ -115,6 +115,7 @@ describe('<BillingPage> store billing', () => {
         price_mode: 'inclusive',
         bill_options: { serviceChargeBase: 'before_discounts' },
         rounding: { cash: 'nearest-25' },
+        shift_required: false,
       },
     });
     expect(await screen.findByText('Saved.')).toBeTruthy();
@@ -208,5 +209,28 @@ describe('<BillingPage> points rule', () => {
     expect(
       (screen.getByLabelText('Points can cover at most (% of the bill)') as HTMLInputElement).value,
     ).toBe('20');
+  });
+});
+
+describe('<BillingPage> shift switch', () => {
+  it('lets the owner require an open shift before payments, saved with the shop settings', async () => {
+    const { client, updates } = fakeClient();
+    mount(ctx(client));
+    await screen.findByRole('heading', { name: 'Billing & points' });
+    const sw = screen.getByRole('switch', {
+      name: 'Require an open shift before taking payment',
+    }) as HTMLInputElement;
+    expect(sw.checked).toBe(false);
+    await userEvent.click(sw);
+    await userEvent.click(screen.getByRole('button', { name: 'Save billing settings' }));
+    await waitFor(() =>
+      expect(
+        updates.some(
+          (u) =>
+            u.table === 'stores' &&
+            (u.values as { shift_required?: boolean }).shift_required === true,
+        ),
+      ).toBe(true),
+    );
   });
 });

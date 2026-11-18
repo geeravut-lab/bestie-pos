@@ -14,6 +14,7 @@ import {
   pullOrders,
   resetOfflineDb,
   saveOrder,
+  saveOrders,
   syncReceiptCounter,
 } from './index';
 import type { RemoteClient } from './index';
@@ -354,6 +355,35 @@ describe('payOrder (cash)', () => {
 });
 
 async function resetQueue() {
+  const { db } = await import('./db');
+  await db.outbox.clear();
+}
+
+describe('split and merge storage', () => {
+  it('saves both bills and ONLY the explicit server writes (the server moves the lines itself)', async () => {
+    const a = sendNew(withLine(base('A', 'A001')), NOW).order;
+    await saveOrder(null, a);
+    await resetQueueDb();
+    const b = { ...base('B', 'A002'), lines: [] };
+    await saveOrders(
+      [{ ...a, lines: [] }, b],
+      [
+        { kind: 'insert', table: 'orders', values: { id: 'B' } },
+        { kind: 'rpc', fn: 'move_order_lines', args: { p: {} } },
+      ],
+    );
+    expect((await getOrder('A'))?.lines).toEqual([]);
+    expect((await getOrder('B'))?.number).toBe('A002');
+    const q = await listOutbox();
+    expect(q.map((e) => (e.op.kind === 'rpc' ? e.op.fn : 'insert'))).toEqual([
+      'insert',
+      'move_order_lines',
+    ]);
+    expect(q[0]!.createdAt).toBeLessThan(q[1]!.createdAt);
+  });
+});
+
+async function resetQueueDb() {
   const { db } = await import('./db');
   await db.outbox.clear();
 }

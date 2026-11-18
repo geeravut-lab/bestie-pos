@@ -23,6 +23,7 @@ export type PosConfig = {
   branchCode: string;
   vatRegistered: boolean;
   cashRounding: RoundingRule;
+  shiftRequired: boolean;
   defaultLang: Lang;
   vatBps: number;
   serviceChargeBps: number;
@@ -58,7 +59,7 @@ async function loadConfig(client: PageContext['client'], storeId: string): Promi
   const r = await client
     .from('stores')
     .select(
-      'name, vat_registered, vat_bps, service_charge_bps, price_mode, bill_options, rounding, branch_code, default_lang, legal_entities(name, tax_id)',
+      'name, vat_registered, vat_bps, service_charge_bps, price_mode, bill_options, rounding, branch_code, default_lang, shift_required, legal_entities(name, tax_id)',
     )
     .eq('id', storeId)
     .maybeSingle();
@@ -73,6 +74,7 @@ async function loadConfig(client: PageContext['client'], storeId: string): Promi
     branchCode: typeof s.branch_code === 'string' ? s.branch_code : '00000',
     vatRegistered: s.vat_registered === true,
     cashRounding: roundingFor('cash', parseRoundingConfig(s.rounding)),
+    shiftRequired: s.shift_required === true,
     defaultLang: s.default_lang === 'en' ? 'en' : 'th',
     vatBps: s.vat_registered === true ? num(s.vat_bps) : 0,
     serviceChargeBps: num(s.service_charge_bps),

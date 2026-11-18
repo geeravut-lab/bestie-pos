@@ -1,6 +1,10 @@
 import {
   OrderError,
   buildCashReceipt,
+  mergeOrders,
+  movePayload,
+  orderToRow,
+  splitOrder,
   closeOrder,
   hasUnsent,
   newOrder,
@@ -8,9 +12,16 @@ import {
   payBlockers,
   sendNew,
 } from '@bestie/core';
-import type { BillConfig, Channel, Lang, OrderDoc, RoundingRule } from '@bestie/core';
+import type { BillConfig, Channel, Lang, OrderDoc, RoundingRule, SplitPick } from '@bestie/core';
 import type { ErrorKey } from '@bestie/i18n';
-import { getOrder, nextOrderNumber, nextReceiptNumber, payOrder, saveOrder } from '@bestie/offline';
+import {
+  getOrder,
+  nextOrderNumber,
+  nextReceiptNumber,
+  payOrder,
+  saveOrder,
+  saveOrders,
+} from '@bestie/offline';
 import type { DeviceBinding } from '@bestie/offline';
 
 /** Open a new order on this tablet: numbered A001…, saved locally first, queued for the server. Returns its id. */
@@ -117,6 +128,85 @@ export function payCash(p: {
         return e.code === 'closed' ? 'err_order_closed' : 'err_order_failed';
       console.error('[pos] payment failed', e instanceof Error ? e.message : 'unknown');
       return 'err_pay_failed';
+    }
+  };
+  const next = chain.then(run, run);
+  chain = next;
+  return next;
+}
+
+/**
+ * Split picked lines (or part of a line's quantity) off a bill into a NEW bill on the same table. The new bill's number comes
+ * from this device's series; the server moves the lines itself (`move_order_lines`), so only the new bill's header and that one
+ * call are queued. Returns the new bill's id, or an error key.
+ */
+export function splitBill(p: {
+  orderId: string;
+  picks: SplitPick[];
+  binding: DeviceBinding;
+  staffId?: string;
+}): Promise<{ id: string } | { error: ErrorKey }> {
+  const run = async (): Promise<{ id: string } | { error: ErrorKey }> => {
+    try {
+      const fresh = await getOrder(p.orderId);
+      if (!fresh) return { error: 'err_order_failed' };
+      const now = Date.now();
+      const r = splitOrder(fresh, p.picks, {
+        newOrderId: crypto.randomUUID(),
+        newNumber: await nextOrderNumber(p.binding.storeId, p.binding.code, now),
+        newLineId: () => crypto.randomUUID(),
+        openedBy: p.staffId ?? null,
+        deviceId: p.binding.deviceId,
+        now,
+      });
+      await saveOrders(
+        [r.source, r.target],
+        [
+          { kind: 'insert', table: 'orders', values: orderToRow({ ...r.target, lines: [] }) },
+          {
+            kind: 'rpc',
+            fn: 'move_order_lines',
+            args: movePayload(fresh.id, r.target.id, r.moves),
+          },
+        ],
+        () => now,
+      );
+      return { id: r.target.id };
+    } catch (e) {
+      if (e instanceof OrderError)
+        return { error: e.code === 'closed' ? 'err_order_closed' : 'err_split_failed' };
+      console.error('[pos] split failed', e instanceof Error ? e.message : 'unknown');
+      return { error: 'err_split_failed' };
+    }
+  };
+  const next = chain.then(run, run);
+  chain = next;
+  return next;
+}
+
+/** Move every line of one bill into another and close the empty one. */
+export function mergeBills(p: { sourceId: string; targetId: string }): Promise<ErrorKey | null> {
+  const run = async (): Promise<ErrorKey | null> => {
+    try {
+      const [source, target] = await Promise.all([getOrder(p.sourceId), getOrder(p.targetId)]);
+      if (!source || !target) return 'err_order_failed';
+      const r = mergeOrders(source, target);
+      await saveOrders(
+        [r.source, r.target],
+        [
+          {
+            kind: 'rpc',
+            fn: 'move_order_lines',
+            args: movePayload(source.id, target.id, r.moves, true),
+          },
+        ],
+      );
+      return null;
+    } catch (e) {
+      if (e instanceof OrderError)
+        return e.code === 'closed' ? 'err_order_closed' : 'err_split_failed';
+      console.error('[pos] merge failed', e instanceof Error ? e.message : 'unknown');
+      return 'err_split_failed';
     }
   };
   const next = chain.then(run, run);

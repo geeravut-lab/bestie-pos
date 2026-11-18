@@ -50,6 +50,7 @@ export function FloorPlanPage({ ctx }: { ctx: PageContext }) {
                 key={tb.id}
                 table={tb}
                 order={orderOf(tb.id)}
+                bills={orders.filter((o) => o.tableId === tb.id).length}
                 config={config}
                 canOpen={binding !== null}
                 onOpen={async () => {
@@ -84,6 +85,7 @@ export function FloorPlanPage({ ctx }: { ctx: PageContext }) {
 function TableCard({
   table,
   order,
+  bills,
   config,
   canOpen,
   onOpen,
@@ -91,6 +93,8 @@ function TableCard({
 }: {
   table: PosTable;
   order: OrderDoc | undefined;
+  /** How many open bills sit on this table (a split makes more than one). */
+  bills: number;
   config: PosConfig;
   canOpen: boolean;
   onOpen: () => Promise<void>;
@@ -115,7 +119,7 @@ function TableCard({
         <strong>{table.name}</strong>
         {order ? (
           <>
-            <span>{t.tablesBusy}</span>
+            <span>{bills > 1 ? fmt(t.tablesBills, { n: bills }) : t.tablesBusy}</span>
             <span className="tabular">
               {itemCount(order)} ·{' '}
               {formatTHB(orderBill(order, billConfigFor(config, order.channel)).total, locale)}

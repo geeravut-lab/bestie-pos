@@ -34,6 +34,7 @@ type StoreRow = {
   price_mode: 'inclusive' | 'exclusive';
   rounding: unknown;
   bill_options: unknown;
+  shift_required?: boolean;
 };
 
 const tx = (t: Dict, key: string, fallback = key): string =>
@@ -57,7 +58,7 @@ export function BillingPage({ ctx }: { ctx: PageContext }) {
       ctx.client
         .from('stores')
         .select(
-          'id, name, vat_registered, vat_bps, service_charge_bps, price_mode, rounding, bill_options',
+          'id, name, vat_registered, vat_bps, service_charge_bps, price_mode, rounding, bill_options, shift_required',
         )
         .eq('org_id', ctx.orgId)
         .is('deleted_at', null)
@@ -112,6 +113,7 @@ function StoreBilling({
   const [storeId, setStoreId] = useState(stores[0]!.id);
   const store = stores.find((s) => s.id === storeId) ?? stores[0]!;
   const [vatRegistered, setVatRegistered] = useState(store.vat_registered);
+  const [shiftRequired, setShiftRequired] = useState(store.shift_required === true);
   const [vat, setVat] = useState(pct(store.vat_bps || 700));
   const [service, setService] = useState(pct(store.service_charge_bps));
   const [priceMode, setPriceMode] = useState(store.price_mode);
@@ -130,6 +132,7 @@ function StoreBilling({
     setService(pct(s.service_charge_bps));
     setPriceMode(s.price_mode);
     setOpts(parseBillOptions(s.bill_options));
+    setShiftRequired(s.shift_required === true);
     setCashRule(parseRoundingConfig(s.rounding).cash ?? 'none');
     setSaved(false);
     setError(null);
@@ -167,6 +170,7 @@ function StoreBilling({
         service_charge_bps: serviceBps,
         price_mode: priceMode,
         bill_options: billOptionsToColumn(opts),
+        shift_required: shiftRequired,
         rounding: roundingToColumn(rounding),
       })
       .eq('id', store.id)
@@ -238,6 +242,19 @@ function StoreBilling({
           }}
         />
         <span className="switch-text">{t.billingVatRegistered}</span>
+      </label>
+      <label className="switch-row">
+        <input
+          type="checkbox"
+          role="switch"
+          checked={shiftRequired}
+          disabled={!canEdit}
+          onChange={(e) => {
+            setShiftRequired(e.target.checked);
+            setSaved(false);
+          }}
+        />
+        <span className="switch-text">{t.billingShiftRequired}</span>
       </label>
       <div className="filters">
         <div className="form-row">

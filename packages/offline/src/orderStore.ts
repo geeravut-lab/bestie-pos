@@ -8,7 +8,7 @@ import {
   receiptSeq,
   rowsToOrder,
 } from '@bestie/core';
-import type { OrderDoc, ReceiptDoc } from '@bestie/core';
+import type { OrderDoc, OutboxOp, ReceiptDoc } from '@bestie/core';
 import { db } from './db';
 import { nextStamp } from './outbox';
 import type { RemoteClient } from './outbox';
@@ -279,4 +279,37 @@ export async function pullOrderNow(
     doc,
   });
   return true;
+}
+
+/**
+ * Save several order documents and an explicit list of server writes in ONE local transaction — for a split or a merge,
+ * where the server does the move itself (`move_order_lines`) and the lines must NOT also be written one by one.
+ */
+export async function saveOrders(
+  docs: readonly OrderDoc[],
+  ops: readonly OutboxOp[],
+  now: () => number = Date.now,
+): Promise<void> {
+  await db.transaction('rw', db.orders, db.outbox, async () => {
+    for (const d of docs) {
+      await db.orders.put({
+        id: d.id,
+        storeId: d.storeId,
+        status: d.status,
+        businessDate: d.businessDate,
+        tableId: d.tableId,
+        doc: d,
+      });
+    }
+    for (const op of ops) {
+      await db.outbox.add({
+        id: crypto.randomUUID(),
+        op,
+        createdAt: await nextStamp(now),
+        attempts: 0,
+        nextTryAt: 0,
+        status: 'pending',
+      });
+    }
+  });
 }

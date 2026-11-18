@@ -1,6 +1,6 @@
 import Dexie from 'dexie';
 import type { Table } from 'dexie';
-import type { OrderDoc, OutboxEntry } from '@bestie/core';
+import type { OrderDoc, OutboxEntry, ShiftDoc } from '@bestie/core';
 
 export type CacheRow = { key: string; data: unknown; savedAt: number };
 export type KvRow = { key: string; value: unknown };
@@ -22,6 +22,7 @@ class OfflineDb extends Dexie {
   orders!: Table<OrderRow, string>;
   /** Numbers that must never go backwards (receipt series). NOT cleared at sign-out. */
   counters!: Table<{ key: string; value: number }, string>;
+  shifts!: Table<ShiftDoc, string>;
   constructor() {
     super('bestie-offline');
     this.version(1).stores({
@@ -42,6 +43,14 @@ class OfflineDb extends Dexie {
       orders: 'id, storeId, status, businessDate, tableId',
       counters: 'key',
     });
+    this.version(4).stores({
+      outbox: 'id, status, createdAt',
+      cache: 'key',
+      kv: 'key',
+      orders: 'id, storeId, status, businessDate, tableId',
+      counters: 'key',
+      shifts: 'id, deviceId, status',
+    });
   }
 }
 
@@ -55,5 +64,6 @@ export async function resetOfflineDb(): Promise<void> {
     db.kv.clear(),
     db.orders.clear(),
     db.counters.clear(),
+    db.shifts.clear(),
   ]);
 }

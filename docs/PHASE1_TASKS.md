@@ -50,6 +50,7 @@ Work top to bottom. One PR per task. Tick when merged.
 - [x] Pay at table via PromptPay QR: the guest page shows the bill total (computed by the server with the till's own billing code), starts a Stripe PromptPay QR through the same payment-attempt machinery, polls its status and shows "paid" + the online receipt number when the signed webhook closes the bill. The owner picks which device's A+ receipt series / POS ID guest payments use (Billing & points; off by default); lines still waiting for staff confirmation block payment; ordering is locked while a QR is waiting. **Needs a Stripe test-mode run (docs/ENVIRONMENT.md §6).**
 
 ## 6. Customers, Credit & Points
+- [x] Manager override with a PIN (`Void with a manager PIN` on a sent line for people without `order.void`; online, one action per approval, approver recorded in the audit event)
 - [x] Customer lookup by phone / member code / name (`/customers`, and **Add a customer to this bill** on the order screen): create a member, see the Bestie Points balance and history. _(A scanner that types the member code works today; a camera QR scanner is later.)_
 - [ ] Tender framework: cash, PromptPay, gateway, Credit — **done**; **split tender done** (`Split` tab: N payers, equal shares or any amounts, each cash or Bestie Credit, one receipt, server-numbered `X+…`, online) — still to do: Points as a bill discount, PromptPay / card legs inside a split, per-store tender toggles screen
 - [ ] Payment gateway adapter (card / e-wallets) behind an interface so providers can be swapped

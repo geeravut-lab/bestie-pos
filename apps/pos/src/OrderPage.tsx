@@ -30,6 +30,7 @@ import { changeOrder, mergeBills, payCash, splitBill } from './orderActions';
 import { SplitSheet } from './SplitSheet';
 import { LoadFailed, Loading, Page } from './PosBits';
 import { ModifierSheet } from './ModifierSheet';
+import { ManagerVoid } from './ManagerVoid';
 import { OrderCustomer } from './OrderCustomer';
 import { PaySheet } from './PaySheet';
 import { useSplitInfo } from './useSplitInfo';
@@ -242,6 +243,9 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
                   locale={locale}
                   canEdit={canEdit}
                   canVoid={canVoid}
+                  mgrVoid={
+                    open && !canVoid && canEdit ? { ctx, orderId: order.id, online: netUp } : null
+                  }
                   apply={apply}
                   seatsOn={canEdit}
                 />
@@ -483,6 +487,7 @@ function LineRow({
   locale,
   canEdit,
   canVoid,
+  mgrVoid,
   apply,
   seatsOn,
 }: {
@@ -490,6 +495,8 @@ function LineRow({
   locale: 'th-TH' | 'en-GB';
   canEdit: boolean;
   canVoid: boolean;
+  /** Set for people who cannot void on their own: a manager's PIN approves it instead. */
+  mgrVoid: { ctx: PageContext; orderId: string; online: boolean } | null;
   apply: (fn: (o: OrderDoc) => OrderDoc) => Promise<void>;
   seatsOn: boolean;
 }) {
@@ -622,6 +629,13 @@ function LineRow({
                 {t.orderVoid}
               </button>
             )
+          ) : mgrVoid && !isNew && line.status !== 'void' ? (
+            <ManagerVoid
+              ctx={mgrVoid.ctx}
+              orderId={mgrVoid.orderId}
+              lineId={line.id}
+              online={mgrVoid.online}
+            />
           ) : null}
         </>
       )}

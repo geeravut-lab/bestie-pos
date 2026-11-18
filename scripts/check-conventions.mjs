@@ -61,7 +61,13 @@ for (const file of walk(ROOT)) {
   }
 
   // 2. Thai literals in source: only the dictionary and tests may contain them.
-  if (isSource && r !== 'packages/i18n/src/dict.ts' && !isTest(r)) {
+  // aiPrompts.ts holds the prompt screener: its Thai patterns are matching rules, not UI text.
+  if (
+    isSource &&
+    r !== 'packages/i18n/src/dict.ts' &&
+    r !== 'packages/core/src/aiPrompts.ts' &&
+    !isTest(r)
+  ) {
     lines.forEach((l, i) => {
       if (THAI.test(l)) add(r, i + 1, 'Thai text in code — put it in packages/i18n/src/dict.ts');
     });

@@ -11,6 +11,7 @@ Database, Auth, Storage and Realtime for Bestie POS.
   - `20261117235800_audit_trail.sql` — append-only `audit_log`, event catalogue, per-org switches (`set_audit_settings`), `write_audit` RPC, DB triggers on staff / orgs / stores.
   - `20261118000210_live_sync.sql` — content-free Realtime pings from DB triggers + `live_can_listen` policy on `realtime.messages`.
   - `20261118001123_branding.sql` — private `brand-assets` bucket (platform-admin-only policies, no SVG), brand JSON shape guard.
+  - `20261118001756_ai_settings.sql` — `ai_settings`, insert-only `ai_prompt_versions`, server-written `ai_events` (platform-admin policies).
 - `tests/` — `local_stub.sql` (Supabase look-alike roles + `auth` schema) and `*.test.sql` (RLS / guard assertions).
   Run `pnpm test:db` (needs PostgreSQL 14+ binaries; CI runs it too). The same assertions were dry-run inside a rolled-back
   transaction on the hosted project before applying.

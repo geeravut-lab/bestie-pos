@@ -32,6 +32,8 @@
 
 - 2026-11-18 — Branding: platform admin edits name (TH/EN), logo (≤ 1 MB raster) and tab/app icon (square PNG 192–1024 px). Images live in a private bucket and are served by `/api/brand` (ETag per version, defaults as fallback); the web manifest is dynamic; the product name is written once in the dictionary and swapped at read time. Vercel Functions that need shared code import it by relative path (workspace packages pointing at `.ts` do not resolve in the Lambda).
 
+- 2026-11-18 — AI assistant: platform admin picks provider + model per task; defaults are cheap (Claude Haiku 5.5 / Sonnet 5.5 for the medium task, Gemini 3 Flash / Flash-Lite), never Opus; safety + review tasks have no fallback and cannot be extended; the model reads/explains, **code computes money, tax, points, permissions**; kitchen display has no assistant. AI calls go through server functions only; keys in Vercel env; admin additions to prompts pass a code screener and an AI reviewer that fails closed. Model ids and prices come from the knowledge file (Oct 2026) — verify with the **Test** button before relying on them.
+
 ## Proposed (confirm)
 - Offline-first on Supabase (Firestore's built-in offline cache is gone): IndexedDB (Dexie) local store + an outbox of client-generated-UUID writes replayed to Supabase with per-entity conflict rules. Needed before task "Offline: full order flow works with network off".
 - Live sync = Supabase Realtime "ping" topics + refetch, per docs/LIVE-SYNC-KNOWLEDGE.md (adapted from Next.js `router.refresh()` to React Query/refetch).

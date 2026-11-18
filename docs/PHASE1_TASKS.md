@@ -95,10 +95,10 @@ Work top to bottom. One PR per task. Tick when merged.
 - [x] Change password (re-auth, sign out other devices); audit + LINE notice of the change arrive with §11 / §14
 
 ## 13. AI assistant  _(AI-PROVIDER-MODEL, AI-PROMPTS-RULES; roles in KNOWLEDGE-MAPPING §B)_
-- [ ] Provider/model registry with capabilities + per-task routes + fallback; admin page to choose provider and model per task; keys only in Vercel env
-- [ ] Admin prompts & rules page: append-only extra instructions, two-gate screening, versioned history, shows the real prompt
-- [ ] Module `ai.assistant` with store/role toggles; Owner/Manager "Ask my shop" (read-only, numbers from SQL), menu translation/description helper
-- [ ] Usage + cost log per task
+- [x] Provider/model registry with capabilities + per-task routes + fallback; admin page (`/ai` as platform admin) to choose provider and model per task, key status (never the key), Test button, recent fallback/error events; keys only in Vercel env; base URLs locked
+- [x] Admin prompts & rules page (`/admin/ai/prompts`): append-only extra instructions, gate 1 code screener + gate 2 AI reviewer (fails closed), versioned insert-only history, shows the real prompt; safety/review tasks not editable
+- [ ] Module `ai.assistant` wiring + Owner/Manager "Ask my shop" (read-only, numbers from SQL) and menu translation/description helper — needs real data (§2/§3/§7) and **an API key in Vercel** (`ANTHROPIC_API_KEY` / `GOOGLE_API_KEY`) to test
+- [ ] Usage + cost log per task (tokens are already returned by the adapters)
 
 ## 14. LINE notifications  _(LINE-ACCOUNT-LINKING, LINE-NOTIFICATIONS, LINE-FLEX-CARD)_
 - [ ] LINE OA webhook + one-time-code account linking + status in account page

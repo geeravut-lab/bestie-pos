@@ -47,7 +47,7 @@ Work top to bottom. One PR per task. Tick when merged.
 
 ## 5. Guest QR ordering (apps/guest)
 - [x] Table QR → menu in EN/TH → order → appears on POS/KDS: each table has a random QR token (`/tables` → table → **Ordering QR**: show, print, create a new code); the guest page `/t/<token>` (`packages/guest-ui`, mounted in apps/pos and apps/guest) needs no account; the database prices the order and checks options / availability / the `order.qr` module; guest lines wait on the bill as unsent lines (**Guest order** badge) or go straight to the kitchen when the shop switches on auto-send (Billing & points); retries never order twice; 12 orders per table per 10 min. The guest sees what is on the table and its kitchen state (refreshed every 10 s)
-- [ ] Pay at table via PromptPay QR
+- [x] Pay at table via PromptPay QR: the guest page shows the bill total (computed by the server with the till's own billing code), starts a Stripe PromptPay QR through the same payment-attempt machinery, polls its status and shows "paid" + the online receipt number when the signed webhook closes the bill. The owner picks which device's A+ receipt series / POS ID guest payments use (Billing & points; off by default); lines still waiting for staff confirmation block payment; ordering is locked while a QR is waiting. **Needs a Stripe test-mode run (docs/ENVIRONMENT.md §6).**
 
 ## 6. Customers, Credit & Points
 - [ ] Customer lookup by phone / member QR

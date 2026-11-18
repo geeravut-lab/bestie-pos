@@ -1,7 +1,7 @@
-import { DEFAULT_BILL_OPTIONS } from './tax';
-import type { BillOptions } from './tax';
-import { DEFAULT_ROUNDING } from './rounding';
-import type { RoundingConfig, RoundingRule, TenderKind } from './rounding';
+import { DEFAULT_BILL_OPTIONS } from './tax.js';
+import type { BillOptions } from './tax.js';
+import { DEFAULT_ROUNDING } from './rounding.js';
+import type { RoundingConfig, RoundingRule, TenderKind } from './rounding.js';
 
 /**
  * Owner-editable billing choices (the accountant confirms them; they are NOT hard-coded). Stored per store as

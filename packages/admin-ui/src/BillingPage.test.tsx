@@ -29,7 +29,14 @@ const store = (over: Partial<Store> = {}): Store => ({
   ...over,
 });
 
-function fakeClient(opts: { stores?: Store[]; points?: unknown; updatedRows?: number } = {}) {
+function fakeClient(
+  opts: {
+    stores?: Store[];
+    points?: unknown;
+    updatedRows?: number;
+    devices?: { id: string; store_id: string; name: string }[];
+  } = {},
+) {
   const updates: { table: string; values: unknown }[] = [];
   const from = vi.fn((table: string) => {
     let updated = false;
@@ -43,7 +50,10 @@ function fakeClient(opts: { stores?: Store[]; points?: unknown; updatedRows?: nu
         : chain;
     chain.eq = () => chain;
     chain.is = () => chain;
-    chain.order = async () => ({ data: opts.stores ?? [store()], error: null });
+    chain.order = async () => ({
+      data: table === 'devices' ? (opts.devices ?? []) : (opts.stores ?? [store()]),
+      error: null,
+    });
     chain.maybeSingle = async () => ({ data: { points_rule: opts.points ?? {} }, error: null });
     chain.update = (values: unknown) => {
       updated = true;
@@ -117,6 +127,7 @@ describe('<BillingPage> store billing', () => {
         rounding: { cash: 'nearest-25' },
         shift_required: false,
         qr_auto_send: false,
+        qr_pay_device: null,
       },
     });
     expect(await screen.findByText('Saved.')).toBeTruthy();
@@ -250,6 +261,31 @@ describe('<BillingPage> QR auto-send switch', () => {
     await waitFor(() =>
       expect(
         updates.some((u) => (u.values as { qr_auto_send?: boolean }).qr_auto_send === true),
+      ).toBe(true),
+    );
+  });
+});
+
+describe('<BillingPage> pay at the table device', () => {
+  it('is off by default and lets the owner pick which device’s receipts guest payments use', async () => {
+    const { client, updates } = fakeClient({
+      devices: [
+        { id: 'd1', store_id: 's1', name: 'Counter' },
+        { id: 'd2', store_id: 'other', name: 'Other shop till' },
+      ],
+    });
+    mount(ctx(client));
+    await screen.findByRole('heading', { name: 'Billing & points' });
+    const sel = screen.getByLabelText(
+      /Device whose receipts guest payments use/,
+    ) as HTMLSelectElement;
+    expect(sel.value).toBe('');
+    expect(within(sel).queryByText('Other shop till')).toBeNull();
+    await userEvent.selectOptions(sel, 'd1');
+    await userEvent.click(screen.getByRole('button', { name: 'Save billing settings' }));
+    await waitFor(() =>
+      expect(
+        updates.some((u) => (u.values as { qr_pay_device?: string }).qr_pay_device === 'd1'),
       ).toBe(true),
     );
   });

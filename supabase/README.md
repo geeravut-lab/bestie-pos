@@ -13,6 +13,7 @@ Database, Auth, Storage and Realtime for Bestie POS.
   - `20261118001123_branding.sql` — private `brand-assets` bucket (platform-admin-only policies, no SVG), brand JSON shape guard.
   - `20261118001756_ai_settings.sql` — `ai_settings`, insert-only `ai_prompt_versions`, server-written `ai_events` (platform-admin policies).
   - `20261118002504_line_linking.sql` — `notification_channels` (server-only; one active LINE account per user) and `message_log`.
+  - `20261118002917_lock_function_privileges.sql` + `…2950_auth_admin_trigger_grant.sql` — security fix found by the Supabase advisor: internal SECURITY DEFINER functions were callable by `anon`; now locked, and **new functions get no grants by default**.
 - `tests/` — `local_stub.sql` (Supabase look-alike roles + `auth` schema) and `*.test.sql` (RLS / guard assertions).
   Run `pnpm test:db` (needs PostgreSQL 14+ binaries; CI runs it too). The same assertions were dry-run inside a rolled-back
   transaction on the hosted project before applying.
@@ -24,6 +25,7 @@ Rules every migration must follow (docs/CLAUDE.md rules 5–7, docs/KNOWLEDGE-MA
 3. Offline-first: client-generated `uuid` primary keys, `updated_at`, soft delete (`deleted_at`) so queued writes can sync later.
 4. Code must tolerate a deploy that runs before its migration (catch `42703` / `PGRST204` / `23514`, degrade gracefully).
 5. Never write `service_role` keys into this repo.
+6. **Functions have no default grants** (migration 8): every new function must `grant execute … to authenticated` (RLS helpers / RPCs) or `service_role` (internal) explicitly. Run the Supabase security advisor after each migration (`GET /v1/projects/<ref>/advisors/security`).
 
 How a migration reaches the hosted project (done by Claude through the Management API with the owner's token, or `supabase db push`):
 1. write it, add RLS + tests, `pnpm test:db` locally; 2. dry-run on the hosted project inside `begin; … rollback;`;

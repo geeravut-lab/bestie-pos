@@ -36,6 +36,8 @@
 
 - 2026-11-18 — LINE: account linking by one-time code sent to the Official Account (method A of the knowledge file); Flex card button is **teal with white text** (the knowledge file's coral button fails contrast); card colours are the Bestie tokens (a unit test keeps them equal to theme.css). The notification queue, quota and cron tick are deferred until the first real notice exists.
 
+- 2026-11-18 — Security: Supabase grants EXECUTE on new functions to `anon`/`authenticated` by default, which left internal SECURITY DEFINER functions (e.g. `audit_record`, `live_ping`) callable from the browser with only the public anon key (anyone could have written audit events). Found with the Supabase security advisor right after the first deploys; fixed by migration 8 (applied) with tests; new functions now get no grants by default. No data had been written through this path (the project had no users yet).
+
 ## Proposed (confirm)
 - Offline-first on Supabase (Firestore's built-in offline cache is gone): IndexedDB (Dexie) local store + an outbox of client-generated-UUID writes replayed to Supabase with per-entity conflict rules. Needed before task "Offline: full order flow works with network off".
 - Live sync = Supabase Realtime "ping" topics + refetch, per docs/LIVE-SYNC-KNOWLEDGE.md (adapted from Next.js `router.refresh()` to React Query/refetch).

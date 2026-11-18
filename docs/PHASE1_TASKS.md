@@ -25,7 +25,7 @@ Work top to bottom. One PR per task. Tick when merged.
 - [x] Owner signup → create org + store → pick profile; **add more shops** (`create_store`); invited staff join with a one-time code on the first screen
 - [x] Billing & points settings (owner-selectable VAT / service charge / rounding / Points rule, live sample bill, audited)
 - [x] Module toggle screen (store level) with dependency warnings (`/modules`: plan / legal locks, auto-enable, confirm before switching off dependents)
-- [ ] Menu editor: categories, items, modifiers (min/max), channel prices, Thai/English names
+- [x] Menu editor (`/menu`): categories, items, add-on option groups with min/max, per-option prices, prices per channel, station, sold-out switch, Thai required / English optional, soft delete, audited, live-pinged. _(AI translation helper and item photos come later)_
 - [x] Staff & roles: team list, role change, deactivate, one-time invite codes, PIN set (bcrypt) — `/staff`. _(PIN login on the tablet comes with §3 device login; custom-role editor later)_
 - [x] Devices: register tablet, set role (cashier / staff / KDS + station), assign Revenue Dept POS ID, switch off — `/devices`
 

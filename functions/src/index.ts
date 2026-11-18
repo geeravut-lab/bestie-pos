@@ -9,3 +9,7 @@ export { ssoExchangeResponse } from './sso-handler.js';
 export { brandResponse, buildManifest, createSupabaseBrandStore } from './brand.js';
 export type { BrandStore } from './brand.js';
 export { brandHandler } from './brand-handler.js';
+export { AiError, createAnthropicAdapter, createGoogleAdapter } from './ai-adapters.js';
+export type { AiRequest, AiResponse, ProviderAdapter } from './ai-adapters.js';
+export { runAiWith } from './ai-run.js';
+export { aiHandler, keysFrom } from './ai-handler.js';

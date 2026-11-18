@@ -116,3 +116,8 @@ Work top to bottom. One PR per task. Tick when merged.
 - [ ] 5b: concierge basics, feedback intake, hair-style advisor (after appointments), spa / yoga advisor (rules signed by a therapist and the lawyer first)
 - [ ] 5c: karaoke profile + room timer, voice song search, **Bestie Song Bridge** (YouTube Lounge / Cast / HID / IR), standalone "Bestie Karaoke" web app, tours / rentals / resort concierge
 
+## 16. Crypto top-up of Bestie Credit  _(spec: docs/modules/CRYPTO_TOPUP.md · knowledge: docs/CRYPTO_TRANSFER_KNOWLEDGE.md)_
+- [x] Data model, rules and server: wallets (2-person change), KYC T1 / T2, payment requests with locked rate + unique amount + 15 min, chain watcher (TronGrid / Etherscan behind an interface), matching, confirmations, review queue, flags, blocklist, AML report, idempotent crediting into the Credit ledger (`funding = crypto`; still no cash-out). Off by default; needs the module, Credit and `legal_sign_off.cryptoTopup`.
+- [ ] Screens: crypto top-up panel on the member page (KYC form, request with QR and 6+6 address, status), review queue + KYC approval + wallet setup + AML export (`/crypto`)
+- [ ] Owner / lawyer actions: legal opinion uploaded and sign-off set; TronGrid / Etherscan keys; scheduler; **Shasta / Sepolia test run**; confirm tiers and limits; company wallet and printed address card
+

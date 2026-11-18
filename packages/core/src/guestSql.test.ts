@@ -47,3 +47,38 @@ describe('tender.credit in the database mirrors the registry', () => {
     expect(sql).not.toMatch(/'cash_out'|'refund'|'crypto'/);
   });
 });
+
+/** And for the crypto top-up: module switch + Credit + the lawyer's sign-off are all enforced in SQL. */
+describe('credit.topup.crypto in the database mirrors the registry', () => {
+  const dir = new URL('../../../supabase/migrations/', import.meta.url);
+  const file = readdirSync(dir).find((f) => f.endsWith('_crypto_topup.sql')) ?? '';
+  const sql = readFileSync(new URL(file, dir), 'utf8');
+  const marker =
+    /-- registry:credit\.topup\.crypto profiles=([a-z,]*) plan=([a-z,]+) legal=([A-Za-z]+) depends=([a-z.]+)/.exec(
+      sql,
+    );
+  const m = MODULE_BY_ID['credit.topup.crypto'];
+
+  it("is off for every profile, behind the lawyer's sign-off, and depends on Credit", () => {
+    expect(m.defaultProfiles).toEqual([]);
+    expect(marker![1]).toBe('');
+    expect(marker![3]).toBe(m.legalGate);
+    expect(m.dependsOn).toEqual([marker![4]]);
+    expect(sql).toMatch(/legal_sign_off ->> 'cryptoTopup'/);
+  });
+  it('same plan tiers', () => {
+    const allowed = (Object.keys(PLAN_RANK) as (keyof typeof PLAN_RANK)[]).filter(
+      (p) => PLAN_RANK[p] >= PLAN_RANK[m.plan],
+    );
+    expect(marker![2]!.split(',').sort()).toEqual(allowed.sort());
+  });
+  it('no migration anywhere defines a cash-out of Credit or a crypto exchange / withdrawal', () => {
+    for (const f of readdirSync(dir)) {
+      const text = readFileSync(new URL(f, dir), 'utf8');
+      expect(text, f).not.toMatch(/'cash_out'\s*[,)]\s*'(?!x)/);
+      expect(text, f).not.toMatch(
+        /create (or replace )?function public\.(credit_cash_out|crypto_withdraw|crypto_send|crypto_refund)/i,
+      );
+    }
+  });
+});

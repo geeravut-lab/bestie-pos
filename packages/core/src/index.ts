@@ -36,3 +36,4 @@ export * from './reports';
 export * from './guestCart';
 export * from './customers';
 export * from './splitTender';
+export * from './crypto';

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@bestie/i18n';
 import { AuthProvider } from './context';
-import { LoginPage, SsoCallbackPage } from './components';
+import { AcceptInviteCard, LoginPage, SsoCallbackPage } from './components';
 
 afterEach(() => {
   cleanup();
@@ -168,5 +168,49 @@ describe('<SsoCallbackPage>', () => {
       <SsoCallbackPage search="" pathname="/sso/callback" onDone={() => {}} onBack={() => {}} />,
     );
     expect((await screen.findByRole('alert')).textContent).toContain('expired');
+  });
+});
+
+describe('<AcceptInviteCard>', () => {
+  const clientWith = (rpc: ReturnType<typeof vi.fn>) =>
+    ({
+      auth: {
+        getSession: vi.fn(async () => ({ data: { session: null } })),
+        onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: () => {} } } })),
+      },
+      rpc,
+      from: vi.fn(),
+    }) as never;
+
+  it('sends the normalised code to the server and then reloads the account', async () => {
+    const rpc = vi.fn(async () => ({ data: 'staff-id', error: null }));
+    const onJoined = vi.fn(async () => {});
+    mount(<AcceptInviteCard onJoined={onJoined} />, clientWith(rpc));
+    await userEvent.type(screen.getByLabelText('Invite code'), 'ab12-cd34 ef56');
+    await userEvent.click(screen.getByRole('button', { name: 'Join the shop' }));
+    await waitFor(() => expect(onJoined).toHaveBeenCalledTimes(1));
+    expect(rpc).toHaveBeenCalledWith('accept_staff_invite', { p_code: 'AB12CD34EF56' });
+  });
+
+  it('shows a readable message for a wrong / used / expired code and does not reload', async () => {
+    const rpc = vi.fn(async () => ({ data: null, error: { code: 'P0002' } }));
+    const onJoined = vi.fn(async () => {});
+    mount(<AcceptInviteCard onJoined={onJoined} />, clientWith(rpc));
+    await userEvent.type(screen.getByLabelText('Invite code'), 'AB12CD34EF56');
+    await userEvent.click(screen.getByRole('button', { name: 'Join the shop' }));
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'wrong, expired or already used',
+    );
+    expect(onJoined).not.toHaveBeenCalled();
+    expect(document.querySelector('.spinner')).toBeNull();
+  });
+
+  it('does not even call the server for something that is not shaped like a code', async () => {
+    const rpc = vi.fn();
+    mount(<AcceptInviteCard onJoined={async () => {}} />, clientWith(rpc));
+    await userEvent.type(screen.getByLabelText('Invite code'), 'hello');
+    await userEvent.click(screen.getByRole('button', { name: 'Join the shop' }));
+    await screen.findByRole('alert');
+    expect(rpc).not.toHaveBeenCalled();
   });
 });

@@ -92,3 +92,17 @@ describe('brandedDict', () => {
     expect(brandedDict('en', { nameEn: 'A' })).toBe(brandedDict('en', { nameEn: 'A' }));
   });
 });
+
+describe('module names', () => {
+  it('every module in the registry has a name in every language', async () => {
+    const { MODULE_IDS } = await import('@bestie/core');
+    for (const lang of LANGS) {
+      for (const id of MODULE_IDS) {
+        expect(
+          (dict[lang] as Record<string, string>)[`mod_${id}`],
+          `${lang} mod_${id}`,
+        ).toBeTruthy();
+      }
+    }
+  });
+});

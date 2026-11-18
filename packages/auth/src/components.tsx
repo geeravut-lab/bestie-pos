@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { errorText, useI18n } from '@bestie/i18n';
 import type { ErrorKey } from '@bestie/i18n';
+import { isInviteCodeShape, normalizeInviteCode } from '@bestie/core';
 import { AsyncButton, Brand, LangSwitch, Spinner } from '@bestie/ui';
 import type { PublicEnv } from '@bestie/supabase';
 import { useAuth } from './context';
@@ -300,7 +301,58 @@ export function OnboardingPage({ onCreated }: { onCreated: () => Promise<void> }
           </AsyncButton>
         </form>
       </section>
+      <AcceptInviteCard onJoined={onCreated} />
     </AuthFrame>
+  );
+}
+
+/** A person invited by an owner / manager redeems the one-time code here (the server checks it; nothing is trusted here). */
+export function AcceptInviteCard({ onJoined }: { onJoined: () => Promise<void> }) {
+  const { t } = useI18n();
+  const { client } = useAuth();
+  const [code, setCode] = useState('');
+  const [error, setError] = useState<ErrorKey | null>(null);
+
+  const join = async () => {
+    if (!client) return;
+    setError(null);
+    if (!isInviteCodeShape(code)) return setError('err_invite_invalid');
+    const { error: err } = await client.rpc('accept_staff_invite', {
+      p_code: normalizeInviteCode(code),
+    });
+    if (err) {
+      console.error('[invite] accept failed', err.code ?? 'unknown');
+      return setError(err.code === 'P0002' ? 'err_invite_invalid' : 'err_save_failed');
+    }
+    await onJoined();
+  };
+
+  return (
+    <section className="card auth-card">
+      <h2>{t.acceptTitle}</h2>
+      <p className="muted">{t.acceptBody}</p>
+      <form className="auth-form" onSubmit={(e) => e.preventDefault()}>
+        <div className="form-row">
+          <label htmlFor="accept-code" className="label">
+            {t.acceptLabel}
+          </label>
+          <input
+            id="accept-code"
+            className="field mono"
+            value={code}
+            maxLength={20}
+            autoCapitalize="characters"
+            autoComplete="off"
+            spellCheck={false}
+            onChange={(e) => setCode(e.target.value)}
+          />
+        </div>
+        {error ? <Notice kind="error">{errorText(error, t)}</Notice> : null}
+        <AsyncButton type="submit" variant="secondary" onClick={join}>
+          {t.acceptButton}
+        </AsyncButton>
+      </form>
+    </section>
   );
 }
 

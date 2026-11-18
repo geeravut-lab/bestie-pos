@@ -22,12 +22,12 @@ Work top to bottom. One PR per task. Tick when merged.
 
 ## 2. Back office (apps/admin)
 - [x] Database foundation applied to Supabase (orgs, stores, roles, staff, RLS, `create_org()` RPC) — UI for owner signup still to build
-- [ ] Owner signup → create org + store → pick profile → see enabled modules
+- [x] Owner signup → create org + store → pick profile; **add more shops** (`create_store`); invited staff join with a one-time code on the first screen
 - [x] Billing & points settings (owner-selectable VAT / service charge / rounding / Points rule, live sample bill, audited)
-- [ ] Module toggle screen (store level) with dependency warnings
+- [x] Module toggle screen (store level) with dependency warnings (`/modules`: plan / legal locks, auto-enable, confirm before switching off dependents)
 - [ ] Menu editor: categories, items, modifiers (min/max), channel prices, Thai/English names
-- [ ] Staff & roles, PIN codes
-- [ ] Devices: register tablet, set role (cashier / staff / KDS), assign Revenue Dept POS ID
+- [x] Staff & roles: team list, role change, deactivate, one-time invite codes, PIN set (bcrypt) — `/staff`. _(PIN login on the tablet comes with §3 device login; custom-role editor later)_
+- [x] Devices: register tablet, set role (cashier / staff / KDS + station), assign Revenue Dept POS ID, switch off — `/devices`
 
 ## 3. POS app (apps/pos, PWA, offline-first)
 - [ ] Device login + staff PIN

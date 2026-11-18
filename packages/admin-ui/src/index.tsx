@@ -4,6 +4,7 @@ export { BrandingPage } from './BrandingPage';
 export { DevicesPage } from './DevicesPage';
 export { MenuPage } from './MenuPage';
 export { ModulesPage } from './ModulesPage';
+export { ReportsPage } from './ReportsPage';
 export { StaffPage } from './StaffPage';
 export { AiPromptsPage, AiSettingsPage } from './AiPages';
 export { useRemote } from './useRemote';
@@ -18,6 +19,7 @@ import { BrandingPage } from './BrandingPage';
 import { DevicesPage } from './DevicesPage';
 import { MenuPage } from './MenuPage';
 import { ModulesPage } from './ModulesPage';
+import { ReportsPage } from './ReportsPage';
 import { StaffPage } from './StaffPage';
 
 /** Back-office pages by path. Mounted by apps/pos and apps/admin through `AuthApp pages={adminPages}`. */
@@ -34,6 +36,7 @@ export function adminPages(ctx: PageContext): ReactNode | null {
   if (ctx.path === '/menu') return <MenuPage ctx={ctx} />;
   if (ctx.path === '/modules') return <ModulesPage ctx={ctx} />;
   if (ctx.path === '/staff') return <StaffPage ctx={ctx} />;
+  if (ctx.path === '/reports') return <ReportsPage ctx={ctx} />;
   if (ctx.path === '/devices') return <DevicesPage ctx={ctx} />;
   return null;
 }

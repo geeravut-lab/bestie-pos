@@ -1544,3 +1544,24 @@ a.nav-card[aria-busy='true'] {
 .queue-ready-col h2 {
   color: var(--bp-primary-hover);
 }
+
+/* ── report tiles ─────────────────────────────────────────────────────────── */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+}
+.kpi {
+  border: 1px solid var(--bp-line);
+  border-radius: var(--bp-radius-control);
+  padding: 0.75rem;
+}
+.kpi dt {
+  font-size: 0.85rem;
+}
+.kpi dd {
+  margin: 0.25rem 0 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+}

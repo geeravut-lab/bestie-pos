@@ -11,15 +11,17 @@ export function useRemote<T>(
 ): { status: 'loading' | 'ready' | 'error'; data: T | undefined; reload: () => void } {
   const [tick, setTick] = useState(0);
   const fullKey = `${key}#${tick}`;
-  const [res, setRes] = useState<{ key: string; data?: T; error?: boolean } | null>(null);
+  const [res, setRes] = useState<{ base: string; tick: number; data?: T; error?: boolean } | null>(
+    null,
+  );
 
   useEffect(() => {
     let alive = true;
     load().then(
-      (data) => alive && setRes({ key: fullKey, data }),
+      (data) => alive && setRes({ base: key, tick, data }),
       (e: unknown) => {
         console.error('[remote] failed', e instanceof Error ? e.message : 'unknown');
-        if (alive) setRes({ key: fullKey, error: true });
+        if (alive) setRes({ base: key, tick, error: true });
       },
     );
     return () => {
@@ -29,7 +31,9 @@ export function useRemote<T>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fullKey]);
 
-  const current = res?.key === fullKey ? res : null;
+  // Same inputs, newer tick = a silent refresh: keep showing the previous result until the new one lands.
+  // An error is only shown for the request that failed (a manual retry shows "loading" again).
+  const current = res?.base === key && (!res.error || res.tick === tick) ? res : null;
   const reload = useCallback(() => setTick((n) => n + 1), []);
   return {
     status: !current ? 'loading' : current.error ? 'error' : 'ready',

@@ -14,3 +14,6 @@ export {
 export type { Membership, MyContext, StoreInfo } from './myContext';
 export { aivoraAuthorizeUrl, fetchEnabledProviders } from './providers';
 export { LoginPage, Notice, OnboardingPage, SsoCallbackPage, AccountPage } from './components';
+export { LiveSyncController, isUserBusy } from './liveSync';
+export type { LiveSyncOptions } from './liveSync';
+export { useLiveSync } from './useLiveSync';

@@ -21,3 +21,17 @@ create function auth.uid() returns uuid language sql stable as
 create function auth.role() returns text language sql stable as
   $$ select nullif(current_setting('request.jwt.claim.role', true), '') $$;
 grant usage on schema auth to anon, authenticated, service_role;
+
+-- Realtime look-alike: messages table (RLS target), topic() and send() that records what would be broadcast.
+create schema if not exists realtime;
+create table realtime.messages (id bigserial primary key, topic text, extension text default 'broadcast');
+create table realtime.sent (id bigserial primary key, topic text, event text, payload jsonb, is_private boolean);
+create function realtime.topic() returns text language sql stable as $$ select nullif(current_setting('realtime.topic', true), '') $$;
+create function realtime.send(payload jsonb, event text, topic text, private boolean default true) returns void language sql as
+  $$ insert into realtime.sent (topic, event, payload, is_private) values (topic, event, payload, private) $$;
+alter table realtime.messages enable row level security;
+grant usage on schema realtime to anon, authenticated, service_role;
+grant select on realtime.messages to authenticated;
+grant all on realtime.sent to authenticated, service_role;
+grant all on realtime.messages to service_role;
+grant usage on all sequences in schema realtime to service_role, authenticated;

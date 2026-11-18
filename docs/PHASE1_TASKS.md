@@ -55,7 +55,7 @@ Work top to bottom. One PR per task. Tick when merged.
 - [ ] Tender framework: cash, PromptPay, gateway, Credit — **done**; **split tender done** (`Split` tab: N payers, equal shares or any amounts, each cash or Bestie Credit, one receipt, server-numbered `X+…`, online) — still to do: Points as a bill discount, PromptPay / card legs inside a split, per-store tender toggles screen
 - [ ] Payment gateway adapter (card / e-wallets) behind an interface so providers can be swapped
 - [ ] Bestie Credit ledger (double-entry, scoped to the issuing legal entity): **cash top-up, balance, history, manager correction, liability report per company, drawer count — done** (`tender.credit` module, off by default; append-only; no cash-out kind; no crypto funding). **spending Credit on a bill is done** (split tender). Still to do: PromptPay / card top-ups
-- [ ] Bestie Points ledger: ~~earn on paid bill~~ **done** (append-only `points_ledger`, earned once per bill from baht spend only, manager corrections with a reason, audited), redeem as discount — _next PR_
+- [ ] Bestie Points ledger: ~~earn on paid bill~~ **done** (append-only `points_ledger`, earned once per bill from baht spend only, manager corrections with a reason, audited), redeem as discount — **database part done** (`set_order_points`, reservation, receipt columns; tested), the till screen / bill / receipt / guest-bill code is _next_
 - [ ] Module stub `credit.topup.crypto` (disabled; blocked unless org.legalSignOff.cryptoTopup) — build in Phase 3
 
 ## 7. Reports
@@ -109,4 +109,15 @@ Work top to bottom. One PR per task. Tick when merged.
 - [x] Flex bubble builder in Bestie colours (title → ≤ 8 label/value lines → one "Open the app" button), rich `altText`, every field truncated, internal links only, TH/EN by recipient; `notifyLine` pushes with retry key and maps LINE errors
 - [ ] `notify()` writer: in-app inbox + LINE **queue**, dedupe keys, monthly quota with reserve, cron tick + retry table, per-user opt-in — build with the first real notice
 - [ ] First notices: PromptPay paid, order ready, low stock, shift variance, daily summary — need orders/payments (§3, §6)
+
+## 15. AI for customers & Karaoke  _(design: docs/AI-CUSTOMER-ASSISTANT.md, docs/KARAOKE-AI.md — proposal, waiting for the owner)_
+- [ ] Owner confirms the open questions in AI-CUSTOMER-ASSISTANT §7 (who pays for guest AI, therapist sign-off for spa rules, languages, hair photos)
+- [ ] 5a: food tags on menu items (+ AI drafts, owner confirms), menu translation helper, guest menu advisor on `/t/<token>` (filter by SQL, AI ranks), "Ask my shop"
+- [ ] 5b: concierge basics, feedback intake, hair-style advisor (after appointments), spa / yoga advisor (rules signed by a therapist and the lawyer first)
+- [ ] 5c: karaoke profile + room timer, voice song search, **Bestie Song Bridge** (YouTube Lounge / Cast / HID / IR), standalone "Bestie Karaoke" web app, tours / rentals / resort concierge
+
+## 16. Crypto top-up of Bestie Credit  _(spec: docs/modules/CRYPTO_TOPUP.md · knowledge: docs/CRYPTO_TRANSFER_KNOWLEDGE.md)_
+- [x] Data model, rules and server: wallets (2-person change), KYC T1 / T2, payment requests with locked rate + unique amount + 15 min, chain watcher (TronGrid / Etherscan behind an interface), matching, confirmations, review queue, flags, blocklist, AML report, idempotent crediting into the Credit ledger (`funding = crypto`; still no cash-out). Off by default; needs the module, Credit and `legal_sign_off.cryptoTopup`.
+- [ ] Screens: crypto top-up panel on the member page (KYC form, request with QR and 6+6 address, status), review queue + KYC approval + wallet setup + AML export (`/crypto`)
+- [ ] Owner / lawyer actions: legal opinion uploaded and sign-off set; TronGrid / Etherscan keys; scheduler; **Shasta / Sepolia test run**; confirm tiers and limits; company wallet and printed address card
 

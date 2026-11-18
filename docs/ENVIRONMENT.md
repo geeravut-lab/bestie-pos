@@ -99,3 +99,16 @@ fix `functions/src/stripe.ts` and its tests — nothing else depends on Stripe's
 4. Press **Cancel payment** on a second attempt: the QR disappears and the intent is cancelled in the Stripe dashboard.
 5. Reload the page while a QR is live: the same QR returns (no second intent).
 
+## 7. Crypto top-up (module `credit.topup.crypto`) — only after the lawyer's sign-off
+Server-only variables (never a public prefix):
+
+| Name | Purpose |
+|---|---|
+| `TRONGRID_API_KEY` | TronGrid API key (reads USDT-TRC20 transfers into the company wallet; read-only) |
+| `ETHERSCAN_API_KEY` | Etherscan API key (USDT-ERC20 transfers; read-only) |
+| `CRON_SECRET` | secret for `/api/crypto/poll` (constant-time compare) |
+| `PRICE_URL_COINGECKO`, `PRICE_URL_THAI_TICKER` | optional: override the two public price sources (the Thai exchange's public ticker is read for the PRICE only) |
+
+- **Scheduler:** `vercel.json` has **no** cron entry on purpose (a per-minute cron is refused on a Hobby plan and would break the deploy). On a Pro plan add `"crons": [{ "path": "/api/crypto/poll", "schedule": "* * * * *" }]`; otherwise call `GET /api/crypto/poll` with `Authorization: Bearer $CRON_SECRET` from any scheduler (GitHub Actions `schedule`, cron-job.org …). Until then staff use **Check now** on a request (rate limited).
+- **Before real money:** run the whole flow on **Tron Shasta / Ethereum Sepolia** with test USDT; confirm the TronGrid, Etherscan and price-source response shapes (marked ⚠️ in `functions/src/crypto-*.ts`); set the company wallet (read-only address) and print its 6+6-character card for the shop; get the lawyer's file uploaded and `legal_sign_off.cryptoTopup` set by the platform admin.
+

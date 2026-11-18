@@ -52,7 +52,7 @@ const mountOrder = (tables = baseTables(), over = {}) => {
 };
 const openPay = async () => {
   await userEvent.click(await screen.findByRole('button', { name: 'Take payment' }));
-  return screen.findByRole('dialog', { name: 'Cash payment' });
+  return screen.findByRole('dialog', { name: 'Payment' });
 };
 
 describe('taking cash', () => {
@@ -321,6 +321,30 @@ describe('<ReceiptPage>', () => {
     const r = await screen.findByRole('article');
     expect(r.textContent).toContain('Service charge');
     expect(r.textContent).toContain('Rounding');
+  });
+
+  it('a PromptPay or card payment is printed as its own line, with no cash / change lines', async () => {
+    bindTablet();
+    await paid(
+      fakeReceipt({
+        number: 'A+000001',
+        payments: [
+          {
+            id: 'p',
+            tender: 'promptpay',
+            amount: 16000,
+            tendered: null,
+            change: 0,
+            createdAt: '2026-11-18T05:30:00.000Z',
+          },
+        ],
+      }),
+    );
+    mountReceipt();
+    const r = await screen.findByRole('article');
+    expect(r.textContent).toContain('PromptPay');
+    expect(r.textContent).toContain('A+000001');
+    expect(r.textContent).not.toContain('Change');
   });
 
   it('a bill that is not paid has no receipt', async () => {

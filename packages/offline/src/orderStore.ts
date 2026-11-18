@@ -244,3 +244,39 @@ export async function pullOrders(
   });
   return 'ok';
 }
+
+/**
+ * Fetch ONE order (lines, receipt, payments) from the server and make it the working copy. Used right after the server
+ * closed a bill (PromptPay / card): the till has just flushed its queue, so nothing local can be overwritten.
+ */
+export async function pullOrderNow(
+  client: Pick<RemoteClient, 'from'>,
+  orderId: string,
+): Promise<boolean> {
+  const order = await client.from('orders').select('*').eq('id', orderId);
+  if (order.error || !order.data?.[0]) return false;
+  const [lines, receipts, payments] = await Promise.all([
+    client.from('order_lines').select('*').eq('order_id', orderId),
+    client.from('receipts').select('*').eq('order_id', orderId),
+    client.from('payments').select('*').eq('order_id', orderId),
+  ]);
+  if (lines.error || receipts.error || payments.error) return false;
+  const doc = rowsToOrder(
+    order.data[0] as Record<string, unknown>,
+    (lines.data ?? []) as Record<string, unknown>[],
+    {
+      receipt: ((receipts.data ?? [])[0] as Record<string, unknown> | undefined) ?? null,
+      payments: (payments.data ?? []) as Record<string, unknown>[],
+    },
+  );
+  if (!doc) return false;
+  await db.orders.put({
+    id: doc.id,
+    storeId: doc.storeId,
+    status: doc.status,
+    businessDate: doc.businessDate,
+    tableId: doc.tableId,
+    doc,
+  });
+  return true;
+}

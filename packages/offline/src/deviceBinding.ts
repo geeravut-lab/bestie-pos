@@ -9,6 +9,8 @@ export type DeviceBinding = {
   /** 1–2 letters, unique per shop: the prefix of this tablet's order numbers (A001, A002 …). */
   code: string;
   role: DeviceRole;
+  /** True when the back office registered a card reader for this device (the Card option is offered). */
+  reader?: boolean;
   station: 'kitchen' | 'bar' | null;
   posId: string | null;
 };
@@ -27,6 +29,7 @@ const isBinding = (v: unknown): v is DeviceBinding => {
     typeof b.code === 'string' &&
     /^[A-Z]{1,2}$/.test(b.code) &&
     (b.role === 'cashier' || b.role === 'staff' || b.role === 'kds') &&
+    (b.reader === undefined || typeof b.reader === 'boolean') &&
     (b.station === null || b.station === 'kitchen' || b.station === 'bar') &&
     (b.posId === null || typeof b.posId === 'string')
   );

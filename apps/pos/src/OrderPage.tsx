@@ -22,13 +22,21 @@ import type { Dict, ErrorKey } from '@bestie/i18n';
 import { AsyncButton } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
-import { useOpenOrders, useOrder, useOutboxCounts } from '@bestie/offline';
+import { useOnline, useOpenOrders, useOrder, useOutboxCounts } from '@bestie/offline';
 import { billConfigFor, usePosData } from './posData';
 import type { PosTable } from './posData';
 import { changeOrder, payCash } from './orderActions';
 import { LoadFailed, Loading, Page } from './PosBits';
 import { ModifierSheet } from './ModifierSheet';
 import { PaySheet } from './PaySheet';
+import {
+  cancelOnlinePayment,
+  findLiveAttempt,
+  finishOnlinePayment,
+  readAttempt,
+  startOnlinePayment,
+} from './onlinePay';
+import type { OnlinePay } from './onlinePay';
 import { usePosStore } from './posData';
 
 const channelText = (t: Dict, c: Channel): string =>
@@ -67,6 +75,7 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
   const remote = usePosData(ctx, order?.storeId ?? null);
   const openOrders = useOpenOrders(order?.storeId ?? null);
   const { pending } = useOutboxCounts();
+  const netUp = useOnline();
   const [cat, setCat] = useState('');
   const [picking, setPicking] = useState<{ item: Item; groups: OrderGroupInput[] } | null>(null);
   const [paying, setPaying] = useState(false);
@@ -304,6 +313,15 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
         <PaySheet
           total={bill.total}
           rule={config.cashRounding}
+          online={onlinePay(
+            ctx,
+            order.id,
+            binding,
+            billConfigFor(config, order.channel),
+            config.defaultLang,
+            netUp,
+            () => ctx.navigate(`/receipt/${order.id}`),
+          )}
           onClose={() => setPaying(false)}
           onPay={async (tendered) => {
             const err = await payCash({
@@ -477,4 +495,37 @@ function LineRow({
       )}
     </li>
   );
+}
+
+/** The online payment functions of one bill (PromptPay QR / card reader), wired to the signed-in client. */
+function onlinePay(
+  ctx: PageContext,
+  orderId: string,
+  binding: NonNullable<ReturnType<typeof usePosStore>['binding']>,
+  billConfig: ReturnType<typeof billConfigFor>,
+  lang: 'th' | 'en',
+  available: boolean,
+  done: () => void,
+): OnlinePay {
+  return {
+    available,
+    hasReader: binding.reader === true,
+    start: (tender) =>
+      startOnlinePayment({
+        client: ctx.client,
+        orderId,
+        tender,
+        binding,
+        billConfig,
+        staffId: ctx.staffId,
+        lang,
+      }),
+    cancel: (attemptId) => cancelOnlinePayment(ctx.client, attemptId),
+    status: (attemptId) => readAttempt(ctx.client, attemptId),
+    findLive: () => findLiveAttempt(ctx.client, orderId),
+    finish: async () => {
+      await finishOnlinePayment(ctx.client, orderId);
+      done();
+    },
+  };
 }

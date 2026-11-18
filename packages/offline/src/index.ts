@@ -15,6 +15,7 @@ export {
   nextOrderNumber,
   nextReceiptNumber,
   payOrder,
+  pullOrderNow,
   pullOrders,
   saveOrder,
   syncReceiptCounter,

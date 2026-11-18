@@ -17,6 +17,7 @@ type DeviceRow = {
   role: DeviceRole;
   station: KdsStation | null;
   revenue_pos_id: string | null;
+  stripe_reader_id: string | null;
   active: boolean;
 };
 type StoreRow = { id: string; name: string; vat_registered: boolean };
@@ -34,7 +35,7 @@ export function DevicesPage({ ctx }: { ctx: PageContext }) {
     const [devices, stores] = await Promise.all([
       ctx.client
         .from('devices')
-        .select('id, store_id, name, code, role, station, revenue_pos_id, active')
+        .select('id, store_id, name, code, role, station, revenue_pos_id, stripe_reader_id, active')
         .eq('org_id', ctx.orgId)
         .order('created_at'),
       ctx.client
@@ -110,12 +111,17 @@ function DeviceItem({
 }) {
   const { t } = useI18n();
   const [posId, setPosId] = useState(device.revenue_pos_id ?? '');
+  const [readerId, setReaderId] = useState(device.stripe_reader_id ?? '');
   const here = useDeviceBinding();
   const isHere = here?.deviceId === device.id;
   const [error, setError] = useState<ErrorKey | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const save = async (values: { revenue_pos_id?: string | null; active?: boolean }) => {
+  const save = async (values: {
+    revenue_pos_id?: string | null;
+    stripe_reader_id?: string | null;
+    active?: boolean;
+  }) => {
     setError(null);
     setSaved(false);
     const { data: rows, error: err } = await ctx.client
@@ -140,6 +146,12 @@ function DeviceItem({
     )
       return setError('err_device_invalid');
     return save({ revenue_pos_id: v === '' ? null : v });
+  };
+
+  const saveReader = () => {
+    const v = readerId.trim();
+    if (v !== '' && !/^tmr_[A-Za-z0-9]{6,60}$/.test(v)) return setError('err_device_invalid');
+    return save({ stripe_reader_id: v === '' ? null : v });
   };
 
   return (
@@ -173,8 +185,30 @@ function DeviceItem({
             }}
           />
         </div>
+        {device.role !== 'kds' ? (
+          <div className="form-row">
+            <label className="label" htmlFor={`reader-${device.id}`}>
+              {t.deviceReaderId}
+            </label>
+            <input
+              id={`reader-${device.id}`}
+              className="field mono"
+              value={readerId}
+              maxLength={64}
+              disabled={!canEdit}
+              placeholder="tmr_…"
+              onChange={(e) => {
+                setReaderId(e.target.value);
+                setSaved(false);
+              }}
+            />
+          </div>
+        ) : null}
         {canEdit ? (
           <div className="actions">
+            <AsyncButton variant="secondary" onClick={saveReader}>
+              {t.deviceReaderSave}
+            </AsyncButton>
             <AsyncButton variant="secondary" onClick={savePos}>
               {t.deviceSave}
             </AsyncButton>
@@ -197,6 +231,7 @@ function DeviceItem({
                           role: device.role,
                           station: device.station,
                           posId: device.revenue_pos_id,
+                          reader: device.stripe_reader_id !== null,
                         },
                   )
                 }

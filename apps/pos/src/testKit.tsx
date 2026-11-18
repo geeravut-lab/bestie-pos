@@ -25,6 +25,7 @@ export function posClient(tables: Record<string, unknown[]>) {
     channel,
     removeChannel: vi.fn(),
     rpc: vi.fn(async () => ({ data: null, error: null })),
+    auth: { getSession: async () => ({ data: { session: { access_token: 'user-jwt' } } }) },
   };
 }
 
@@ -41,6 +42,7 @@ export function bindTablet() {
     role: 'cashier',
     station: null,
     posId: 'POS-77',
+    reader: true,
   });
 }
 

@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@bestie/i18n';
@@ -36,7 +36,15 @@ function fakeClient(report: unknown = REPORT, reportError: { code: string } | nu
   const rpc = vi.fn(async (name: string, _args?: unknown) =>
     name === 'sales_report'
       ? { data: reportError ? null : report, error: reportError }
-      : { data: null, error: null },
+      : name === 'credit_liability'
+        ? {
+            data: [
+              { name: 'Acme Co', outstanding: 84000, customers: 3 },
+              { name: 'Idle Co', outstanding: 0, customers: 0 },
+            ],
+            error: null,
+          }
+        : { data: null, error: null },
   );
   const from = vi.fn(() => {
     const chain: Record<string, unknown> = {};
@@ -80,7 +88,9 @@ describe('<ReportsPage>', () => {
     expect(screen.getByText('฿133.75')).toBeTruthy();
     expect(screen.getByText('2026-11-16')).toBeTruthy();
     expect(screen.getAllByText('Beach')).toHaveLength(2); // the picker and the by-shop table
-    const args = rpc.mock.calls[0]![1] as { p: { org_id: string; store_id: string | null } };
+    const args = rpc.mock.calls.find((c) => c[0] === 'sales_report')![1] as {
+      p: { org_id: string; store_id: string | null };
+    };
     expect(args.p.org_id).toBe('org-1');
     expect(args.p.store_id).toBeNull(); // all shops
   });
@@ -91,7 +101,9 @@ describe('<ReportsPage>', () => {
     await screen.findByText('฿535');
     await userEvent.selectOptions(await screen.findByLabelText('Shop'), 's2');
     await waitFor(() => {
-      const last = rpc.mock.calls.at(-1)![1] as { p: { store_id: string | null } };
+      const last = rpc.mock.calls.filter((c) => c[0] === 'sales_report').at(-1)![1] as {
+        p: { store_id: string | null };
+      };
       expect(last.p.store_id).toBe('s2');
     });
     await userEvent.click(screen.getByRole('tab', { name: 'By payment' }));
@@ -100,6 +112,15 @@ describe('<ReportsPage>', () => {
     expect(await screen.findByText('Not recorded')).toBeTruthy();
     await userEvent.click(screen.getByRole('tab', { name: 'By item' }));
     expect(await screen.findByText('Pad Thai TH')).toBeTruthy();
+  });
+
+  it('shows unspent Credit per company (only companies that owe something)', async () => {
+    const { client } = fakeClient();
+    mount(ctx(client));
+    const box = await screen.findByRole('region', { name: /Unspent Credit/ });
+    expect(within(box).getByText('Acme Co')).toBeTruthy();
+    expect(within(box).getByText('฿840')).toBeTruthy();
+    expect(within(box).queryByText('Idle Co')).toBeNull();
   });
 
   it('exports CSV and writes the audit event', async () => {

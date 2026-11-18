@@ -44,6 +44,20 @@ export function ReportsPage({ ctx }: { ctx: PageContext }) {
     return (data ?? []) as { id: string; name: string }[];
   }, ctx.orgId);
 
+  // what the company owes its customers in unspent Credit (a liability, not revenue); empty while Credit is unused
+  const credit = useRemote(async () => {
+    if (!canView) return [];
+    const { data, error } = await ctx.client.rpc('credit_liability', { p_org: ctx.orgId });
+    if (error || !Array.isArray(data)) return [];
+    return (data as { name?: unknown; outstanding?: unknown; customers?: unknown }[])
+      .map((x) => ({
+        name: typeof x.name === 'string' ? x.name : '',
+        outstanding: typeof x.outstanding === 'number' ? x.outstanding : 0,
+        customers: typeof x.customers === 'number' ? x.customers : 0,
+      }))
+      .filter((x) => x.outstanding !== 0);
+  }, ctx.orgId);
+
   const report = useRemote(async (): Promise<SalesReport> => {
     if (!canView) throw new Error('forbidden');
     const { data, error } = await ctx.client.rpc('sales_report', {
@@ -204,6 +218,20 @@ export function ReportsPage({ ctx }: { ctx: PageContext }) {
         </div>
         <p className="muted hint">{t.repNote}</p>
       </section>
+
+      {tab === 'summary' && (credit.data?.length ?? 0) > 0 ? (
+        <section className="card admin-card" aria-label={t.repCreditTitle}>
+          <h2>{t.repCreditTitle}</h2>
+          <Table
+            head={[t.repCreditEntity, t.repCreditCustomers, t.repCreditOutstanding]}
+            rows={(credit.data ?? []).map((c) => [
+              c.name,
+              String(c.customers),
+              money(c.outstanding),
+            ])}
+          />
+        </section>
+      ) : null}
     </div>
   );
 }

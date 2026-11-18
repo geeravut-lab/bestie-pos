@@ -574,6 +574,34 @@ const th = {
   optionNone: 'ยังไม่มีตัวเลือกในกลุ่มนี้',
   optionFree: 'ไม่คิดเพิ่ม',
   err_menu_invalid: 'ข้อมูลเมนูไม่ถูกต้อง กรุณาตรวจชื่อ ราคา และจำนวนที่เลือกได้',
+
+  // ── offline sync, device binding, PIN lock ────────────────────────────────
+  syncOffline: 'ออฟไลน์ ทำงานต่อได้',
+  syncOfflineQueued: 'ออฟไลน์ · รอส่ง {n} รายการ',
+  syncSyncing: 'กำลังซิงก์',
+  syncQueued: 'รอส่ง {n} รายการ',
+  syncSynced: 'ซิงก์แล้ว',
+  syncAttention: 'ส่งไม่สำเร็จ {n} รายการ ต้องตรวจสอบ',
+  syncNow: 'ส่งตอนนี้',
+  deviceHere: 'แท็บเล็ตเครื่องนี้',
+  deviceBind: 'ใช้แท็บเล็ตนี้เป็นเครื่องนี้',
+  deviceUnbind: 'เลิกใช้แท็บเล็ตนี้เป็นเครื่องขาย',
+  deviceBoundNote: 'แท็บเล็ตนี้คือ "{name}" ต้องใส่ PIN ก่อนใช้งานทุกครั้ง',
+  lockTitle: 'ใครกำลังใช้งาน?',
+  lockPickPerson: 'แตะชื่อของคุณ',
+  lockEnterPin: 'ใส่ PIN ของ {name}',
+  lockPinLabel: 'PIN',
+  lockUnlock: 'เข้าใช้งาน',
+  lockOther: 'เลือกคนอื่น',
+  lockNoPeople: 'ยังไม่มีใครมี PIN ให้เจ้าของร้านตั้ง PIN ที่หน้า "ทีมงาน" ก่อน',
+  lockOfflineNote: 'ออฟไลน์ ใช้ได้เฉพาะ PIN ที่เคยใส่สำเร็จบนเครื่องนี้',
+  lockButton: 'ล็อกเครื่อง',
+  lockDeviceOff: 'เครื่องนี้ถูกปิดใช้งานในหลังร้าน',
+  lockWrongDevice: 'ไม่ใช่เครื่องนี้? ให้เจ้าของร้านเลิกผูกเครื่องที่หน้า "เครื่องของร้าน"',
+  err_pin_wrong: 'PIN ไม่ถูกต้อง',
+  err_pin_locked: 'ใส่ PIN ผิดหลายครั้ง ล็อกไว้ 15 นาที',
+  err_pin_unknown_offline: 'ออฟไลน์อยู่ และเครื่องนี้ยังไม่เคยยืนยัน PIN ของคุณ ต้องต่อเน็ตสำหรับครั้งแรก',
+  err_pin_not_set: 'คนนี้ยังไม่มี PIN ให้เจ้าของร้านตั้งให้ที่หน้า "ทีมงาน"',
 };
 
 export type Dict = { [K in keyof typeof th]: string };
@@ -1133,6 +1161,35 @@ const en = {
   optionFree: 'No extra charge',
   err_menu_invalid:
     'The menu details are not valid. Check the names, prices and how many can be picked.',
+
+  // ── offline sync, device binding, PIN lock ────────────────────────────────
+  syncOffline: 'Offline — you can keep working',
+  syncOfflineQueued: 'Offline · {n} waiting to send',
+  syncSyncing: 'Syncing',
+  syncQueued: '{n} waiting to send',
+  syncSynced: 'All synced',
+  syncAttention: '{n} could not be sent — needs attention',
+  syncNow: 'Send now',
+  deviceHere: 'This tablet',
+  deviceBind: 'Use this tablet as this device',
+  deviceUnbind: 'Stop using this tablet as a till',
+  deviceBoundNote: 'This tablet is "{name}". A PIN is needed every time it is used.',
+  lockTitle: "Who's working?",
+  lockPickPerson: 'Tap your name',
+  lockEnterPin: "Enter {name}'s PIN",
+  lockPinLabel: 'PIN',
+  lockUnlock: 'Start',
+  lockOther: 'Someone else',
+  lockNoPeople: 'Nobody has a PIN yet. The owner sets PINs on the "Team" page first.',
+  lockOfflineNote: 'Offline — only PINs that already worked on this tablet are accepted.',
+  lockButton: 'Lock',
+  lockDeviceOff: 'This device was switched off in the back office.',
+  lockWrongDevice: 'Not this tablet? The owner can unlink it on the "Shop devices" page.',
+  err_pin_wrong: 'Wrong PIN.',
+  err_pin_locked: 'Too many wrong tries. Locked for 15 minutes.',
+  err_pin_unknown_offline:
+    'Offline, and this tablet has not confirmed your PIN before. Connect to the internet the first time.',
+  err_pin_not_set: 'This person has no PIN yet. The owner sets it on the "Team" page.',
 } satisfies Dict;
 
 export const dict: Record<Lang, Dict> = { th, en };

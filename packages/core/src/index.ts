@@ -25,3 +25,4 @@ export * from './flex';
 export * from './billing';
 export * from './backoffice';
 export * from './menuAdmin';
+export * from './outbox';

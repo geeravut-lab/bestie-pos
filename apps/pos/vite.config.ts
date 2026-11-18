@@ -9,5 +9,10 @@ export default defineConfig({
   // One shared .env.local at the repo root (see docs/ENVIRONMENT.md).
   envDir: '../..',
   server: { port: 5173 },
-  test: { environment: 'jsdom', css: false, exclude: ['e2e/**', 'node_modules/**', 'dist/**'] },
+  test: {
+    environment: 'jsdom',
+    css: false,
+    setupFiles: ['./src/test-setup.ts'],
+    exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
+  },
 });

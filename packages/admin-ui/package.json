@@ -16,6 +16,7 @@
     "@bestie/auth": "workspace:*",
     "@bestie/core": "workspace:*",
     "@bestie/i18n": "workspace:*",
+    "@bestie/offline": "workspace:*",
     "@bestie/ui": "workspace:*",
     "@supabase/supabase-js": "2.119.0"
   },

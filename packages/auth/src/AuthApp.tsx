@@ -18,6 +18,8 @@ import {
 import { AuthProvider, useAuth } from './context';
 import { useBrand } from './useBrand';
 import { appRoleFor, pickStore } from './myContext';
+import { effectiveActing, withActing } from './acting';
+import type { ActingIdentity } from './acting';
 
 /** What a back-office page needs to know about who is looking at it and where. */
 export type PageContext = {
@@ -29,6 +31,15 @@ export type PageContext = {
   permissions: readonly Permission[];
   isOwner: boolean;
   isPlatformAdmin: boolean;
+};
+
+/** Tablet mode (apps/pos): a lock screen in front of the app, the acting person's role, extra header controls. */
+export type DeviceMode = {
+  /** Full-screen takeover (device not set up / locked). Return null once someone is working. */
+  gate: (ctx: PageContext, acting: ActingIdentity | null) => ReactNode | null;
+  /** What the app remembers; an unlock that belongs to another account is ignored. */
+  acting: ActingIdentity | null;
+  headerExtra?: ReactNode;
 };
 
 function AccountLink() {
@@ -67,13 +78,35 @@ function Inner({
   app,
   env,
   pages,
+  deviceMode,
 }: {
   app: AppId;
   env: PublicEnv | undefined;
   pages?: (ctx: PageContext) => ReactNode | null;
+  deviceMode?: DeviceMode;
 }) {
   const auth = useAuth();
   const { my } = auth;
+  // The person who unlocked the till (PIN) replaces the account's own role — but only for THIS signed-in account.
+  const acting = effectiveActing(deviceMode?.acting, auth.user?.id);
+  const baseMembership = my.data?.memberships[0];
+  const membership = useMemo(() => withActing(baseMembership, acting), [baseMembership, acting]);
+  const pageContext = useCallback(
+    (path: string, navigate: (p: string) => void): PageContext | null =>
+      auth.client && membership && my.data
+        ? {
+            path,
+            navigate,
+            client: auth.client,
+            orgId: membership.orgId,
+            storeId: membership.storeId,
+            permissions: membership.permissions,
+            isOwner: membership.roleBuiltIn === 'owner',
+            isPlatformAdmin: my.data.isPlatformAdmin,
+          }
+        : null,
+    [auth.client, membership, my.data],
+  );
   const brand = useBrand(auth.client, auth.status === 'signedIn');
   const public_ = app === 'guest'; // guest pages need no account
 
@@ -96,14 +129,17 @@ function Inner({
       if (my.status === 'error' || !my.data) return <LoadFailed onRetry={my.reload} />;
       if (my.data.memberships.length === 0 && !my.data.isPlatformAdmin)
         return <OnboardingPage onCreated={my.reload} />;
+      if (deviceMode) {
+        const ctx = pageContext(path, navigate);
+        if (ctx) return deviceMode.gate(ctx, acting);
+      }
       return null;
     },
-    [env, public_, auth.status, my.status, my.data, my.reload],
+    [env, public_, auth.status, my.status, my.data, my.reload, deviceMode, pageContext, acting],
   );
 
   const live = useMemo(() => {
     if (!env || public_ || auth.status !== 'signedIn' || !my.data) return undefined;
-    const membership = my.data.memberships[0];
     const store = pickStore(my.data, membership);
     if (!store && !my.data.isPlatformAdmin) return undefined;
     const role = appRoleFor(membership, { app, isPlatformAdmin: my.data.isPlatformAdmin });
@@ -119,7 +155,7 @@ function Inner({
         role: { hiddenModules: membership?.hiddenModules ?? [] },
       },
     };
-  }, [env, public_, app, auth.status, my.data]);
+  }, [env, public_, app, auth.status, my.data, membership]);
 
   return (
     <AppRoot
@@ -130,22 +166,17 @@ function Inner({
       renderPage={({ path, navigate }) => {
         if (!live || !my.data) return null;
         if (path === '/account') return <AccountPage />;
-        const membership = my.data.memberships[0];
-        if (!auth.client || !membership) return null;
-        return (
-          pages?.({
-            path,
-            navigate,
-            client: auth.client,
-            orgId: membership.orgId,
-            storeId: membership.storeId,
-            permissions: membership.permissions,
-            isOwner: membership.roleBuiltIn === 'owner',
-            isPlatformAdmin: my.data.isPlatformAdmin,
-          }) ?? null
-        );
+        const ctx = pageContext(path, navigate);
+        return ctx ? (pages?.(ctx) ?? null) : null;
       }}
-      headerExtra={live ? <AccountLink /> : null}
+      headerExtra={
+        live ? (
+          <>
+            {deviceMode?.headerExtra}
+            <AccountLink />
+          </>
+        ) : null
+      }
     />
   );
 }
@@ -158,10 +189,12 @@ export function AuthApp({
   app,
   rawEnv,
   pages,
+  deviceMode,
 }: {
   app: AppId;
   rawEnv: Record<string, string | boolean | undefined>;
   pages?: (ctx: PageContext) => ReactNode | null;
+  deviceMode?: DeviceMode;
 }) {
   const env = useMemo(() => {
     try {
@@ -174,7 +207,7 @@ export function AuthApp({
   const client = useMemo(() => (env ? createBrowserClient(env) : null), [env]);
   return (
     <AuthProvider client={client}>
-      <Inner app={app} env={env} pages={pages} />
+      <Inner app={app} env={env} pages={pages} deviceMode={deviceMode} />
     </AuthProvider>
   );
 }

@@ -1011,3 +1011,97 @@ a.nav-card[aria-busy='true'] {
   margin: 0;
   font-weight: 800;
 }
+
+/* ── sync indicator + PIN lock screen ─────────────────────────────────────── */
+.sync-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2rem;
+  padding: 0.15rem 0.75rem;
+  border-radius: var(--bp-radius-pill);
+  background: var(--bp-success-bg);
+  color: var(--bp-success-fg);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.sync-pill[data-state='offline'],
+.sync-pill[data-state='queued'] {
+  background: var(--bp-warning-bg);
+  color: var(--bp-warning-fg);
+}
+.sync-pill[data-state='attention'] {
+  background: var(--bp-danger-bg);
+  color: var(--bp-danger-fg);
+}
+.sync-pill[data-state='syncing'] {
+  background: var(--bp-info-bg);
+  color: var(--bp-info-fg);
+}
+.sync-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+.sync-retry {
+  min-height: 1.75rem;
+  padding: 0 0.6rem;
+}
+.lock-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.75rem;
+}
+.lock-person {
+  display: grid;
+  place-items: center;
+  gap: 0.35rem;
+  min-height: 6rem;
+  padding: 0.75rem;
+  border: 2px solid var(--bp-line);
+  border-radius: var(--bp-radius-card);
+  background: var(--bp-surface);
+  color: var(--bp-ink);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.lock-person:hover,
+.lock-person:focus-visible {
+  border-color: var(--bp-primary);
+  background: var(--bp-mint);
+}
+.pin-pad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(4rem, 1fr));
+  gap: 0.5rem;
+  max-width: 18rem;
+  margin-inline: auto;
+}
+.pin-pad button {
+  min-height: 3.5rem;
+  border: 1px solid var(--bp-line);
+  border-radius: var(--bp-radius-control);
+  background: var(--bp-surface);
+  color: var(--bp-ink);
+  font: inherit;
+  font-size: 1.4rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.pin-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 1.5rem;
+}
+.pin-dots span {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  border: 2px solid var(--bp-primary);
+}
+.pin-dots span[data-on='true'] {
+  background: var(--bp-primary);
+}

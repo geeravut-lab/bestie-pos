@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { liveQuery } from 'dexie';
 import type { OrderDoc } from '@bestie/core';
 import { db } from './db';
-import { listOpenOrders, listPaidOrders } from './orderStore';
+import { listOpenOrders, listPaidOrders, listShopOrders } from './orderStore';
 
 /** Live view of the shop's open orders from this tablet's working copy (works offline, updates when anything changes). */
 export function useOpenOrders(storeId: string | null): OrderDoc[] | undefined {
@@ -50,5 +50,21 @@ export function usePaidOrders(
     });
     return () => sub.unsubscribe();
   }, [storeId, businessDate, key]);
+  return state && state.key === key ? state.list : undefined;
+}
+
+/** Open bills + recently paid ones of a shop, live — the source for the kitchen display, the pick-up list and the queue board. */
+export function useShopOrders(storeId: string | null, sinceDate: string): OrderDoc[] | undefined {
+  const [state, setState] = useState<{ key: string; list: OrderDoc[] } | undefined>();
+  const key = `${storeId}|${sinceDate}`;
+  useEffect(() => {
+    if (!storeId) return;
+    const sub = liveQuery(() => listShopOrders(storeId, sinceDate)).subscribe({
+      next: (list) => setState({ key, list }),
+      error: (e: unknown) =>
+        console.error('[orders] read failed', e instanceof Error ? e.message : 'unknown'),
+    });
+    return () => sub.unsubscribe();
+  }, [storeId, sinceDate, key]);
   return state && state.key === key ? state.list : undefined;
 }

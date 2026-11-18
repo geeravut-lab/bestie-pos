@@ -2,6 +2,8 @@ import {
   OrderError,
   buildCashReceipt,
   mergeOrders,
+  setLinesStatus,
+  statusPayload,
   movePayload,
   orderToRow,
   splitOrder,
@@ -12,10 +14,19 @@ import {
   payBlockers,
   sendNew,
 } from '@bestie/core';
-import type { BillConfig, Channel, Lang, OrderDoc, RoundingRule, SplitPick } from '@bestie/core';
+import type {
+  BillConfig,
+  Channel,
+  KitchenStatus,
+  Lang,
+  OrderDoc,
+  RoundingRule,
+  SplitPick,
+} from '@bestie/core';
 import type { ErrorKey } from '@bestie/i18n';
 import {
   getOrder,
+  listShopOrders,
   nextOrderNumber,
   nextReceiptNumber,
   payOrder,
@@ -207,6 +218,35 @@ export function mergeBills(p: { sourceId: string; targetId: string }): Promise<E
         return e.code === 'closed' ? 'err_order_closed' : 'err_split_failed';
       console.error('[pos] merge failed', e instanceof Error ? e.message : 'unknown');
       return 'err_split_failed';
+    }
+  };
+  const next = chain.then(run, run);
+  chain = next;
+  return next;
+}
+
+/**
+ * Move lines through the kitchen (sent → ready → served, or the one-step undo). The tablet's copy changes at once and ONE
+ * `set_lines_status` call is queued, so a bump works with no signal and is applied in order when the network returns.
+ */
+export function bumpLines(p: {
+  storeId: string;
+  lineIds: readonly string[];
+  status: KitchenStatus;
+  sinceDate: string;
+}): Promise<ErrorKey | null> {
+  const run = async (): Promise<ErrorKey | null> => {
+    try {
+      const orders = await listShopOrders(p.storeId, p.sinceDate);
+      const changed = setLinesStatus(orders, p.lineIds, p.status);
+      if (changed.length === 0) return null; // nothing could move (already there, cancelled, never sent)
+      await saveOrders(changed, [
+        { kind: 'rpc', fn: 'set_lines_status', args: statusPayload(p.lineIds, p.status) },
+      ]);
+      return null;
+    } catch (e) {
+      console.error('[pos] bump failed', e instanceof Error ? e.message : 'unknown');
+      return 'err_kds_failed';
     }
   };
   const next = chain.then(run, run);

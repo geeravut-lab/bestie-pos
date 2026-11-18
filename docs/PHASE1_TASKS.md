@@ -42,8 +42,8 @@ Work top to bottom. One PR per task. Tick when merged.
 - [ ] Offline: full order flow works with network off; sync + conflict handling tested — **foundation done** (`@bestie/offline`: IndexedDB outbox with client uuids, ordered replay, retry/backoff, dead-letter, conflict rules per table, cached reads incl. the signed-in user's shop data); each order / payment screen below plugs into it
 
 ## 4. Kitchen & queue
-- [ ] KDS screen per station (kitchen / bar) with item routing rules
-- [ ] Queue call screen for cafe
+- [x] KDS screen per station (`/kds`): tickets per bill with only that station's lines (a menu item's station is the routing rule; no station = never shown), oldest first, colour by waiting time (8 / 15 min), Ready / Undo, optional chime for new tickets, works offline (bumps are queued), live + 10 s refresh; a screen with no station shows everything that has one; waiter's **Ready to serve** list (`/ready`) with Served
+- [x] Queue for the cafe: staff board (`/queue`: Preparing / Ready to collect, Handed over) and the customer-facing call screen (`/queue/display`: big numbers, full screen, chime when a number becomes ready); counter bills only
 
 ## 5. Guest QR ordering (apps/guest)
 - [ ] Table QR → menu in EN/TH → order → appears on POS/KDS
@@ -78,7 +78,8 @@ Work top to bottom. One PR per task. Tick when merged.
 - [x] `useLiveSync` hook + `LiveSyncController`: refetch on ping (debounced), polling fallback with backoff, pause on hidden tab + catch-up, never refresh under typing / open dialog, catch-up after reconnect
 - [x] Wired to: roles / modules / store settings of the signed-in user (all open screens of an org update by themselves), audit history
 - [x] Wired to: floor plan, order list, order screen (tables / orders / lines ping `store:<id>`; the till pulls the shop's orders when nothing is waiting to be sent)
-- [ ] Still to wire: KDS, queue call screen, guest "order ready" (§4, §5)
+- [x] Wired to: KDS, pick-up list, queue board (store topic ping + fast refresh)
+- [ ] Still to wire: guest "order ready" (§5)
 - [x] Interplay with the offline outbox: sync indicator in the top bar (offline / syncing / N waiting / needs attention) driven by the local queue
 
 ## 11. Audit trail  _(AUDIT-TRAIL-KNOWLEDGE + admin switches, see KNOWLEDGE-MAPPING §A)_

@@ -12,6 +12,7 @@ export {
   getOrder,
   listOpenOrders,
   listPaidOrders,
+  listShopOrders,
   nextOrderNumber,
   nextReceiptNumber,
   payOrder,
@@ -21,7 +22,7 @@ export {
   saveOrders,
   syncReceiptCounter,
 } from './orderStore';
-export { useOpenOrders, useOrder, usePaidOrders } from './useOrders';
+export { useOpenOrders, useOrder, usePaidOrders, useShopOrders } from './useOrders';
 export {
   getOpenShift,
   listClosedShifts,

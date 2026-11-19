@@ -52,5 +52,7 @@ export * from './appointments';
 export * from './onlineBooking';
 export * from './barcode';
 export * from './menuImages';
+export * from './barcode128';
+export * from './labels';
 export * from './commission';
 export * from './packages';

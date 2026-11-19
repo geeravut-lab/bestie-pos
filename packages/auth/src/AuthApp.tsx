@@ -22,6 +22,8 @@ import { useBrand } from './useBrand';
 import { useStoreTheme } from './useStoreTheme';
 import { useCardImages } from './useCardImages';
 import { appRoleFor, pickStore } from './myContext';
+import type { Membership } from './myContext';
+import { roleDisplay } from './roleLabel';
 import { effectiveActing, withActing } from './acting';
 import type { ActingIdentity } from './acting';
 
@@ -60,6 +62,27 @@ function AccountLink() {
     <a className="icon-button" href="/account" aria-label={t.navAccount} title={t.navAccount}>
       <Icon name="account" />
     </a>
+  );
+}
+
+/** Who is working and in which role (the person who unlocked the till, or the signed-in account), always visible in the top bar. */
+export function RoleChip({
+  membership,
+  place,
+  platformAdmin,
+}: {
+  membership: Membership;
+  place: string;
+  platformAdmin: boolean;
+}) {
+  const { t } = useI18n();
+  const role = roleDisplay(membership, t);
+  const full = [role, place, platformAdmin ? t.acctPlatformAdmin : ''].filter(Boolean).join(' · ');
+  return (
+    <span className="role-chip" title={full} aria-label={`${t.headerRoleLabel}: ${full}`}>
+      <strong>{role}</strong>
+      {place ? <span className="role-chip-place">{place}</span> : null}
+    </span>
   );
 }
 
@@ -166,6 +189,7 @@ function Inner({
     const role = appRoleFor(membership, { app, isPlatformAdmin: my.data.isPlatformAdmin });
     return {
       role,
+      roleName: membership?.roleBuiltIn ? null : (membership?.roleName ?? null),
       ctx: {
         store: store ?? {
           profile: 'restaurant' as const,
@@ -196,6 +220,17 @@ function Inner({
         live ? (
           <>
             {deviceMode?.headerExtra}
+            {membership ? (
+              <RoleChip
+                membership={membership}
+                place={
+                  my.data
+                    ? (pickStore(my.data, membership)?.name ?? membership.orgName)
+                    : membership.orgName
+                }
+                platformAdmin={Boolean(my.data?.isPlatformAdmin)}
+              />
+            ) : null}
             <NotificationBell />
             <AccountLink />
           </>

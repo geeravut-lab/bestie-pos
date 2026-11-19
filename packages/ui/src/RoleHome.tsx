@@ -12,6 +12,8 @@ export type RoleHomeProps = {
   pendingPath?: string | null;
   /** Admin-uploaded replacements per card (docs/UX-DESIGN.md §7). Missing = built-in illustration. */
   imageUrls?: Partial<Record<ArtId, string>>;
+  /** The name of a role the shop made itself; built-in roles use the translated label of `role`. */
+  roleName?: string | null;
 };
 
 /**
@@ -24,6 +26,7 @@ export function RoleHome({
   onNavigate,
   pendingPath = null,
   imageUrls = {},
+  roleName = null,
 }: RoleHomeProps) {
   const { t } = useI18n();
   const layout = ROLE_LAYOUT[role];
@@ -32,7 +35,7 @@ export function RoleHome({
   return (
     <div className="home">
       <section className="home-hero">
-        <p className="badge">{t[roleLabelKey(role)]}</p>
+        <p className="badge">{roleName ?? t[roleLabelKey(role)]}</p>
         <h1>{t.homeGreeting}</h1>
       </section>
 

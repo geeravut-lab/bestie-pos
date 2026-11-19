@@ -16,7 +16,12 @@ import { RoleHome } from './RoleHome';
 export type AppId = 'pos' | 'admin' | 'guest';
 
 /** Real session data: replaces the preview chips (role + store come from the database, not from a picker). */
-export type LiveSession = { role: AppRole; ctx: NavContext };
+export type LiveSession = {
+  role: AppRole;
+  ctx: NavContext;
+  /** The name of a role the shop made itself (null for the built-in roles). */
+  roleName?: string | null;
+};
 
 export type AppRootProps = {
   app: AppId;
@@ -159,6 +164,7 @@ function Frame({ app, live, gate, renderPage, headerExtra, cardImages }: AppRoot
           onNavigate={go}
           pendingPath={pendingPath}
           imageUrls={cardImages}
+          roleName={live?.roleName ?? null}
         />
       ) : (
         <PageSoon art={current?.id ?? 'home'} onNavigate={go} />

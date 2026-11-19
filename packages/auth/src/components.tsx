@@ -7,6 +7,8 @@ import { AsyncButton, Brand, LangSwitch, Spinner } from '@bestie/ui';
 import type { PublicEnv } from '@bestie/supabase';
 import { accountLabel, isAivoraUser } from './account';
 import { useAuth } from './context';
+import { pickStore } from './myContext';
+import { roleDisplay } from './roleLabel';
 import { LineConnect } from './LineConnect';
 import { authErrorCode, passwordChangeProblem, signUpProblem } from './errors';
 import { aivoraAuthorizeUrl, fetchEnabledProviders } from './providers';
@@ -210,7 +212,7 @@ const PROFILE_CHOICES = [
   { id: 'salon', live: true },
   { id: 'spa', live: true },
   { id: 'resort', live: false },
-  { id: 'retail', live: false },
+  { id: 'retail', live: true },
   { id: 'tours', live: false },
 ] as const;
 
@@ -460,7 +462,9 @@ export function SsoCallbackPage({
 // ── account ─────────────────────────────────────────────────────────────────
 export function AccountPage() {
   const { t } = useI18n();
-  const { client, user, signOut } = useAuth();
+  const { client, user, signOut, my } = useAuth();
+  const myRole = my.data?.memberships[0];
+  const myShop = my.data && myRole ? pickStore(my.data, myRole) : undefined;
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -533,6 +537,28 @@ export function AccountPage() {
           {t.authSignOut}
         </AsyncButton>
       </section>
+      {myRole || my.data?.isPlatformAdmin ? (
+        <section className="card auth-card" aria-label={t.acctRoleTitle}>
+          <h2>{t.acctRoleTitle}</h2>
+          <dl className="kv">
+            {myRole ? (
+              <>
+                <dt>{t.acctRoleLabel}</dt>
+                <dd>
+                  <strong>{roleDisplay(myRole, t)}</strong>
+                </dd>
+                <dt>{t.acctOrgLabel}</dt>
+                <dd>{myRole.orgName}</dd>
+                <dt>{t.acctShopLabel}</dt>
+                <dd>{myRole.storeId === null ? t.acctAllShops : (myShop?.name ?? '')}</dd>
+              </>
+            ) : null}
+            <dt>{t.acctPlatformAdmin}</dt>
+            <dd>{my.data?.isPlatformAdmin ? t.acctYes : t.acctNo}</dd>
+          </dl>
+          {!my.data?.isPlatformAdmin ? <p className="muted">{t.acctPlatformAdminHint}</p> : null}
+        </section>
+      ) : null}
       <LineConnect />
       <section className="card auth-card">
         <h2>{t.pwTitle}</h2>

@@ -63,6 +63,17 @@ function MenuEditor({ ctx, stores }: { ctx: PageContext; stores: StoreRow[] }) {
       <h1>{t.menuTitle}</h1>
       <Notice kind="info">{t.menuIntro}</Notice>
       {!canEdit ? <Notice kind="info">{t.menuReadOnly}</Notice> : null}
+      {canEdit ? (
+        <div className="actions">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => ctx.navigate('/labels')}
+          >
+            {t.labelsTitle}
+          </button>
+        </div>
+      ) : null}
       {stores.length > 1 ? (
         <div className="form-row">
           <label className="label" htmlFor="menu-store">

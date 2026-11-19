@@ -158,7 +158,7 @@ const mount = (c: PageContext) =>
 describe('<BrandingPage>', () => {
   it('is for platform admins only', () => {
     mount(ctx(fakeClient().client, false));
-    expect(screen.getByRole('alert').textContent).toContain('platform admins');
+    expect(screen.getByRole('alert').textContent).toContain('platform administrator');
   });
 
   it('shows the defaults, validates a wrong icon in the UI and shows a readable error', async () => {

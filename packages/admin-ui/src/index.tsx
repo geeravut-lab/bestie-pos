@@ -38,6 +38,7 @@ import { CardImagesPage } from './CardImagesPage';
 import { CryptoPage } from './CryptoPage';
 import { CustomersPage } from './CustomersPage';
 import { DevicesPage } from './DevicesPage';
+import { LabelsPage } from './LabelsPage';
 import { LineSettingsPage } from './LineSettingsPage';
 import { MenuPage } from './MenuPage';
 import { ModulesPage } from './ModulesPage';
@@ -56,6 +57,7 @@ export function adminPages(ctx: PageContext): ReactNode | null {
   if (ctx.path === '/calendar') return <AppointmentsPage ctx={ctx} />;
   if (ctx.path === '/commission') return <CommissionPage ctx={ctx} />;
   if (ctx.path === '/packages') return <PackagesPage ctx={ctx} />;
+  if (ctx.path === '/labels') return <LabelsPage ctx={ctx} />;
   if (ctx.path === '/resources') return <ResourcesPage ctx={ctx} />;
   if (ctx.path === '/ask') return <AskShopPage ctx={ctx} />;
   if (ctx.path === '/feedback') return <FeedbackPage ctx={ctx} />;

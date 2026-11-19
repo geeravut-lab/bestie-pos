@@ -7,6 +7,7 @@ import { KitchenPage, QueueDisplayPage, QueuePage, ReadyPage } from './KitchenPa
 import { OrdersPage } from './OrdersPage';
 import { ShiftPage } from './ShiftPage';
 import { ReceiptPage, ReceiptsPage } from './ReceiptPages';
+import { PrintersPage } from './printing/PrintersPage';
 
 /** Till screens first, then the back-office pages (a manager at the till can still open /menu, /staff …). */
 export function posPages(ctx: PageContext): ReactNode | null {
@@ -21,6 +22,7 @@ export function posPages(ctx: PageContext): ReactNode | null {
   if (m) return <OrderPage ctx={ctx} orderId={m[1]!} />;
   if (ctx.path === '/shift') return <ShiftPage ctx={ctx} />;
   if (ctx.path === '/receipts') return <ReceiptsPage ctx={ctx} />;
+  if (ctx.path === '/settings/printers') return <PrintersPage ctx={ctx} />;
   const r = /^\/receipt\/([0-9a-f-]{36})$/.exec(ctx.path);
   if (r) return <ReceiptPage ctx={ctx} orderId={r[1]!} />;
   return adminPages(ctx);

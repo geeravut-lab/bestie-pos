@@ -8,6 +8,7 @@ import type { PageContext } from '@bestie/auth';
 import { useOrder, useOutboxCounts, usePaidOrders } from '@bestie/offline';
 import { usePosData, usePosStore } from './posData';
 import { Loading, Page } from './PosBits';
+import { PrintButton } from './printing/PrintButton';
 import { ReceiptView } from './ReceiptView';
 
 /** One receipt: view in the guest's language, print (browser print, 80 mm layout), back to selling. */
@@ -49,7 +50,7 @@ export function ReceiptPage({ ctx, orderId }: { ctx: PageContext; orderId: strin
             </button>
           ))}
         </div>
-        <AsyncButton onClick={() => globalThis.print()}>{t.receiptPrint}</AsyncButton>
+        <PrintButton ctx={ctx} order={order} receipt={order.receipt} lang={lang} />
         <AsyncButton variant="secondary" onClick={() => ctx.navigate('/sell')}>
           {t.sellNew}
         </AsyncButton>

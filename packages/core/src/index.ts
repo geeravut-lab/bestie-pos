@@ -41,3 +41,4 @@ export * from './dietary';
 export * from './storeTheme';
 export * from './cardImages';
 export * from './aiCost';
+export * from './printing';

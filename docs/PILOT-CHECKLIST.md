@@ -17,8 +17,8 @@ Everything marked **(owner)** needs the shop owner's own accounts or paperwork. 
 | Item | Notes |
 |---|---|
 | Tablets | iPad or Android tablet, Chrome / Safari, **Add to Home Screen** so the PWA runs full screen. One per role: counter, waiter(s), kitchen, bar |
-| Receipt printer | Browser print (80 mm) works now. ESC/POS network / Bluetooth printing is not built yet: write down the printer model |
-| Cash drawer | Opens manually until ESC/POS is built |
+| Receipt printer | Until a printer is added, receipts save as a **PDF**. Add the printer at `/settings/printers` (USB / Serial / Bluetooth in Chrome or Edge; LAN printers through `tools/print-bridge`; iPad Safari: PDF or browser dialog only), press **Print a test page**, and write down the model that worked or failed |
+| Cash drawer | Plugged into the printer; tick *Open the cash drawer after printing* on that printer |
 | Card reader (optional) | Stripe Terminal reader available in Thailand; register it in Stripe, note its `tmr_…` id |
 | Network | Shop Wi-Fi + a phone hotspot as backup. Offline cash sales work without signal; PromptPay and card need it |
 | Power | Charge tablets overnight; a power bank at the counter |

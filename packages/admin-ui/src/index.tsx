@@ -21,6 +21,7 @@ export type { Cat, Group, Item, Menu, Opt } from './menuData';
 import type { ReactNode } from 'react';
 import type { PageContext } from '@bestie/auth';
 import { AiUsagePage } from './AiUsagePage';
+import { AskShopPage } from './AskShopPage';
 import { AuditPage } from './AuditPage';
 import { AiPromptsPage, AiSettingsPage } from './AiPages';
 import { BillingPage } from './BillingPage';
@@ -44,6 +45,7 @@ export function adminPages(ctx: PageContext): ReactNode | null {
   if (ctx.path === '/admin/branding' || ctx.path.startsWith('/admin/branding/'))
     return <BrandingPage ctx={ctx} />;
   if (ctx.path === '/ai/usage') return <AiUsagePage ctx={ctx} />;
+  if (ctx.path === '/ask') return <AskShopPage ctx={ctx} />;
   if (ctx.path === '/admin/line') return <LineSettingsPage ctx={ctx} />;
   if (ctx.path === '/admin/cards') return <CardImagesPage ctx={ctx} />;
   if (ctx.isPlatformAdmin && ctx.path === '/ai')

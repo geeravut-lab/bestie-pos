@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { parseFood } from '@bestie/core';
-import type { DietTag } from '@bestie/core';
+import type { AskPreset, DietTag } from '@bestie/core';
 import { AppError } from '@bestie/i18n';
 
 /** Call /api/ai with the signed-in admin's JWT. Only a code ever reaches the screen, never a provider message. */
@@ -78,4 +78,48 @@ export async function translateName(
   if (!res.ok) throw new AppError('err_unknown');
   const b = (await res.json().catch(() => null)) as { available?: unknown; text?: unknown } | null;
   return b?.available === true && typeof b.text === 'string' ? b.text : null;
+}
+
+export type ShopAnswer =
+  | {
+      available: true;
+      answer: string;
+      /** Numbers in the answer that the shop's own figures do not contain. */
+      unverified: string[];
+      figures: string;
+      range: { from: string; to: string };
+    }
+  | { available: false };
+
+/** "Ask my shop": a plain-language answer about the chosen period; every figure comes from the shop's reports (read only). */
+export async function askShop(
+  client: SupabaseClient,
+  storeId: string,
+  preset: AskPreset,
+  question: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ShopAnswer> {
+  const { data } = await client.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new AppError('err_forbidden');
+  const res = await fetchImpl('/api/ask/shop', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ store_id: storeId, preset, question }),
+  });
+  if (res.status === 403) throw new AppError('err_forbidden');
+  if (res.status === 429) throw new AppError('err_rate_limited');
+  if (!res.ok) throw new AppError('err_unknown');
+  const b = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!b || b.available !== true || typeof b.answer !== 'string') return { available: false };
+  const r = (b.range ?? {}) as { from?: unknown; to?: unknown };
+  return {
+    available: true,
+    answer: b.answer,
+    unverified: Array.isArray(b.unverified)
+      ? b.unverified.filter((x): x is string => typeof x === 'string')
+      : [],
+    figures: typeof b.figures === 'string' ? b.figures : '',
+    range: { from: String(r.from ?? ''), to: String(r.to ?? '') },
+  };
 }

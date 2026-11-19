@@ -78,6 +78,13 @@ export function ModulesPage({ ctx }: { ctx: PageContext }) {
         >
           {t.tendersTitle}
         </button>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => ctx.navigate('/settings/theme')}
+        >
+          {t.themeTitle}
+        </button>
       </div>
       {!canEdit ? <Notice kind="info">{t.modulesReadOnly}</Notice> : null}
       {data.stores.length > 0 ? (

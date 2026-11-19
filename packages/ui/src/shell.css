@@ -1784,3 +1784,44 @@ a.nav-card[aria-busy='true'] {
   flex-wrap: wrap;
   align-items: center;
 }
+
+/* ── shop colours page ───────────────────────────────────────────────────── */
+.theme-input {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.theme-input input[type='color'] {
+  width: var(--bp-touch);
+  height: var(--bp-touch);
+  padding: 0;
+  border: 1px solid var(--bp-field-border);
+  border-radius: var(--bp-radius-control);
+  background: var(--bp-surface);
+}
+.theme-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+.theme-chip-brand {
+  background: var(--bp-brand);
+  color: var(--bp-ink);
+}
+.theme-chip-accent {
+  background: var(--bp-accent);
+  color: var(--bp-ink);
+}
+.theme-chip-sun {
+  background: var(--bp-sun);
+  color: var(--bp-ink);
+}
+.theme-mint {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 0.75rem;
+  border-radius: var(--bp-radius-control);
+  background: var(--bp-mint);
+  color: var(--bp-muted);
+}

@@ -1,6 +1,7 @@
 export { AuditPage } from './AuditPage';
 export { BillingPage } from './BillingPage';
 export { BrandingPage } from './BrandingPage';
+export { CardImagesPage } from './CardImagesPage';
 export { CryptoPage } from './CryptoPage';
 export { CustomerPicker } from './CustomerPicker';
 export { CustomersPage } from './CustomersPage';
@@ -10,6 +11,7 @@ export { ModulesPage } from './ModulesPage';
 export { ReportsPage } from './ReportsPage';
 export { StaffPage } from './StaffPage';
 export { TendersPage } from './TendersPage';
+export { ThemePage } from './ThemePage';
 export { AiPromptsPage, AiSettingsPage } from './AiPages';
 export { useRemote } from './useRemote';
 export { loadMenu } from './menuData';
@@ -20,6 +22,7 @@ import { AuditPage } from './AuditPage';
 import { AiPromptsPage, AiSettingsPage } from './AiPages';
 import { BillingPage } from './BillingPage';
 import { BrandingPage } from './BrandingPage';
+import { CardImagesPage } from './CardImagesPage';
 import { CryptoPage } from './CryptoPage';
 import { CustomersPage } from './CustomersPage';
 import { DevicesPage } from './DevicesPage';
@@ -28,6 +31,7 @@ import { ModulesPage } from './ModulesPage';
 import { ReportsPage } from './ReportsPage';
 import { StaffPage } from './StaffPage';
 import { TendersPage } from './TendersPage';
+import { ThemePage } from './ThemePage';
 
 /** Back-office pages by path. Mounted by apps/pos and apps/admin through `AuthApp pages={adminPages}`. */
 export function adminPages(ctx: PageContext): ReactNode | null {
@@ -35,11 +39,13 @@ export function adminPages(ctx: PageContext): ReactNode | null {
     return <AuditPage ctx={ctx} />;
   if (ctx.path === '/admin/branding' || ctx.path.startsWith('/admin/branding/'))
     return <BrandingPage ctx={ctx} />;
+  if (ctx.path === '/admin/cards') return <CardImagesPage ctx={ctx} />;
   if (ctx.isPlatformAdmin && ctx.path === '/ai')
     return <AiSettingsPage ctx={ctx} onNavigate={ctx.navigate} />;
   if (ctx.path === '/admin/ai/prompts')
     return <AiPromptsPage ctx={ctx} onNavigate={ctx.navigate} />;
   if (ctx.path === '/settings/billing') return <BillingPage ctx={ctx} />;
+  if (ctx.path === '/settings/theme') return <ThemePage ctx={ctx} />;
   if (ctx.path === '/settings/tenders') return <TendersPage ctx={ctx} />;
   if (ctx.path === '/menu') return <MenuPage ctx={ctx} />;
   if (ctx.path === '/modules') return <ModulesPage ctx={ctx} />;

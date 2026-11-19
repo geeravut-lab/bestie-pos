@@ -29,3 +29,5 @@ export type { LiveSyncOptions } from './liveSync';
 export { useLiveSync } from './useLiveSync';
 export { useBrand } from './useBrand';
 export { NotificationBell, NotificationsPage } from './Notifications';
+export { useStoreTheme } from './useStoreTheme';
+export { useCardImages } from './useCardImages';

@@ -69,10 +69,10 @@ Work top to bottom. One PR per task. Tick when merged.
 - [x] App shell: sidebar (desktop) / rail (tablet) / bottom bar + "More" sheet (phone), one nav list, safe-area, back links, Playwright 390×844 + 1280×800 + axe
 - [x] Role home screens (cashier, waiter, kitchen, manager, owner, platform admin, guest) as illustrated cards, grey when module off
 - [x] Card illustrations: 30 built-in SVGs in the Island Breeze palette; `RoleHome` already accepts per-card `imageUrls`
-- [ ] Admin upload override per card (Storage bucket `card-images` + `home_card_images` table + admin screen)
+- [x] Admin upload override per card: private bucket `card-images`, `platform_settings.card_images`, versioned files served by `/api/card-image` (ETag), admin screen `/admin/cards` (platform admin; linked from Branding), the home page picks the pictures up live
 - [x] Navigation feedback: progress bar + spinner on the tapped item while the next screen loads
 - [x] Branding admin (BRANDING-KNOWLEDGE): upload logo/icon, rename app (TH/EN), `/brand/logo` + `/brand/favicon` + dynamic web manifest via `/api/brand`, tab title/icon follow the brand live, defaults = the designed logo/favicon
-- [ ] Per-store 5-colour theme with contrast validation
+- [x] Per-store 5-colour theme with contrast validation: `/settings/theme` (owner; linked from the module screen) — primary, fill 1, accent, highlight, soft background; every text pairing is checked live (WCAG AA) and a failing theme cannot be saved; `stores.theme` (shape-checked), applied as CSS variables for the signed-in shop; "use the default colours" in one click
 
 ## 10. Live sync  _(LIVE-SYNC-KNOWLEDGE)_
 - [x] Supabase Realtime private channels + `live_ping` DB trigger helper + policy (`live_can_listen`) deciding who may listen (platform / org / store / audit / user / admin topics); applied to the hosted project
@@ -89,7 +89,7 @@ Work top to bottom. One PR per task. Tick when merged.
 - [x] Admin: master on/off + tick-list of event types (stores only what is *off*), settings change always audited
 - [x] Admin: viewer, filters, CSV export (export itself audited)
 - [ ] Test: any function that checks staff permission must import `audit` (no staff-permission functions exist yet — add when §2/§3 actions land)
-- [ ] Retention / purge function (open question: how many years)
+- [x] Retention / purge function: `audit_retention.years` (default 5, never below 4), `audit_purge()` run hourly by `/api/notify/tick`, the only thing that can delete audit rows. **The number of years still needs the accountant's / lawyer's confirmation.**
 
 ## 12. Authentication
 - [x] Supabase Auth: owner e-mail sign-up / sign-in, shop onboarding (`create_org`), profiles + roles tables (role never comes from SSO), live role home from the DB

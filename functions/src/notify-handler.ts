@@ -64,15 +64,20 @@ export async function notifyTickResponse(
         })
       : null; // LINE not configured yet: the in-app inbox still works, the queue just waits
     // tidy once an hour (minute 0..4 of the first tick); cheap and idempotent either way
-    const tidied =
-      new Date(now).getUTCMinutes() < 5
-        ? await callRpc(supabaseUrl, serviceRoleKey, 'notify_housekeeping', {}, f)
-        : null;
+    const tidyNow = new Date(now).getUTCMinutes() < 5;
+    const tidied = tidyNow
+      ? await callRpc(supabaseUrl, serviceRoleKey, 'notify_housekeeping', {}, f)
+      : null;
+    // audit rows older than the retention (default 5 years) are removed in bulk; nothing else can delete audit rows
+    const purged = tidyNow
+      ? await callRpc(supabaseUrl, serviceRoleKey, 'audit_purge', {}, f)
+      : null;
     return reply({
       summaries,
       line: cfg ? 'configured' : 'not_configured',
       delivery,
       tidied: typeof tidied === 'number' ? tidied : 0,
+      auditPurged: typeof purged === 'number' ? purged : 0,
     });
   } catch {
     return reply({ error: 'server_error' }, 502);

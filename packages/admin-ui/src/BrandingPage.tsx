@@ -121,6 +121,16 @@ function BrandingForm({
         </form>
       </section>
 
+      <div className="actions">
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => ctx.navigate('/admin/cards')}
+        >
+          {t.cardsTitle}
+        </button>
+      </div>
+
       <ImageCard
         ctx={ctx}
         kind="logo"

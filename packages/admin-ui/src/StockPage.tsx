@@ -24,6 +24,7 @@ import type { ErrorKey } from '@bestie/i18n';
 import { AsyncButton, Spinner } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
+import { CountSheet } from './CountSheet';
 import { OptionsTab } from './StockOptions';
 import { OrdersTab, SuppliersTab } from './StockPurchasing';
 import { TransfersTab } from './StockTransfers';
@@ -45,6 +46,7 @@ type Loaded = {
   recipes: ReturnType<typeof parseRecipeLines>;
   menu: MenuRow[];
   moves: Move[];
+  shop: string;
   vat: { vatBps: number; inclusive: boolean };
 };
 const KINDS = ['receive', 'waste', 'adjust', 'count'] as const;
@@ -88,12 +90,13 @@ export function StockPage({ ctx }: { ctx: PageContext }) {
           .limit(60),
         ctx.client
           .from('stores')
-          .select('vat_registered, vat_bps, price_mode')
+          .select('name, vat_registered, vat_bps, price_mode')
           .eq('id', storeId)
           .maybeSingle(),
       ]);
       if (items.error || recipes.error || menu.error || moves.error) throw new Error('load');
       const st = (store.data ?? {}) as {
+        name?: string;
         vat_registered?: boolean;
         vat_bps?: number;
         price_mode?: string;
@@ -103,6 +106,7 @@ export function StockPage({ ctx }: { ctx: PageContext }) {
         recipes: parseRecipeLines(recipes.data),
         menu: (menu.data ?? []) as MenuRow[],
         moves: (moves.data ?? []) as Move[],
+        shop: String(st.name ?? ''),
         vat: {
           vatBps: st.vat_registered ? (st.vat_bps ?? 0) : 0,
           inclusive: st.price_mode !== 'exclusive',
@@ -380,6 +384,7 @@ function ItemsTab({ ctx, d, storeId, canEdit, money, fail, done }: Common) {
       </form>
       {scanMsg ? <Notice kind="info">{scanMsg}</Notice> : null}
       {d.items.length === 0 ? <p className="muted">{t.stockEmpty}</p> : null}
+      <CountSheet items={d.items} shop={d.shop} />
       <ul className="member-list">
         {d.items.map((i) => {
           const q = splitQty(i.quantity, i.unit);

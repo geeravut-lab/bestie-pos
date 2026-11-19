@@ -46,8 +46,14 @@ jobs:
       - name: The service-role key must never reach a browser bundle
         run: "! grep -rilE 'service_role' apps/*/dist"
 
-      - name: Install Playwright browser
-        run: pnpm --filter @bestie/pos exec playwright install --with-deps chromium
+      - name: Install Playwright browser (the Ubuntu mirrors time out now and then: retry)
+        run: |
+          for i in 1 2 3 4; do
+            sudo apt-get update -o Acquire::Retries=3 || true
+            pnpm --filter @bestie/pos exec playwright install --with-deps chromium && exit 0
+            echo "attempt $i failed, waiting"; sleep $((i * 20))
+          done
+          exit 1
 
       - name: E2E + accessibility (390x844 phone, 1280x800 desktop; Thai + English)
         run: pnpm --filter @bestie/pos e2e

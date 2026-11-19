@@ -83,4 +83,19 @@ select t_val('00000000-0000-0000-0000-0000000000e5', 'authenticated', 'ctx4', $$
 select t_rows(null, 'service_role', $$select 1 from t_out where k='ctx4' and v is null$$, 1, 'another business gets nothing');
 select t_err(null, 'anon', $$select public.ask_shop_context((select v::uuid from t_out where k='store'))$$, '42501', 'anon cannot call it');
 select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select public.ask_shop_enabled((select v::uuid from t_out where k='store'))$$, '42501', 'the bare module check is not callable from a browser');
+
+-- ── all shops together ──
+select t_val('00000000-0000-0000-0000-0000000000a1', 'authenticated', 'all1', $$select public.ask_shop_context_all((select v::uuid from t_out where k='org'))::text$$);
+select t_rows(null, 'service_role', $$select 1 from t_out where k='all1' and (v::jsonb ->> 'count') = '1'$$, 1, 'one shop, module on: all-shops context lists it');
+select t_val('00000000-0000-0000-0000-0000000000a1', 'authenticated', 'store2', $$select public.create_store((select v::uuid from t_out where k='org'), 'Second', 'cafe', null)::text$$);
+select t_val('00000000-0000-0000-0000-0000000000a1', 'authenticated', 'all2', $$select public.ask_shop_context_all((select v::uuid from t_out where k='org'))::text$$);
+select t_rows(null, 'service_role', $$select 1 from t_out where k='all2' and v is null$$, 1, 'a second shop WITHOUT the module: no all-shops answer');
+update public.stores set module_overrides = '{"ai.assistant": true}', plan = 'pro' where id = (select v::uuid from t_out where k='store2');
+select t_val('00000000-0000-0000-0000-0000000000a1', 'authenticated', 'all3', $$select public.ask_shop_context_all((select v::uuid from t_out where k='org'))::text$$);
+select t_rows(null, 'service_role', $$select 1 from t_out where k='all3' and (v::jsonb ->> 'count') = '2'$$, 1, 'both shops on: all-shops context lists both');
+select t_val('00000000-0000-0000-0000-0000000000d4', 'authenticated', 'all4', $$select public.ask_shop_context_all((select v::uuid from t_out where k='org'))::text$$);
+select t_rows(null, 'service_role', $$select 1 from t_out where k='all4' and v is null$$, 1, 'a cashier gets nothing');
+select t_val('00000000-0000-0000-0000-0000000000e5', 'authenticated', 'all5', $$select public.ask_shop_context_all((select v::uuid from t_out where k='org'))::text$$);
+select t_rows(null, 'service_role', $$select 1 from t_out where k='all5' and v is null$$, 1, 'another business gets nothing');
+select t_err(null, 'anon', $$select public.ask_shop_context_all((select v::uuid from t_out where k='org'))$$, '42501', 'anon cannot');
 do $$ begin raise notice 'ALL ASK SHOP TESTS PASSED'; end $$;

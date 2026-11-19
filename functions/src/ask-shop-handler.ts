@@ -78,31 +78,41 @@ export async function askShopResponse(
   if (!token) return reply({ error: 'forbidden' }, 403);
   const body = (await request.json().catch(() => null)) as {
     store_id?: unknown;
+    org_id?: unknown;
     preset?: unknown;
     question?: unknown;
   } | null;
   const question = typeof body?.question === 'string' ? body.question.trim() : '';
   const preset = ASK_PRESETS.find((p) => p === body?.preset) as AskPreset | undefined;
-  if (
-    !body ||
-    typeof body.store_id !== 'string' ||
-    !UUID.test(body.store_id) ||
-    !preset ||
-    question.length < 2 ||
-    question.length > 300
-  )
+  // one shop (`store_id`) or every shop of a business together (`org_id` alone)
+  const storeId =
+    typeof body?.store_id === 'string' && UUID.test(body.store_id) ? body.store_id : null;
+  const orgId =
+    !storeId && typeof body?.org_id === 'string' && UUID.test(body.org_id) ? body.org_id : null;
+  if (!body || (!storeId && !orgId) || !preset || question.length < 2 || question.length > 300)
     return reply({ error: 'invalid' }, 422);
 
   const f = deps.fetchImpl ?? fetch;
   try {
     const { supabaseUrl, serviceRoleKey } = readServerEnv(env);
     const anon = (env.SUPABASE_ANON_KEY ?? env.VITE_SUPABASE_ANON_KEY)?.trim() || serviceRoleKey;
-    // 1. may this person ask about this shop? (their own token; the database decides)
-    const ctx = await rpc(f, supabaseUrl, anon, token, 'ask_shop_context', {
-      p_store: body.store_id,
-    });
-    const c = ctx.data as { org_id?: unknown; name?: unknown } | null;
+    // 1. may this person ask about this shop (or all shops)? (their own token; the database decides)
+    const ctx = storeId
+      ? await rpc(f, supabaseUrl, anon, token, 'ask_shop_context', { p_store: storeId })
+      : await rpc(f, supabaseUrl, anon, token, 'ask_shop_context_all', { p_org: orgId });
+    const c = ctx.data as {
+      org_id?: unknown;
+      name?: unknown;
+      store_ids?: unknown;
+      count?: unknown;
+    } | null;
     if (!ctx.ok || !c || typeof c.org_id !== 'string') return reply({ error: 'forbidden' }, 403);
+    const logStore = storeId ?? (Array.isArray(c.store_ids) ? String(c.store_ids[0] ?? '') : '');
+    const shopName = storeId
+      ? typeof c.name === 'string'
+        ? c.name
+        : ''
+      : `All ${typeof c.count === 'number' ? c.count : ''} shops together`;
     if (!allowAsk(`ask:${token.slice(-16)}`)) return reply({ error: 'rate_limited' }, 429);
 
     const keys = keysFrom(env);
@@ -112,14 +122,14 @@ export async function askShopResponse(
     const range = presetRange(preset, (deps.now ?? Date.now)());
     const read = async (r: { from: string; to: string }) => {
       const res = await rpc(f, supabaseUrl, anon, token, 'sales_report', {
-        p: { org_id: c.org_id, store_id: body.store_id, from: r.from, to: r.to },
+        p: { org_id: c.org_id, store_id: storeId, from: r.from, to: r.to },
       });
       if (!res.ok || !res.data) throw new Error('report');
       return parseSalesReport(res.data);
     };
     const [current, previous] = await Promise.all([read(range), read(previousRange(range))]);
     const pack = buildFiguresPack({
-      shopName: typeof c.name === 'string' ? c.name : '',
+      shopName,
       current,
       previous: previous.totals.bills > 0 ? previous : null,
     });
@@ -153,7 +163,7 @@ export async function askShopResponse(
     try {
       await rpc(f, supabaseUrl, serviceRoleKey, serviceRoleKey, 'log_ai_usage', {
         p: {
-          store_id: body.store_id,
+          store_id: logStore,
           task: TASKS.ask_shop.id,
           provider: out.provider,
           model: out.model,

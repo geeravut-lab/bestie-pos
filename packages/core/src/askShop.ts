@@ -158,6 +158,15 @@ export function buildFiguresPack(p: {
       return `${d.date}: ${baht(d.payable)} THB, ${d.bills} bills`;
     }),
   );
+  if (c.byStore.length > 1)
+    top(
+      'Sales by shop',
+      c.byStore.slice(0, 20).map((x) => {
+        addB(x.payable);
+        addN(x.bills);
+        return `${x.name}: ${baht(x.payable)} THB, ${x.bills} bills`;
+      }),
+    );
   if (prev) {
     top(
       'Previous period best sellers',

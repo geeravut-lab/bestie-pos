@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useRemote } from './useRemote';
 import { ASK_PRESETS } from '@bestie/core';
 import type { AskPreset } from '@bestie/core';
 import { AppError, errorText, fmt, useI18n } from '@bestie/i18n';
@@ -25,6 +26,17 @@ export function AskShopPage({ ctx }: { ctx: PageContext }) {
   const canAsk = ctx.isOwner || ctx.permissions.includes('report.view');
   const on = ctx.isModuleOn?.('ai.assistant') ?? true;
   const storeId = ctx.storeId ?? ctx.homeStoreId ?? null;
+  const [scope, setScope] = useState(''); // '' = the signed-in shop, 'all' = every shop together, else a shop id
+  const shops = useRemote(async () => {
+    const { data, error } = await ctx.client
+      .from('stores')
+      .select('id, name')
+      .eq('org_id', ctx.orgId)
+      .is('deleted_at', null)
+      .order('created_at');
+    if (error) throw new Error(error.code ?? 'query');
+    return (data ?? []) as { id: string; name: string }[];
+  }, ctx.orgId);
   const [preset, setPreset] = useState<AskPreset>('last7');
   const [question, setQuestion] = useState('');
   const [result, setResult] = useState<ShopAnswer | null>(null);
@@ -40,9 +52,10 @@ export function AskShopPage({ ctx }: { ctx: PageContext }) {
   const ask = async () => {
     setError(null);
     setResult(null);
-    if (!storeId) return setError('err_load_failed');
+    const target = scope === 'all' ? { orgId: ctx.orgId } : { storeId: scope || storeId };
+    if (!('orgId' in target) && !target.storeId) return setError('err_load_failed');
     try {
-      setResult(await askShop(ctx.client, storeId, preset, question.trim()));
+      setResult(await askShop(ctx.client, target as { storeId: string }, preset, question.trim()));
     } catch (e) {
       setError(e instanceof AppError ? e.code : 'err_unknown');
     }
@@ -54,6 +67,27 @@ export function AskShopPage({ ctx }: { ctx: PageContext }) {
       <Notice kind="info">{t.askShopIntro}</Notice>
       {!on ? <Notice kind="info">{t.askShopOff}</Notice> : null}
       <section className="card admin-card auth-form">
+        {(shops.data?.length ?? 0) > 1 ? (
+          <div className="form-row">
+            <label className="label" htmlFor="ask-shop">
+              {t.repShop}
+            </label>
+            <select
+              id="ask-shop"
+              className="field"
+              value={scope}
+              onChange={(e) => setScope(e.target.value)}
+            >
+              <option value="">{t.askShopThisShop}</option>
+              <option value="all">{t.repAllShops}</option>
+              {(shops.data ?? []).map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
         <div className="form-row">
           <label className="label" htmlFor="ask-period">
             {t.askShopPeriod}

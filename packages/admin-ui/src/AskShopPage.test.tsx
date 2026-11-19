@@ -10,8 +10,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+const shopRows = [
+  { id: 's1', name: 'Beach' },
+  { id: 's2', name: 'Town' },
+];
 const client = {
   auth: { getSession: async () => ({ data: { session: { access_token: 'jwt' } } }) },
+  from: () => {
+    const chain: Record<string, unknown> = {};
+    for (const m of ['select', 'eq', 'is']) chain[m] = () => chain;
+    chain.order = async () => ({ data: shopRows, error: null });
+    return chain;
+  },
 };
 const ctx = (over: Partial<PageContext> = {}): PageContext => ({
   path: '/ask',
@@ -61,6 +71,28 @@ describe('<AskShopPage>', () => {
       store_id: 's1',
       preset: 'last30',
       question: 'Which dish sells best?',
+    });
+  });
+
+  it('with several shops, "All shops" asks about the whole business (org_id, no store)', async () => {
+    const f = stub(200, {
+      available: true,
+      answer: 'ok',
+      unverified: [],
+      figures: 'x',
+      range: { from: 'a', to: 'b' },
+    });
+    mount(ctx());
+    await userEvent.selectOptions(await screen.findByLabelText('Shop'), 'all');
+    fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'sales?' } });
+    await userEvent.click(screen.getByRole('button', { name: 'Ask' }));
+    await waitFor(() => expect(f).toHaveBeenCalledTimes(1));
+    expect(
+      JSON.parse((f.mock.calls[0] as unknown as [string, RequestInit])[1].body as string),
+    ).toEqual({
+      org_id: 'o1',
+      preset: 'last7',
+      question: 'sales?',
     });
   });
 

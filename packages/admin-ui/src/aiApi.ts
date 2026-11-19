@@ -94,7 +94,8 @@ export type ShopAnswer =
 /** "Ask my shop": a plain-language answer about the chosen period; every figure comes from the shop's reports (read only). */
 export async function askShop(
   client: SupabaseClient,
-  storeId: string,
+  /** One shop, or every shop of the business together. */
+  target: { storeId: string } | { orgId: string },
   preset: AskPreset,
   question: string,
   fetchImpl: typeof fetch = fetch,
@@ -105,7 +106,11 @@ export async function askShop(
   const res = await fetchImpl('/api/ask/shop', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ store_id: storeId, preset, question }),
+    body: JSON.stringify({
+      ...('storeId' in target ? { store_id: target.storeId } : { org_id: target.orgId }),
+      preset,
+      question,
+    }),
   });
   if (res.status === 403) throw new AppError('err_forbidden');
   if (res.status === 429) throw new AppError('err_rate_limited');

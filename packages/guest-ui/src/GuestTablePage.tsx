@@ -18,6 +18,7 @@ import type { CartLine, DietFilter, GuestGroup, GuestItem } from '@bestie/core';
 import { fmt, useI18n } from '@bestie/i18n';
 import type { Dict } from '@bestie/i18n';
 import { AsyncButton, LangSwitch, Spinner } from '@bestie/ui';
+import { FeedbackForm, ShopInfo } from './ShopInfo';
 import {
   callStaff,
   cancelGuestPayment,
@@ -240,6 +241,7 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
       ) : null}
 
       <CallStaff token={token} />
+      <ShopInfo token={token} ai={data.ai} />
       <FoodFilter token={token} ai={data.ai} filter={diet} onChange={setDiet} />
       {dietActive ? <p className="muted">{t.gsFilterWarning}</p> : null}
 
@@ -412,6 +414,8 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
           )}
         </section>
       ) : null}
+
+      <FeedbackForm token={token} />
 
       {open ? (
         <ItemSheet

@@ -45,3 +45,4 @@ export * from './printing';
 export * from './askShop';
 export * from './kitchenTicket';
 export * from './printJobs';
+export * from './shopInfo';

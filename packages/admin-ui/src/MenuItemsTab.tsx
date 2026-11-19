@@ -17,6 +17,7 @@ import type { Dict, ErrorKey } from '@bestie/i18n';
 import { AsyncButton } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
+import { translateName } from './aiApi';
 import { deleteRow, nextSort, saveRow } from './menuData';
 import type { Cat, Item, Menu } from './menuData';
 import { ConfirmDelete, NameFields, NameForm } from './MenuParts';
@@ -337,7 +338,14 @@ function ItemForm({
         role="group"
         aria-label={item ? localizedName(item.name, lang) : t.menuItemAdd}
       >
-        <NameFields idPrefix={`item-${id}`} th={th} en={en} onTh={setTh} onEn={setEn} />
+        <NameFields
+          idPrefix={`item-${id}`}
+          th={th}
+          en={en}
+          onTh={setTh}
+          onEn={setEn}
+          translate={(x) => translateName(ctx.client, storeId, x)}
+        />
         <div className="form-row">
           <label className="label" htmlFor={`item-${id}-cat`}>
             {t.menuItemCategory}

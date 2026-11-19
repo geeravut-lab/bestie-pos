@@ -1825,3 +1825,16 @@ a.nav-card[aria-busy='true'] {
   background: var(--bp-mint);
   color: var(--bp-muted);
 }
+
+/* ── usage meter (LINE cap, AI usage) ────────────────────────────────────── */
+.meter {
+  height: 14px;
+  border-radius: var(--bp-radius-pill);
+  background: var(--bp-mint);
+  overflow: hidden;
+}
+.meter span {
+  display: block;
+  height: 100%;
+  background: var(--bp-primary);
+}

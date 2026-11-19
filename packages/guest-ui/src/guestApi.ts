@@ -257,3 +257,25 @@ export async function askGuestAi(
     return { kind: 'failed' };
   }
 }
+
+export type CallResult = 'called' | 'already' | 'failed';
+
+/** "Call staff" — a closed reason, no free text. */
+export async function callStaff(
+  token: string,
+  reason: 'help' | 'bill',
+  fetchImpl: typeof fetch = fetch,
+): Promise<CallResult> {
+  try {
+    const res = await fetchImpl('/api/guest/call', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, reason }),
+    });
+    const b = obj(await res.json().catch(() => null));
+    if (!res.ok) return 'failed';
+    return b.status === 'already' ? 'already' : 'called';
+  } catch {
+    return 'failed';
+  }
+}

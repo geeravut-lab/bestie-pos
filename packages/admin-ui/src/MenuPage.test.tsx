@@ -457,3 +457,47 @@ describe('<MenuPage> food information', () => {
     expect(await row.findByText(/AI is not set up yet/)).toBeTruthy();
   });
 });
+
+describe('<MenuPage> AI translate', () => {
+  const edit = async (db: ReturnType<typeof fakeDb>) => {
+    const client = {
+      ...(db.client as object),
+      auth: { getSession: async () => ({ data: { session: { access_token: 'jwt' } } }) },
+    };
+    mount(ctx(client));
+    await ready();
+    await userEvent.click(within(itemRow('Pad Thai')).getByRole('button', { name: 'Edit' }));
+    return within(itemRow('Pad Thai'));
+  };
+  it('fills the English name from the Thai one and asks to check it; nothing is saved by itself', async () => {
+    const db = fakeDb(tables());
+    const f = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ available: true, text: 'Pad Thai with prawns' }), {
+          status: 200,
+        }),
+    );
+    vi.stubGlobal('fetch', f);
+    const row = await edit(db);
+    const en = row.getByLabelText('Name (English — optional)') as HTMLInputElement;
+    await userEvent.clear(en);
+    await userEvent.click(row.getByRole('button', { name: 'Translate to English with AI' }));
+    await waitFor(() => expect(en.value).toBe('Pad Thai with prawns'));
+    expect(row.getByText(/Translated by AI/)).toBeTruthy();
+    expect(db.writes).toHaveLength(0);
+    const call = f.mock.calls[0] as unknown as [string, RequestInit];
+    expect(call[0]).toBe('/api/menu/ai-translate');
+    expect(JSON.parse(String(call[1].body))).toEqual({ store_id: 's1', text: 'ผัดไทย', to: 'en' });
+  });
+  it('says plainly when AI is not set up and leaves the field alone', async () => {
+    vi.stubGlobal(
+      'fetch',
+      async () => new Response(JSON.stringify({ available: false }), { status: 200 }),
+    );
+    const row = await edit(fakeDb(tables()));
+    const en = row.getByLabelText('Name (English — optional)') as HTMLInputElement;
+    await userEvent.click(row.getByRole('button', { name: 'Translate to English with AI' }));
+    expect(await row.findByText(/AI is not set up yet/)).toBeTruthy();
+    expect(en.value).toBe('Pad Thai');
+  });
+});

@@ -19,6 +19,7 @@ import { fmt, useI18n } from '@bestie/i18n';
 import type { Dict } from '@bestie/i18n';
 import { AsyncButton, LangSwitch, Spinner } from '@bestie/ui';
 import {
+  callStaff,
   cancelGuestPayment,
   guestPaymentStatus,
   loadGuestTable,
@@ -238,6 +239,7 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
         </div>
       ) : null}
 
+      <CallStaff token={token} />
       <FoodFilter token={token} ai={data.ai} filter={diet} onChange={setDiet} />
       {dietActive ? <p className="muted">{t.gsFilterWarning}</p> : null}
 
@@ -602,5 +604,34 @@ function ItemButton({
       </span>
       <span className="tabular">{money(item.price)}</span>
     </button>
+  );
+}
+
+/** Two always-visible buttons: ask for help, ask for the bill. A second tap while a call is open says so instead of adding another. */
+function CallStaff({ token }: { token: string }) {
+  const { t } = useI18n();
+  const [note, setNote] = useState<'called' | 'already' | 'failed' | null>(null);
+  const call = async (reason: 'help' | 'bill') => setNote(await callStaff(token, reason));
+  return (
+    <section className="guest-call" aria-label={t.gsCallTitle}>
+      <div className="actions">
+        <AsyncButton variant="secondary" onClick={() => call('help')}>
+          {t.gsCallHelp}
+        </AsyncButton>
+        <AsyncButton variant="secondary" onClick={() => call('bill')}>
+          {t.gsCallBill}
+        </AsyncButton>
+      </div>
+      {note === 'called' || note === 'already' ? (
+        <p className="notice notice-success" role="status">
+          {note === 'called' ? t.gsCalled : t.gsCallAlready}
+        </p>
+      ) : null}
+      {note === 'failed' ? (
+        <p className="notice notice-error" role="alert">
+          {t.gsCallFailed}
+        </p>
+      ) : null}
+    </section>
   );
 }

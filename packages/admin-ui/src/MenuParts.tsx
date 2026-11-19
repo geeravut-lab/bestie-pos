@@ -13,14 +13,19 @@ export function NameFields({
   en,
   onTh,
   onEn,
+  translate,
 }: {
   idPrefix: string;
   th: string;
   en: string;
   onTh: (v: string) => void;
   onEn: (v: string) => void;
+  /** Draft an English name from the Thai one (AI). Returns null when AI is not set up. */
+  translate?: (th: string) => Promise<string | null>;
 }) {
   const { t } = useI18n();
+  const [note, setNote] = useState<'done' | 'unavailable' | null>(null);
+  const [err, setErr] = useState<ErrorKey | null>(null);
   return (
     <>
       <div className="form-row">
@@ -46,6 +51,28 @@ export function NameFields({
           maxLength={120}
           onChange={(e) => onEn(e.target.value)}
         />
+        {translate ? (
+          <div className="actions">
+            <AsyncButton
+              variant="secondary"
+              disabled={th.trim() === ''}
+              onActionError={setErr}
+              onClick={async () => {
+                setNote(null);
+                setErr(null);
+                const out = await translate(th.trim());
+                if (out === null) return setNote('unavailable');
+                onEn(out);
+                setNote('done');
+              }}
+            >
+              {t.menuTranslate}
+            </AsyncButton>
+          </div>
+        ) : null}
+        {note === 'done' ? <Notice kind="success">{t.menuTranslated}</Notice> : null}
+        {note === 'unavailable' ? <Notice kind="error">{t.foodAiUnavailable}</Notice> : null}
+        {err ? <Notice kind="error">{errorText(err, t)}</Notice> : null}
       </div>
     </>
   );

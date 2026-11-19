@@ -1,3 +1,4 @@
+export { AiUsagePage, monthRange } from './AiUsagePage';
 export { AuditPage } from './AuditPage';
 export { BillingPage } from './BillingPage';
 export { BrandingPage } from './BrandingPage';
@@ -6,6 +7,7 @@ export { CryptoPage } from './CryptoPage';
 export { CustomerPicker } from './CustomerPicker';
 export { CustomersPage } from './CustomersPage';
 export { DevicesPage } from './DevicesPage';
+export { LineSettingsPage } from './LineSettingsPage';
 export { MenuPage } from './MenuPage';
 export { ModulesPage } from './ModulesPage';
 export { ReportsPage } from './ReportsPage';
@@ -18,6 +20,7 @@ export { loadMenu } from './menuData';
 export type { Cat, Group, Item, Menu, Opt } from './menuData';
 import type { ReactNode } from 'react';
 import type { PageContext } from '@bestie/auth';
+import { AiUsagePage } from './AiUsagePage';
 import { AuditPage } from './AuditPage';
 import { AiPromptsPage, AiSettingsPage } from './AiPages';
 import { BillingPage } from './BillingPage';
@@ -26,6 +29,7 @@ import { CardImagesPage } from './CardImagesPage';
 import { CryptoPage } from './CryptoPage';
 import { CustomersPage } from './CustomersPage';
 import { DevicesPage } from './DevicesPage';
+import { LineSettingsPage } from './LineSettingsPage';
 import { MenuPage } from './MenuPage';
 import { ModulesPage } from './ModulesPage';
 import { ReportsPage } from './ReportsPage';
@@ -39,6 +43,8 @@ export function adminPages(ctx: PageContext): ReactNode | null {
     return <AuditPage ctx={ctx} />;
   if (ctx.path === '/admin/branding' || ctx.path.startsWith('/admin/branding/'))
     return <BrandingPage ctx={ctx} />;
+  if (ctx.path === '/ai/usage') return <AiUsagePage ctx={ctx} />;
+  if (ctx.path === '/admin/line') return <LineSettingsPage ctx={ctx} />;
   if (ctx.path === '/admin/cards') return <CardImagesPage ctx={ctx} />;
   if (ctx.isPlatformAdmin && ctx.path === '/ai')
     return <AiSettingsPage ctx={ctx} onNavigate={ctx.navigate} />;

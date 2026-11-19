@@ -30,7 +30,11 @@ export type OnlinePay = {
   available: boolean;
   /** The device has a card reader registered. */
   hasReader: boolean;
-  start: (tender: OnlineTender) => Promise<{ charge: Charge } | { error: ErrorKey }>;
+  /** `legs`: a split bill's cash / Credit shares that wait with this PromptPay / card share. */
+  start: (
+    tender: OnlineTender,
+    legs?: SplitLeg[],
+  ) => Promise<{ charge: Charge } | { error: ErrorKey }>;
   cancel: (attemptId: string) => Promise<void>;
   status: (attemptId: string) => Promise<{ status: AttemptStatus; error: string | null } | null>;
   /** A payment for this bill that is still waiting (a refresh or a second tablet must not strand it). */
@@ -64,6 +68,8 @@ export async function startOnlinePayment(p: {
   billConfig: BillConfig;
   staffId?: string;
   lang: Lang;
+  /** A split bill: all its shares (cash, Credit and this one PromptPay / card share). */
+  split?: { rule: RoundingRule; legs: SplitLeg[]; creditBalance: Satang | null };
 }): Promise<{ charge: Charge } | { error: ErrorKey }> {
   if (globalThis.navigator?.onLine === false) return { error: 'err_pay_offline' };
   const first = await getOrder(p.orderId);
@@ -79,14 +85,33 @@ export async function startOnlinePayment(p: {
 
   const order = await getOrder(p.orderId);
   if (!order) return { error: 'err_order_failed' };
+  const bill = orderBill(order, p.billConfig);
+  let splitPart: { rounding: number; legs: Record<string, unknown>[] } | undefined;
+  let digitalAmount: number | null = null;
+  if (p.split) {
+    const plan = planSplit({
+      total: bill.total,
+      rule: p.split.rule,
+      legs: p.split.legs,
+      creditBalance: p.split.creditBalance,
+    });
+    if (plan.problems.length > 0 || !plan.digital || plan.digital.tender !== p.tender)
+      return { error: 'err_pay_failed' };
+    digitalAmount = plan.digital.amount;
+    splitPart = {
+      rounding: plan.rounding,
+      legs: plan.payments.map((x) => ({ id: crypto.randomUUID(), ...x })),
+    };
+  }
   const snapshot = onlineSnapshot({
     order,
-    bill: orderBill(order, p.billConfig),
+    bill,
     billConfig: p.billConfig,
     tender: p.tender,
     deviceId: p.binding.deviceId,
     staffId: p.staffId ?? null,
     lang: p.lang,
+    split: splitPart,
   });
   const token = (await p.client.auth.getSession()).data.session?.access_token;
   if (!token) return { error: 'err_forbidden' };
@@ -107,7 +132,7 @@ export async function startOnlinePayment(p: {
       charge: {
         attemptId: body.attempt_id,
         tender: p.tender,
-        amount: body.amount ?? (snapshot.payable as number),
+        amount: body.amount ?? digitalAmount ?? (snapshot.payable as number),
         qrImageUrl: body.qr_image_url ?? null,
       },
     };
@@ -198,7 +223,7 @@ export async function closeSplitPayment(p: {
     legs: p.legs,
     creditBalance: p.creditBalance,
   });
-  if (plan.problems.length > 0) return 'err_pay_failed';
+  if (plan.problems.length > 0 || plan.digital) return 'err_pay_failed'; // a PromptPay / card share goes through startOnlinePayment
   const { error } = await p.client.rpc('close_order_tenders', {
     p: {
       order_id: order.id,

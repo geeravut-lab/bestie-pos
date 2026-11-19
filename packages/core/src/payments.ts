@@ -238,7 +238,13 @@ export function onlineSnapshot(p: {
   deviceId: string;
   staffId: string | null;
   lang: Lang;
+  /**
+   * A split bill: the cash / Credit legs that wait with this PromptPay / card share (each with a client id) and the cash
+   * rounding that goes with them. The server charges the digital share only (amount due minus these legs).
+   */
+  split?: { rounding: number; legs: Record<string, unknown>[] };
 }): Record<string, unknown> {
+  const rounding = p.split?.rounding ?? 0;
   return {
     order_id: p.order.id,
     device_id: p.deviceId,
@@ -251,10 +257,11 @@ export function onlineSnapshot(p: {
     vat: p.bill.vat,
     net_before_vat: p.bill.netBeforeVat,
     total: p.bill.total,
-    rounding: 0,
-    payable: p.bill.total,
+    rounding,
+    payable: p.bill.total + rounding,
     vat_bps: p.billConfig.vatBps,
     service_bps: p.billConfig.serviceChargeBps,
     price_mode: p.billConfig.priceMode,
+    ...(p.split ? { legs: p.split.legs } : {}),
   };
 }

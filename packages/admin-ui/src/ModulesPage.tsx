@@ -70,6 +70,15 @@ export function ModulesPage({ ctx }: { ctx: PageContext }) {
     <div className="admin-page">
       <h1>{t.modulesTitle}</h1>
       <Notice kind="info">{t.modulesIntro}</Notice>
+      <div className="actions">
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => ctx.navigate('/settings/tenders')}
+        >
+          {t.tendersTitle}
+        </button>
+      </div>
       {!canEdit ? <Notice kind="info">{t.modulesReadOnly}</Notice> : null}
       {data.stores.length > 0 ? (
         <ModuleToggles

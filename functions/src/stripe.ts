@@ -108,6 +108,12 @@ export function createStripeClient(
   };
 }
 
+/** What we tell Stripe about a payment: our attempt id (the webhook's key) and, for a bill, the bill — nothing about the customer. */
+const metadataFor = (p: { attemptId: string; orderId: string | null }): Record<string, string> =>
+  p.orderId
+    ? { attempt_id: p.attemptId, order_id: p.orderId }
+    : { attempt_id: p.attemptId, kind: 'credit_topup' };
+
 // ── starting a payment ──────────────────────────────────────────────────────
 export type StartedPayment = {
   providerRef: string;
@@ -123,7 +129,7 @@ export type StartedPayment = {
  */
 export async function startPromptPay(
   stripe: StripeClient,
-  p: { attemptId: string; orderId: string; amount: number; siteHost: string },
+  p: { attemptId: string; orderId: string | null; amount: number; siteHost: string },
 ): Promise<StartedPayment> {
   const pi = await stripe.post(
     '/v1/payment_intents',
@@ -137,7 +143,7 @@ export async function startPromptPay(
       },
       confirm: 'true',
       description: `Bestie POS ${p.attemptId.slice(0, 8)}`,
-      metadata: { attempt_id: p.attemptId, order_id: p.orderId },
+      metadata: metadataFor(p),
     },
     `bestie-attempt-${p.attemptId}`,
   );
@@ -153,7 +159,7 @@ export async function startPromptPay(
 /** Card: a card_present PaymentIntent handed to the shop's own reader (server-driven Terminal — no SDK in the browser). */
 export async function startReaderPayment(
   stripe: StripeClient,
-  p: { attemptId: string; orderId: string; amount: number; readerId: string },
+  p: { attemptId: string; orderId: string | null; amount: number; readerId: string },
 ): Promise<StartedPayment> {
   const pi = await stripe.post(
     '/v1/payment_intents',
@@ -163,7 +169,7 @@ export async function startReaderPayment(
       payment_method_types: ['card_present'],
       capture_method: 'automatic',
       description: `Bestie POS ${p.attemptId.slice(0, 8)}`,
-      metadata: { attempt_id: p.attemptId, order_id: p.orderId },
+      metadata: metadataFor(p),
     },
     `bestie-attempt-${p.attemptId}`,
   );

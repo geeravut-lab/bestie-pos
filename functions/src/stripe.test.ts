@@ -273,6 +273,85 @@ const post = (
     body: typeof body === 'string' ? body : JSON.stringify(body),
   });
 
+describe('POST /api/stripe/charge — Bestie Credit top-up', () => {
+  const TOPUP = {
+    customer_id: 'c1',
+    store_id: 's1',
+    device_id: 'd1',
+    tender: 'promptpay',
+    amount: 50000,
+  };
+
+  it('asks the database function for top-ups as the user, then Stripe with NO bill and NO customer data', async () => {
+    const be = backend({
+      rpc: { begin_credit_topup_attempt: { body: ATTEMPT }, attach_payment_intent: { body: null } },
+      attempt: { amount: 50000, tender: 'promptpay', order_id: null, device_id: 'd1' },
+    });
+    let sent: Record<string, unknown> = {};
+    const stripe: StripeClient = {
+      post: async (_p, params) => {
+        sent = params ?? {};
+        return {
+          id: 'pi_t1',
+          next_action: { promptpay_display_qr_code: { image_url_png: 'https://qr/t.png' } },
+        };
+      },
+    };
+    const r = await stripeChargeResponse(post('charge', { topup: TOPUP }), ENV, {
+      fetchImpl: be.fetchImpl,
+      stripe,
+    });
+    expect(r.status).toBe(200);
+    expect(await r.json()).toMatchObject({
+      attempt_id: ATTEMPT,
+      amount: 50000,
+      qr_image_url: 'https://qr/t.png',
+    });
+    const begin = be.rpcCalls('begin_credit_topup_attempt')[0]!;
+    expect(begin.headers).toMatchObject({ apikey: 'anon-key', Authorization: 'Bearer user-jwt' });
+    expect(begin.body).toEqual({ p: TOPUP });
+    expect(be.rpcCalls('begin_payment_attempt')).toHaveLength(0);
+    expect(sent.metadata).toEqual({ attempt_id: ATTEMPT, kind: 'credit_topup' });
+    expect(JSON.stringify(sent)).not.toContain('c1');
+  });
+
+  it('a bill and a top-up in the same request, or neither, is refused', async () => {
+    const be = backend();
+    const call = (b: unknown) =>
+      stripeChargeResponse(post('charge', b), ENV, { fetchImpl: be.fetchImpl });
+    expect((await call({ snapshot: SNAP, topup: TOPUP })).status).toBe(422);
+    expect((await call({})).status).toBe(422);
+  });
+
+  it('Credit switched off in the shop → 403 module_off, and Stripe is never called', async () => {
+    const be = backend({
+      rpc: { begin_credit_topup_attempt: { status: 400, body: { code: '0A000' } } },
+    });
+    const { stripe, calls } = stripeOk();
+    const r = await stripeChargeResponse(post('charge', { topup: TOPUP }), ENV, {
+      fetchImpl: be.fetchImpl,
+      stripe,
+    });
+    expect(r.status).toBe(403);
+    expect(await r.json()).toEqual({ error: 'module_off' });
+    expect(calls).toHaveLength(0);
+  });
+
+  it('amount out of range / balance cap (22023) → 422; a second live top-up (23505) → 409', async () => {
+    const run = async (code: string) => {
+      const be = backend({ rpc: { begin_credit_topup_attempt: { status: 400, body: { code } } } });
+      return (
+        await stripeChargeResponse(post('charge', { topup: TOPUP }), ENV, {
+          fetchImpl: be.fetchImpl,
+          stripe: stripeOk().stripe,
+        })
+      ).status;
+    };
+    expect(await run('22023')).toBe(422);
+    expect(await run('23505')).toBe(409);
+  });
+});
+
 describe('POST /api/stripe/charge', () => {
   it('is closed without keys, without a signed-in user, with a bad body, and for other methods', async () => {
     expect((await stripeChargeResponse(post('charge', {}), {})).status).toBe(503);

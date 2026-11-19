@@ -106,3 +106,28 @@ describe('ai.guest in the database mirrors the registry', () => {
     expect(marker![2]!.split(',').sort()).toEqual(allowed.sort());
   });
 });
+
+/** PromptPay / card switches: the database refuses a switched-off method, so its copy of the registry entries is checked here. */
+describe('tender.promptpay and tender.gateway in the database mirror the registry', () => {
+  const dir = new URL('../../../supabase/migrations/', import.meta.url);
+  const file = readdirSync(dir).find((f) => f.endsWith('_credit_online_topup.sql')) ?? '';
+  const sql = readFileSync(new URL(file, dir), 'utf8');
+  const marker = (id: string) =>
+    new RegExp(`-- registry:${id.replace('.', '\\.')} profiles=([a-z,]*) plan=([a-z,]+)`).exec(sql);
+
+  it('PromptPay is on for every profile, card for none', () => {
+    expect(MODULE_BY_ID['tender.promptpay'].defaultProfiles.length).toBeGreaterThan(1);
+    expect(marker('tender.promptpay')![1]).toBe('all');
+    expect(MODULE_BY_ID['tender.gateway'].defaultProfiles).toEqual([]);
+    expect(marker('tender.gateway')![1]).toBe('');
+    expect(sql).toMatch(/p_tender = 'promptpay'/);
+  });
+  it('same plan tiers (basic and up)', () => {
+    for (const id of ['tender.promptpay', 'tender.gateway'] as const) {
+      const allowed = (Object.keys(PLAN_RANK) as (keyof typeof PLAN_RANK)[]).filter(
+        (p) => PLAN_RANK[p] >= PLAN_RANK[MODULE_BY_ID[id].plan],
+      );
+      expect(marker(id)![2]!.split(',').sort()).toEqual(allowed.sort());
+    }
+  });
+});

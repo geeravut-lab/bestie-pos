@@ -9,6 +9,7 @@ export { MenuPage } from './MenuPage';
 export { ModulesPage } from './ModulesPage';
 export { ReportsPage } from './ReportsPage';
 export { StaffPage } from './StaffPage';
+export { TendersPage } from './TendersPage';
 export { AiPromptsPage, AiSettingsPage } from './AiPages';
 export { useRemote } from './useRemote';
 export { loadMenu } from './menuData';
@@ -26,6 +27,7 @@ import { MenuPage } from './MenuPage';
 import { ModulesPage } from './ModulesPage';
 import { ReportsPage } from './ReportsPage';
 import { StaffPage } from './StaffPage';
+import { TendersPage } from './TendersPage';
 
 /** Back-office pages by path. Mounted by apps/pos and apps/admin through `AuthApp pages={adminPages}`. */
 export function adminPages(ctx: PageContext): ReactNode | null {
@@ -38,6 +40,7 @@ export function adminPages(ctx: PageContext): ReactNode | null {
   if (ctx.path === '/admin/ai/prompts')
     return <AiPromptsPage ctx={ctx} onNavigate={ctx.navigate} />;
   if (ctx.path === '/settings/billing') return <BillingPage ctx={ctx} />;
+  if (ctx.path === '/settings/tenders') return <TendersPage ctx={ctx} />;
   if (ctx.path === '/menu') return <MenuPage ctx={ctx} />;
   if (ctx.path === '/modules') return <ModulesPage ctx={ctx} />;
   if (ctx.path === '/staff') return <StaffPage ctx={ctx} />;

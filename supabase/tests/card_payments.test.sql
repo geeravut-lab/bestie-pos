@@ -71,6 +71,10 @@ select t_val('00000000-0000-0000-0000-0000000000a1', 'authenticated', 'dev2', $$
 select t_val('00000000-0000-0000-0000-0000000000d4', 'authenticated', 'cashier_staff', $$select id::text from public.staff where display_name = 'Cashier'$$);
 select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$update public.devices set stripe_reader_id = 'not a reader' where name = 'Counter'$$, '23514', 'a malformed reader id is refused');
 
+-- card payments are an owner's choice per shop (tender.gateway has no default-on profile)
+select t_err('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$select public.begin_payment_attempt(jsonb_build_object('order_id', '10000000-0000-4000-8000-000000000001', 'tender', 'gateway'))$$, 'P0002', 'an unknown bill is not found (before any switch is read)');
+update public.stores set module_overrides = '{"tender.gateway": true}' where id = (select v::uuid from t_out where k='store');
+
 -- three bills of 210.00 / 30.00 / 30.00
 select t_rows('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$insert into public.orders (id, org_id, store_id, number, business_date, channel) values
   ('10000000-0000-4000-8000-000000000001', (select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), 'A001', (now() at time zone 'Asia/Bangkok')::date, 'takeaway'),
@@ -171,4 +175,7 @@ select t_rows(null, 'service_role', $$select 1 from t_out where k='e1' and v='tr
 select t_rows(null, 'service_role', $$select 1 from t_out where k='e2' and v='false'$$, 1, 'the second is a repeat');
 select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select * from public.stripe_events$$, '42501', 'the event table is invisible to the browser');
 
+-- the owner can switch a payment method off: no new attempt of that kind
+update public.stores set module_overrides = '{"tender.gateway": true, "tender.promptpay": false}' where id = (select v::uuid from t_out where k='store');
+select t_err('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$select public.begin_payment_attempt(t_begin('10000000-0000-4000-8000-000000000003'))$$, '0A000', 'PromptPay switched off in the shop: refused');
 \echo ALL CARD PAYMENT TESTS PASSED

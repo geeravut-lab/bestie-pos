@@ -473,6 +473,17 @@ const th = {
   err_load_failed: 'โหลดข้อมูลไม่สำเร็จ',
 
   // ── back office: modules, shops, staff, devices ───────────────────────────
+  tendersTitle: 'วิธีรับชำระเงิน',
+  tendersIntro: 'เลือกว่าร้านนี้รับชำระด้วยวิธีไหนบ้าง วิธีที่ปิดอยู่จะหายไปจากหน้ารับเงิน และระบบหลังบ้านจะปฏิเสธด้วย',
+  tendersCash: 'เงินสด',
+  tendersCashNote: 'เปิดเสมอ ใช้ได้แม้ไม่มีอินเทอร์เน็ต',
+  tendersAlso: 'ระบบปรับสิ่งที่เกี่ยวข้องให้ด้วย: {list}',
+  'tendersNote_tender.promptpay': 'ลูกค้าสแกน QR แล้วบิลปิดเองเมื่อเงินเข้า (ผ่าน Stripe)',
+  'tendersNote_tender.gateway':
+    'บัตรผ่านเครื่องรูดบัตร Stripe Terminal ต้องลงทะเบียนเครื่องรูดบัตรที่หน้า "เครื่องของร้าน" ด้วย',
+  'tendersNote_tender.credit':
+    'เงินเติมล่วงหน้าของลูกค้า ใช้ได้เฉพาะร้านของนิติบุคคลเดียวกัน ควรให้ทนายยืนยันโครงสร้างก่อนเปิดใช้จริง',
+  'tendersNote_tender.points': 'แต้มสะสมใช้เป็นส่วนลด ซื้อหรือถอนเป็นเงินสดไม่ได้',
   modulesTitle: 'เปิดปิดโมดูล',
   modulesIntro:
     'เลือกฟีเจอร์ที่แต่ละร้านใช้ ปิดแล้วเมนูจะเป็นสีเทา แต่ข้อมูลที่เคยบันทึกยังอยู่ครบ โมดูลที่ต้องทำงานร่วมกันจะเปิดและปิดตามกันให้เอง',
@@ -1113,6 +1124,13 @@ const th = {
   payTabPromptPay: 'PromptPay QR',
   payTabCard: 'บัตร',
   payOnlineOnly: 'ต้องต่อเน็ตจึงรับ PromptPay หรือบัตรได้',
+  creditTopupOnline: 'เติมแบบออนไลน์',
+  creditTopupPromptPay: 'เติมด้วย PromptPay QR',
+  creditTopupCard: 'เติมด้วยเครื่องรูดบัตร',
+  creditTopupResumed: 'ลูกค้าคนนี้มีการเติมที่ยังรออยู่ แสดงต่อให้แล้ว',
+  err_topup_pending: 'ลูกค้าคนนี้มีการเติมที่ยังค้างอยู่ ยกเลิกก่อนแล้วลองใหม่',
+  err_topup_invalid: 'จำนวนที่เติมไม่ถูกต้อง (100 – 50,000 บาท และยอดคงเหลือรวมไม่เกิน 200,000 บาท)',
+  err_topup_no_device: 'เครื่องนี้ยังไม่ได้ลงทะเบียน (ตั้งที่หน้า "เครื่องของร้าน") จึงเติมออนไลน์ไม่ได้',
   payNoReader: 'เครื่องนี้ยังไม่ได้ตั้งเครื่องรูดบัตร (ตั้งที่หน้า "เครื่องของร้าน")',
   payShowQr: 'แสดง QR ให้ลูกค้าสแกน',
   payStartCard: 'ส่งยอดไปที่เครื่องรูดบัตร',
@@ -1665,6 +1683,20 @@ const en = {
   err_load_failed: 'Could not load the data.',
 
   // ── back office: modules, shops, staff, devices ───────────────────────────
+  tendersTitle: 'Payment methods',
+  tendersIntro:
+    'Choose how this shop takes payment. A method that is off disappears from the till, and the back end refuses it too.',
+  tendersCash: 'Cash',
+  tendersCashNote: 'Always on, works with no internet.',
+  tendersAlso: 'Also adjusted for you: {list}',
+  'tendersNote_tender.promptpay':
+    'The guest scans a QR and the bill closes by itself when the money arrives (via Stripe).',
+  'tendersNote_tender.gateway':
+    'Cards on a Stripe Terminal reader. The reader must also be registered on the "Shop devices" page.',
+  'tendersNote_tender.credit':
+    'Prepaid money of the customer, usable only in shops of the same legal entity. Have a lawyer confirm the structure before real use.',
+  'tendersNote_tender.points':
+    'Reward points used as a discount. They can never be bought or cashed out.',
   modulesTitle: 'Modules',
   modulesIntro:
     'Choose which features each shop uses. A feature that is off turns grey in the menu, but everything already saved stays. Modules that need each other switch on and off together.',
@@ -2326,6 +2358,15 @@ const en = {
   payTabPromptPay: 'PromptPay QR',
   payTabCard: 'Card',
   payOnlineOnly: 'PromptPay and card need an internet connection.',
+  creditTopupOnline: 'Top up online',
+  creditTopupPromptPay: 'Top up by PromptPay QR',
+  creditTopupCard: 'Top up with the card reader',
+  creditTopupResumed: 'This customer has a top-up that is still waiting; showing it again.',
+  err_topup_pending: 'This customer already has a top-up waiting. Cancel it first, then try again.',
+  err_topup_invalid:
+    'That amount is not allowed (THB 100 – 50,000, and the balance may not pass THB 200,000).',
+  err_topup_no_device:
+    'This tablet is not registered as a device (do it on the "Shop devices" page), so it cannot top up online.',
   payNoReader: 'This device has no card reader set up (do it on the "Shop devices" page).',
   payShowQr: 'Show QR for the guest to scan',
   payStartCard: 'Send the amount to the card reader',

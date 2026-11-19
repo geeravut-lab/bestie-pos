@@ -26,6 +26,7 @@ export function PaySheet({
   onPay,
   onSplitPay,
   splitCredit = null,
+  methods = { promptpay: true, gateway: true },
   onClose,
 }: {
   /** The bill total BEFORE cash rounding. */
@@ -40,6 +41,8 @@ export function PaySheet({
   onSplitPay?: (legs: SplitLeg[]) => Promise<ErrorKey | null>;
   /** The customer on the bill and their Credit here; null = Credit not usable. */
   splitCredit?: { name: string; balance: Satang } | null;
+  /** The owner's payment-method switches for this shop (cash is always on). */
+  methods?: { promptpay: boolean; gateway: boolean };
   onClose: () => void;
 }) {
   const { t, lang } = useI18n();
@@ -55,8 +58,8 @@ export function PaySheet({
   const tabs: { id: Tab; label: string }[] = [
     { id: 'cash', label: t.payTabCash },
     ...(onSplitPay ? [{ id: 'split' as const, label: t.paySplitTab }] : []),
-    { id: 'promptpay', label: t.payTabPromptPay },
-    { id: 'gateway', label: t.payTabCard },
+    ...(methods.promptpay ? [{ id: 'promptpay' as const, label: t.payTabPromptPay }] : []),
+    ...(methods.gateway ? [{ id: 'gateway' as const, label: t.payTabCard }] : []),
   ];
 
   return (

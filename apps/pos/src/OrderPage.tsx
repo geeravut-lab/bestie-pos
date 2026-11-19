@@ -412,6 +412,10 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
           onOpenShift={() => ctx.navigate('/shift')}
           total={bill.total}
           rule={config.cashRounding}
+          methods={{
+            promptpay: ctx.isModuleOn?.('tender.promptpay') ?? true,
+            gateway: ctx.isModuleOn?.('tender.gateway') ?? true,
+          }}
           online={onlinePay(
             ctx,
             order.id,

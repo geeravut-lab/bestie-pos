@@ -51,6 +51,11 @@ export function ReceiptPage({ ctx, orderId }: { ctx: PageContext; orderId: strin
           ))}
         </div>
         <PrintButton ctx={ctx} order={order} receipt={order.receipt} lang={lang} />
+        {ctx.isOwner || ctx.permissions.includes('refund.create') ? (
+          <AsyncButton variant="secondary" onClick={() => ctx.navigate(`/return/${order.id}`)}>
+            {t.returnButton}
+          </AsyncButton>
+        ) : null}
         <AsyncButton variant="secondary" onClick={() => ctx.navigate('/sell')}>
           {t.sellNew}
         </AsyncButton>

@@ -1,5 +1,11 @@
 import { useState } from 'react';
-import { formatTHB, parseSalesReport, presetRange, reportCsv } from '@bestie/core';
+import {
+  formatTHB,
+  parseReturnsReport,
+  parseSalesReport,
+  presetRange,
+  reportCsv,
+} from '@bestie/core';
 import type { RangePreset, ReportSection, SalesReport } from '@bestie/core';
 import { errorText, useI18n } from '@bestie/i18n';
 import type { Dict, ErrorKey } from '@bestie/i18n';
@@ -68,6 +74,16 @@ export function ReportsPage({ ctx }: { ctx: PageContext }) {
     if (error) throw new Error(error.code ?? 'query');
     return parseSalesReport(data);
   }, `${ctx.orgId}|${storeId}|${range.from}|${range.to}`);
+
+  // product returns of the same period and shop (by the day the money went back)
+  const returns = useRemote(async () => {
+    if (!canView) return null;
+    const { data, error } = await ctx.client.rpc('returns_report', {
+      p: { org_id: ctx.orgId, store_id: storeId || null, from: range.from, to: range.to },
+    });
+    if (error) return null;
+    return parseReturnsReport(data);
+  }, `ret|${ctx.orgId}|${storeId}|${range.from}|${range.to}`);
 
   if (!canView) {
     return (
@@ -232,6 +248,9 @@ export function ReportsPage({ ctx }: { ctx: PageContext }) {
         ) : (
           <ReportBody t={t} r={r} tab={tab} money={money} />
         )}
+        {tab === 'summary' && returns.data ? (
+          <ReturnsBlock t={t} data={returns.data} sales={r?.totals.payable ?? 0} money={money} />
+        ) : null}
         {exportError ? <Notice kind="error">{errorText(exportError, t)}</Notice> : null}
         <div className="actions">
           <AsyncButton onClick={exportCsv} disabled={!r || r.totals.bills === 0}>
@@ -330,6 +349,66 @@ function ReportBody({
       head={[t.repColStaff, t.repColBills, t.repColAmount]}
       rows={r.byStaff.map((s) => [s.name || t.repNoName, String(s.bills), money(s.payable)])}
     />
+  );
+}
+
+function ReturnsBlock({
+  t,
+  data,
+  sales,
+  money,
+}: {
+  t: Dict;
+  data: ReturnType<typeof parseReturnsReport>;
+  sales: number;
+  money: (n: number) => string;
+}) {
+  const method = (m: string) =>
+    m === 'cash'
+      ? t.returnMethodCash
+      : m === 'credit'
+        ? t.returnMethodCredit
+        : t.returnMethodManual;
+  const reason = (x: string) =>
+    x === 'wrong_item'
+      ? t.returnReasonWrong
+      : x === 'defective'
+        ? t.returnReasonDefective
+        : x === 'changed_mind'
+          ? t.returnReasonChanged
+          : t.returnReasonOther;
+  return (
+    <>
+      <h2>{t.repReturnsTitle}</h2>
+      {data.totals.returns === 0 ? (
+        <p className="muted">{t.repReturnsNone}</p>
+      ) : (
+        <>
+          <dl className="kpis">
+            <Kpi name={t.repReturnsCount} value={String(data.totals.returns)} />
+            <Kpi name={t.repReturnsUnits} value={String(data.totals.units)} />
+            <Kpi name={t.repReturnsRefunded} value={money(data.totals.refunded)} />
+            <Kpi name={t.repReturnsNet} value={money(sales - data.totals.refunded)} />
+          </dl>
+          <Table
+            head={[
+              t.repReturnsNumber,
+              t.repReturnsBill,
+              t.repReturnsMethod,
+              t.repReturnsReason,
+              t.repColAmount,
+            ]}
+            rows={data.rows.map((x) => [
+              x.number,
+              x.bill,
+              method(x.method),
+              reason(x.reason),
+              money(x.amount),
+            ])}
+          />
+        </>
+      )}
+    </>
   );
 }
 

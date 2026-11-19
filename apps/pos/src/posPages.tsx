@@ -7,6 +7,7 @@ import { KitchenPage, QueueDisplayPage, QueuePage, ReadyPage } from './KitchenPa
 import { OrdersPage } from './OrdersPage';
 import { ShiftPage } from './ShiftPage';
 import { ReceiptPage, ReceiptsPage } from './ReceiptPages';
+import { ReturnPage } from './ReturnPage';
 import { PrintersPage } from './printing/PrintersPage';
 import { PrintStationPage } from './printing/PrintStationPage';
 
@@ -25,6 +26,8 @@ export function posPages(ctx: PageContext): ReactNode | null {
   if (ctx.path === '/receipts') return <ReceiptsPage ctx={ctx} />;
   if (ctx.path === '/settings/printers') return <PrintersPage ctx={ctx} />;
   if (ctx.path === '/print-station') return <PrintStationPage ctx={ctx} />;
+  const rt = /^\/return\/([0-9a-f-]{36})$/.exec(ctx.path);
+  if (rt) return <ReturnPage ctx={ctx} orderId={rt[1]!} />;
   const r = /^\/receipt\/([0-9a-f-]{36})$/.exec(ctx.path);
   if (r) return <ReceiptPage ctx={ctx} orderId={r[1]!} />;
   return adminPages(ctx);

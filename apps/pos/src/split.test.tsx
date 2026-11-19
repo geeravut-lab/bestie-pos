@@ -374,7 +374,7 @@ describe('<ShiftPage>', () => {
     expect(close.fn).toBe('close_shift');
     expect(close.args.p).toMatchObject({ counted_cash: 123500, note: 'coins' });
     expect(await screen.findByText('Closed shifts')).toBeTruthy();
-    expect(screen.getByText('Short by ฿5', { selector: '.badge' })).toBeTruthy();
+    expect(await screen.findByText('Short by ฿5', { selector: '.badge' })).toBeTruthy();
   });
 
   it('without shift.open_close you can look but not open or close', async () => {

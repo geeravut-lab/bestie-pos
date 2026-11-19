@@ -48,6 +48,29 @@ const sheet = (online: OnlinePay) =>
     />,
   );
 
+describe('<PaySheet> payment-method switches', () => {
+  const with_ = (methods: { promptpay: boolean; gateway: boolean }) =>
+    mountEn(
+      <PaySheet
+        total={16000}
+        rule="none"
+        online={fakeOnline()}
+        methods={methods}
+        onPay={async () => null}
+        onClose={() => {}}
+      />,
+    );
+  it('a method the owner switched off has no tab; cash is always there', () => {
+    with_({ promptpay: false, gateway: true });
+    expect(screen.getByRole('tab', { name: 'Cash' })).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: 'PromptPay QR' })).toBeNull();
+    expect(screen.getByRole('tab', { name: 'Card' })).toBeTruthy();
+    cleanup();
+    with_({ promptpay: false, gateway: false });
+    expect(screen.getAllByRole('tab')).toHaveLength(1);
+  });
+});
+
 describe('<PaySheet> online tabs', () => {
   it('offers cash first, and PromptPay / card need the network and (for card) a reader', async () => {
     sheet(fakeOnline({ available: false }));

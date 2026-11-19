@@ -1,7 +1,8 @@
 import { useCallback, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Permission } from '@bestie/core';
+import { isEnabledForStore } from '@bestie/core';
+import type { ModuleId, Permission } from '@bestie/core';
 import { useI18n } from '@bestie/i18n';
 import { createBrowserClient, readPublicEnv } from '@bestie/supabase';
 import type { PublicEnv } from '@bestie/supabase';
@@ -38,6 +39,8 @@ export type PageContext = {
   staffName?: string;
   /** The shop this person works in (their own, else the org's first) — never null for a signed-in member with a shop. */
   homeStoreId?: string | null;
+  /** Is this module on in the person's shop (registry + the owner's switches + plan + legal gates)? Absent = no information, treat as on. */
+  isModuleOn?: (id: ModuleId) => boolean;
 };
 
 /** Tablet mode (apps/pos): a lock screen in front of the app, the acting person's role, extra header controls. */
@@ -113,6 +116,10 @@ function Inner({
             staffId: membership.staffId,
             staffName: membership.displayName,
             homeStoreId: pickStore(my.data, membership)?.id ?? membership.storeId,
+            isModuleOn: (() => {
+              const st = pickStore(my.data, membership);
+              return st ? (id: ModuleId) => isEnabledForStore(st, id) : undefined;
+            })(),
           }
         : null,
     [auth.client, membership, my.data],

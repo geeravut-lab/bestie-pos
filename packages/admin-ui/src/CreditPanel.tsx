@@ -7,6 +7,7 @@ import { getDeviceBinding } from '@bestie/offline';
 import { AsyncButton, Spinner } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
+import { CreditOnlineTopup } from './CreditOnlineTopup';
 import { useRemote } from './useRemote';
 
 type Row = { id: string; kind: string; amount: number; reason: string | null; created_at: string };
@@ -56,8 +57,15 @@ export function CreditPanel({ ctx, card }: { ctx: PageContext; card: CustomerCar
           .limit(20),
       ]);
       if (bal.error || hist.error) throw new Error('load');
+      const bound = getDeviceBinding()?.deviceId;
+      const dev = bound
+        ? await ctx.client.from('devices').select('stripe_reader_id').eq('id', bound).maybeSingle()
+        : null;
       return {
         storeId: row.id,
+        hasReader:
+          typeof (dev?.data as { stripe_reader_id?: unknown } | null)?.stripe_reader_id ===
+          'string',
         balance: Number(bal.data ?? 0),
         history: (hist.data ?? []) as Row[],
       };
@@ -152,6 +160,24 @@ export function CreditPanel({ ctx, card }: { ctx: PageContext; card: CustomerCar
             />
           </div>
           <AsyncButton onClick={topup}>{t.creditTopup}</AsyncButton>
+          <CreditOnlineTopup
+            ctx={ctx}
+            customerId={card.id}
+            storeId={data.storeId}
+            deviceId={getDeviceBinding()?.deviceId ?? null}
+            hasReader={data.hasReader}
+            amount={parsePriceInput(amount)}
+            amountOk={(() => {
+              const v = parsePriceInput(amount);
+              return v !== null && v >= 10000 && v <= 5000000 && v + data.balance <= 20000000;
+            })()}
+            onBadAmount={() => setNote('topupBad')}
+            onCredited={() => {
+              setAmount('');
+              setNote('topped');
+              reload();
+            }}
+          />
         </form>
       ) : null}
       <h4>{t.creditHistory}</h4>

@@ -90,6 +90,7 @@ function refusal(r: Rpc): Response {
   if (r.code === '42501') return reply({ error: 'forbidden' }, 403);
   if (r.code === '23505') return reply({ error: 'attempt_pending' }, 409);
   if (r.code === 'P0002') return reply({ error: 'not_found' }, 404);
+  if (r.code === '0A000') return reply({ error: 'module_off' }, 403);
   if (r.code === '23514' || r.code === '22023') return reply({ error: 'invalid' }, 422);
   return reply({ error: 'server_error' }, 502);
 }
@@ -115,12 +116,17 @@ export async function stripeChargeResponse(
     if (!allowCharge(`charge:${who.userId}`)) return reply({ error: 'rate_limited' }, 429);
     const body = (await request.json().catch(() => null)) as {
       snapshot?: Record<string, unknown>;
+      topup?: Record<string, unknown>;
     } | null;
-    if (!body?.snapshot || typeof body.snapshot !== 'object')
-      return reply({ error: 'invalid' }, 422);
+    const isObj = (v: unknown): v is Record<string, unknown> =>
+      !!v && typeof v === 'object' && !Array.isArray(v);
+    // a bill (snapshot) or a Bestie Credit top-up (customer + amount): the database function decides, with the person's own token
+    if (isObj(body?.snapshot) === isObj(body?.topup)) return reply({ error: 'invalid' }, 422);
 
     const asUser = { url: supabaseUrl, apikey: anonKey(env) ?? serviceRoleKey, bearer: who.token };
-    const begun = await rpc(fetchImpl, asUser, 'begin_payment_attempt', { p: body.snapshot });
+    const begun = isObj(body?.snapshot)
+      ? await rpc(fetchImpl, asUser, 'begin_payment_attempt', { p: body.snapshot })
+      : await rpc(fetchImpl, asUser, 'begin_credit_topup_attempt', { p: body?.topup });
     if (!begun.ok || typeof begun.data !== 'string') return refusal(begun);
     const attemptId = begun.data;
 
@@ -128,7 +134,7 @@ export async function stripeChargeResponse(
     const attempt = await selectOne<{
       amount: number;
       tender: 'promptpay' | 'gateway';
-      order_id: string;
+      order_id: string | null;
       device_id: string;
     }>(
       fetchImpl,
@@ -137,6 +143,7 @@ export async function stripeChargeResponse(
       `payment_attempts?id=eq.${attemptId}&select=amount,tender,order_id,device_id`,
     );
     if (!attempt) return reply({ error: 'server_error' }, 502);
+    // 0A000 = Credit switched off in this shop (refusal() maps the other codes)
     const stripe = deps.stripe ?? createStripeClient(cfg.secretKey, fetchImpl);
 
     try {

@@ -54,5 +54,6 @@ export * from './barcode';
 export * from './menuImages';
 export * from './barcode128';
 export * from './labels';
+export * from './returns';
 export * from './commission';
 export * from './packages';

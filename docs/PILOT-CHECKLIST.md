@@ -85,3 +85,5 @@ Read-only. It prints ✅ / ❌ (fix before go-live) / ⚠️ (decide on purpose)
 - [ ] Owner knows where reports and the audit trail are; CSV export works
 - [ ] Support contact written next to the till
 - [ ] A day-1 call / message after closing: what was confusing, what broke
+
+- [ ] **Before go-live: delete the demo data** — `SUPABASE_ACCESS_TOKEN=sbp_… node tools/demo-data/run.mjs remote cleanup --yes` (removes the organisation "[DEMO] Island Group" and every `@bestiedemo.example` account; see tools/demo-data/README.md) **(owner + Claude)**

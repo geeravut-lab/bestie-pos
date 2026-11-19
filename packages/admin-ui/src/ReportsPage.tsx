@@ -29,6 +29,8 @@ export function ReportsPage({ ctx }: { ctx: PageContext }) {
   const canView = ctx.isOwner || ctx.permissions.includes('report.view');
   const [storeId, setStoreId] = useState('');
   const [range, setRange] = useState(() => presetRange('today', clock()));
+  // which quick button the figures on screen belong to; null once the dates are typed by hand
+  const [preset, setPreset] = useState<RangePreset | null>('today');
   const [tab, setTab] = useState<Tab>('summary');
   const [exportError, setExportError] = useState<ErrorKey | null>(null);
   const money = (n: number) => formatTHB(n, lang === 'th' ? 'th-TH' : 'en-GB');
@@ -147,7 +149,11 @@ export function ReportsPage({ ctx }: { ctx: PageContext }) {
               type="date"
               value={range.from}
               max={range.to}
-              onChange={(e) => e.target.value && setRange((x) => ({ ...x, from: e.target.value }))}
+              onChange={(e) => {
+                if (!e.target.value) return;
+                setPreset(null);
+                setRange((x) => ({ ...x, from: e.target.value }));
+              }}
             />
           </div>
           <div className="form-row">
@@ -160,17 +166,25 @@ export function ReportsPage({ ctx }: { ctx: PageContext }) {
               type="date"
               value={range.to}
               min={range.from}
-              onChange={(e) => e.target.value && setRange((x) => ({ ...x, to: e.target.value }))}
+              onChange={(e) => {
+                if (!e.target.value) return;
+                setPreset(null);
+                setRange((x) => ({ ...x, to: e.target.value }));
+              }}
             />
           </div>
         </div>
-        <div className="actions">
+        <div className="chips" role="group" aria-label={t.repPresetsLabel}>
           {PRESETS.map((p) => (
             <button
               key={p}
               type="button"
-              className="btn btn-secondary"
-              onClick={() => setRange(presetRange(p, clock()))}
+              className="chip"
+              aria-pressed={preset === p}
+              onClick={() => {
+                setPreset(p);
+                setRange(presetRange(p, clock()));
+              }}
             >
               {presetLabel[p]}
             </button>

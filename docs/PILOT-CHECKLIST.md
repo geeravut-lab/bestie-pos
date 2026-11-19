@@ -64,6 +64,7 @@ Read-only. It prints ✅ / ❌ (fix before go-live) / ⚠️ (decide on purpose)
 
 - [ ] Run the **Stripe test-mode checklist** (docs/ENVIRONMENT.md §6) once before any real money
 - [ ] Switch to live Stripe keys in Vercel and re-point the webhook **(owner)**
+- [ ] Stripe TEST-mode run with the guided checker: `pnpm stripe:check --guided` (docs/ENVIRONMENT.md §6) — every non-optional step ✅ **(owner + Claude)**
 - [ ] Test PromptPay for a small real amount: the bill closes by itself, the receipt is numbered `A+…`
 - [ ] Test card (if a reader is used): tap, bill closes
 - [ ] Test **cash with the network off**: take an order, pay cash, turn the network on, check it syncs (top bar shows waiting → synced)

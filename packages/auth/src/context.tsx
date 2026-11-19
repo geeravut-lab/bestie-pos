@@ -67,7 +67,7 @@ export function AuthProvider({
     if (!client || !userId) return;
     try {
       // network first; with no signal the last good copy keeps the till working (offline-first, CLAUDE.md rule 5)
-      const { data } = await cachedRead(`my:${userId}`, () => loadMyContext(client));
+      const { data } = await cachedRead(`my:${userId}`, () => loadMyContext(client, userId));
       setResult({ userId, status: 'ready', data });
     } catch (e) {
       console.error('[auth] loading shop data failed', e instanceof Error ? e.message : 'unknown');

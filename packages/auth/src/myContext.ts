@@ -121,14 +121,20 @@ export function appRoleFor(
   return 'kitchen';
 }
 
-export async function loadMyContext(client: SupabaseClient): Promise<MyContext> {
+/**
+ * The signed-in person's own shop data. The staff table lets every member see the WHOLE team of their shop (the Team page
+ * needs that), so the query must ask for THIS user's rows only: without the filter the first row (the owner's) was taken as
+ * "my role" and a cashier saw the owner's home screen and carried the owner's permissions in the screens.
+ */
+export async function loadMyContext(client: SupabaseClient, userId: string): Promise<MyContext> {
   const [profile, staff, stores, admin] = await Promise.all([
     client.from('profiles').select('display_name, language').maybeSingle(),
     client
       .from('staff')
       .select(
-        'id, org_id, store_id, display_name, active, roles(built_in, name, permissions, hidden_modules), orgs(name, legal_sign_off)',
+        'id, user_id, org_id, store_id, display_name, active, roles(built_in, name, permissions, hidden_modules), orgs(name, legal_sign_off)',
       )
+      .eq('user_id', userId)
       .eq('active', true),
     client
       .from('stores')
@@ -142,6 +148,7 @@ export async function loadMyContext(client: SupabaseClient): Promise<MyContext> 
   if (stores.error) throw new Error(`stores: ${stores.error.code ?? 'error'}`);
 
   const memberships = ((staff.data ?? []) as Row[])
+    .filter((r) => r.user_id === userId) // belt and braces: never trust that the server already filtered
     .map(mapMembership)
     .filter((m): m is Membership => m !== null);
   const legalByOrg = new Map(memberships.map((m) => [m.orgId, m.legalSignOff]));

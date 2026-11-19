@@ -6,10 +6,13 @@ import {
   isLow,
   lineCost,
   margin,
+  normalizeBarcode,
+  parseOptionUse,
   parseQty,
   parseRecipeLines,
   parseStockItems,
   priceBeforeVat,
+  stockValue,
   splitQty,
 } from './stock';
 
@@ -111,6 +114,7 @@ describe('reading rows', () => {
       {
         id: 'a',
         name: { th: 'แป้ง', en: 'Flour' },
+        barcode: null,
         unit: 'g',
         quantity: 1200,
         costPer1000: 4000,
@@ -124,5 +128,77 @@ describe('reading rows', () => {
         { menu_item_id: 'm', item_id: 'b', quantity: 0 },
       ]),
     ).toEqual([{ menuItemId: 'm', itemId: 'a', quantity: 150 }]);
+  });
+});
+
+describe('options that use stock', () => {
+  const recipes = [
+    { menuItemId: 'latte', itemId: 'milk', quantity: 150 },
+    { menuItemId: 'latte', itemId: 'beans', quantity: 18 },
+  ];
+  const uses = [
+    { optionId: 'oat', itemId: 'oatmilk', quantity: 150, insteadOf: 'milk' },
+    { optionId: 'shot', itemId: 'beans', quantity: 9, insteadOf: null },
+  ];
+  it('an option can stand in for a recipe ingredient (oat milk instead of milk)', () => {
+    const c = consumption(
+      [{ menuItemId: 'latte', quantity: 2, optionIds: ['oat'] }],
+      recipes,
+      uses,
+    );
+    expect(c.get('oatmilk')).toBe(300);
+    expect(c.has('milk')).toBe(false);
+    expect(c.get('beans')).toBe(36);
+  });
+  it('an extra shot adds to the recipe; no option changes nothing', () => {
+    const c = consumption(
+      [{ menuItemId: 'latte', quantity: 1, optionIds: ['shot'] }],
+      recipes,
+      uses,
+    );
+    expect(c.get('beans')).toBe(27);
+    expect(c.get('milk')).toBe(150);
+    expect(consumption([{ menuItemId: 'latte', quantity: 1 }], recipes, uses).get('milk')).toBe(
+      150,
+    );
+  });
+  it('options of other dishes are not touched, and options never use stock without a link', () => {
+    const c = consumption([{ menuItemId: 'tea', quantity: 1, optionIds: ['oat'] }], recipes, uses);
+    expect(c.get('oatmilk')).toBe(150);
+    expect(
+      consumption(
+        [{ menuItemId: 'latte', quantity: 1, optionIds: ['unknown'] }],
+        recipes,
+        uses,
+      ).get('oatmilk'),
+    ).toBeUndefined();
+  });
+  it('parses links and drops broken rows', () => {
+    expect(
+      parseOptionUse([
+        { option_id: 'a', item_id: 'b', quantity: '150', instead_of: 'c' },
+        { option_id: 'a', item_id: 'b', quantity: 0 },
+        { nope: 1 },
+      ]),
+    ).toEqual([{ optionId: 'a', itemId: 'b', quantity: 150, insteadOf: 'c' }]);
+  });
+});
+
+describe('stock value and barcodes', () => {
+  it('values stock at cost and counts a negative item as nothing', () => {
+    expect(
+      stockValue([
+        { quantity: 2000, costPer1000: 3500 },
+        { quantity: -500, costPer1000: 9000 },
+        { quantity: 500, costPer1000: 9000 },
+      ]),
+    ).toBe(7000 + 4500);
+  });
+  it('accepts only what the database accepts as a barcode', () => {
+    expect(normalizeBarcode(' 8851234567890 ')).toBe('8851234567890');
+    expect(normalizeBarcode('AB-12')).toBe('AB-12');
+    expect(normalizeBarcode('123')).toBeNull();
+    expect(normalizeBarcode('12 34')).toBeNull();
+    expect(normalizeBarcode('รหัส1234')).toBeNull();
   });
 });

@@ -96,6 +96,10 @@ export const PERMISSIONS = [
   'settings.manage',
   /** Kitchen / bar screens: move sent lines through ready → served. Nothing else. */
   'kds.use',
+  /** Stock: change items, recipes, suppliers, purchase orders and transfers. */
+  'stock.manage',
+  /** Stock: look only. */
+  'stock.view',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 

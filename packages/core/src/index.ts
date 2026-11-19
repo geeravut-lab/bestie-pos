@@ -47,3 +47,4 @@ export * from './kitchenTicket';
 export * from './printJobs';
 export * from './shopInfo';
 export * from './stock';
+export * from './purchasing';

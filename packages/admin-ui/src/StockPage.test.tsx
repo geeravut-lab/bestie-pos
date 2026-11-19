@@ -60,7 +60,7 @@ const ctx = (client: unknown, over: Partial<PageContext> = {}): PageContext => (
   client: client as never,
   orgId: 'o1',
   storeId: 's1',
-  permissions: ['menu.edit'],
+  permissions: ['stock.manage'],
   isOwner: false,
   isPlatformAdmin: false,
   ...over,
@@ -145,8 +145,8 @@ describe('<StockPage>', () => {
     });
   });
 
-  it('history shows the moves; a viewer (report.view) cannot change anything; others are closed out', async () => {
-    mount(ctx(fakeDb(tables()).client, { permissions: ['report.view'] }));
+  it('history shows the moves; a viewer (stock.view) cannot change anything; others are closed out', async () => {
+    mount(ctx(fakeDb(tables()).client, { permissions: ['stock.view'] }));
     expect(await screen.findByText('Rice noodles')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Add a stock item' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Goods in' })).toBeNull();

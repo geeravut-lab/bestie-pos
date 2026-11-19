@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import {
   dishCost,
+  normalizeBarcode,
+  stockValue,
   formatPctX10,
   formatTHB,
   inputUnitsFor,
@@ -11,7 +13,6 @@ import {
   parseQty,
   parseRecipeLines,
   parseStockItems,
-  parsePriceInput,
   priceBeforeVat,
   priceInputValue,
   splitQty,
@@ -19,13 +20,17 @@ import {
 } from '@bestie/core';
 import type { InputUnit, StockItem, StockUnit } from '@bestie/core';
 import { errorText, fmt, useI18n } from '@bestie/i18n';
-import type { Dict, ErrorKey } from '@bestie/i18n';
+import type { ErrorKey } from '@bestie/i18n';
 import { AsyncButton, Spinner } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
+import { OptionsTab } from './StockOptions';
+import { OrdersTab, SuppliersTab } from './StockPurchasing';
+import { TransfersTab } from './StockTransfers';
+import { fromCost1000, toCost1000, tx } from './stockInput';
 import { useRemote } from './useRemote';
 
-type Tab = 'items' | 'recipes' | 'history';
+type Tab = 'items' | 'recipes' | 'suppliers' | 'orders' | 'transfers' | 'options' | 'history';
 type MenuRow = { id: string; name: { th: string; en?: string }; prices: { base?: number } };
 type Move = {
   id: string;
@@ -42,16 +47,7 @@ type Loaded = {
   moves: Move[];
   vat: { vatBps: number; inclusive: boolean };
 };
-const tx = (t: Dict, key: string): string => (t as Record<string, string>)[key] ?? key;
 const KINDS = ['receive', 'waste', 'adjust', 'count'] as const;
-
-/** Satang per 1,000 base units from what a person types: per kg / litre, or per piece. */
-const toCost1000 = (text: string, unit: StockUnit): number | null => {
-  const v = parsePriceInput(text);
-  return v === null ? null : unit === 'pcs' ? v * 1000 : v;
-};
-const fromCost1000 = (c: number, unit: StockUnit): number =>
-  unit === 'pcs' ? Math.round(c / 1000) : c;
 
 /** Stock on hand, goods in / waste / counts, recipes with cost and margin. Needs menu.edit (or report.view to look). */
 export function StockPage({ ctx }: { ctx: PageContext }) {
@@ -59,8 +55,8 @@ export function StockPage({ ctx }: { ctx: PageContext }) {
   const locale = lang === 'th' ? ('th-TH' as const) : ('en-GB' as const);
   const money = (n: number) => formatTHB(n, locale);
   const storeId = ctx.storeId ?? ctx.homeStoreId ?? null;
-  const canEdit = ctx.isOwner || ctx.permissions.includes('menu.edit');
-  const canSee = canEdit || ctx.permissions.includes('report.view');
+  const canEdit = ctx.isOwner || ctx.permissions.includes('stock.manage');
+  const canSee = canEdit || ctx.permissions.includes('stock.view');
   const [tab, setTab] = useState<Tab>('items');
   const [error, setError] = useState<ErrorKey | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -141,7 +137,9 @@ export function StockPage({ ctx }: { ctx: PageContext }) {
       {error ? <Notice kind="error">{errorText(error, t)}</Notice> : null}
       {note ? <Notice kind="success">{note}</Notice> : null}
       <div className="tabs" role="tablist">
-        {(['items', 'recipes', 'history'] as const).map((k) => (
+        {(
+          ['items', 'recipes', 'suppliers', 'orders', 'transfers', 'options', 'history'] as const
+        ).map((k) => (
           <button
             key={k}
             type="button"
@@ -178,6 +176,40 @@ export function StockPage({ ctx }: { ctx: PageContext }) {
           storeId={storeId!}
           canEdit={canEdit}
           money={money}
+          fail={fail}
+          done={done}
+        />
+      ) : null}
+      {d && tab === 'suppliers' ? (
+        <SuppliersTab ctx={ctx} storeId={storeId!} canEdit={canEdit} fail={fail} done={done} />
+      ) : null}
+      {d && tab === 'orders' ? (
+        <OrdersTab
+          ctx={ctx}
+          storeId={storeId!}
+          items={d.items}
+          canEdit={canEdit}
+          money={money}
+          fail={fail}
+          done={done}
+        />
+      ) : null}
+      {d && tab === 'transfers' ? (
+        <TransfersTab
+          ctx={ctx}
+          storeId={storeId!}
+          items={d.items}
+          canEdit={canEdit}
+          fail={fail}
+          done={done}
+        />
+      ) : null}
+      {d && tab === 'options' ? (
+        <OptionsTab
+          ctx={ctx}
+          storeId={storeId!}
+          items={d.items}
+          canEdit={canEdit}
           fail={fail}
           done={done}
         />
@@ -236,7 +268,10 @@ function ItemsTab({ ctx, d, storeId, canEdit, money, fail, done }: Common) {
     unit: StockUnit;
     cost: string;
     low: string;
+    barcode: string;
   } | null>(null);
+  const [scan, setScan] = useState('');
+  const [scanMsg, setScanMsg] = useState<string | null>(null);
   const [mv, setMv] = useState<{
     item: StockItem;
     kind: (typeof KINDS)[number];
@@ -256,13 +291,16 @@ function ItemsTab({ ctx, d, storeId, canEdit, money, fail, done }: Common) {
       form.low || '0',
       form.unit === 'g' ? 'kg' : form.unit === 'ml' ? 'l' : 'pcs',
     );
-    if (!form.th.trim() || cost === null || low === null) return setProblem(true);
+    const code = form.barcode.trim() ? normalizeBarcode(form.barcode) : null;
+    if (!form.th.trim() || cost === null || low === null || (form.barcode.trim() && !code))
+      return setProblem(true);
     void inputUnit;
     const values = {
       name: { th: form.th.trim(), ...(form.en.trim() ? { en: form.en.trim() } : {}) },
       unit: form.unit,
       cost_per_1000: cost,
       low_at: low,
+      barcode: code,
     };
     const r = form.id
       ? await ctx.client.from('stock_items').update(values).eq('id', form.id).select('id')
@@ -293,8 +331,54 @@ function ItemsTab({ ctx, d, storeId, canEdit, money, fail, done }: Common) {
     done();
   };
 
+  const findByCode = () => {
+    const code = normalizeBarcode(scan);
+    if (!code) return setScanMsg(t.stockScanBad);
+    const it = d.items.find((i) => i.barcode === code);
+    if (!it) return setScanMsg(t.stockScanNone);
+    setScanMsg(null);
+    setScan('');
+    if (canEdit)
+      setMv({
+        item: it,
+        kind: 'receive',
+        qty: '',
+        unit: inputUnitsFor(it.unit)[inputUnitsFor(it.unit).length - 1]!,
+        cost: '',
+        note: '',
+      });
+    else setScanMsg(localizedName(it.name, lang));
+  };
+
   return (
     <>
+      <p className="tabular">
+        <strong>{fmt(t.stockValue, { amount: money(stockValue(d.items)) })}</strong>
+      </p>
+      <form className="filters" onSubmit={(e) => e.preventDefault()}>
+        <div className="form-row">
+          <label className="label" htmlFor="st-scan">
+            {t.stockScan}
+          </label>
+          <input
+            id="st-scan"
+            className="field tabular"
+            autoComplete="off"
+            value={scan}
+            onChange={(e) => setScan(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                findByCode();
+              }
+            }}
+          />
+        </div>
+        <button type="button" className="btn btn-secondary" onClick={findByCode}>
+          {t.stockScanGo}
+        </button>
+      </form>
+      {scanMsg ? <Notice kind="info">{scanMsg}</Notice> : null}
       {d.items.length === 0 ? <p className="muted">{t.stockEmpty}</p> : null}
       <ul className="member-list">
         {d.items.map((i) => {
@@ -351,6 +435,7 @@ function ItemsTab({ ctx, d, storeId, canEdit, money, fail, done }: Common) {
                         unit: i.unit,
                         cost: priceInputValue(fromCost1000(i.costPer1000, i.unit)),
                         low: low.value,
+                        barcode: i.barcode ?? '',
                       });
                     }}
                   >
@@ -498,6 +583,19 @@ function ItemsTab({ ctx, d, storeId, canEdit, money, fail, done }: Common) {
             />
           </div>
           <div className="form-row">
+            <label className="label" htmlFor="st-barcode">
+              {t.stockBarcode}
+            </label>
+            <input
+              id="st-barcode"
+              className="field tabular"
+              maxLength={40}
+              autoComplete="off"
+              value={form.barcode}
+              onChange={(e) => setForm({ ...form, barcode: e.target.value })}
+            />
+          </div>
+          <div className="form-row">
             <label className="label" htmlFor="st-low">
               {fmt(t.stockLowAt, { unit: tx(t, `stockBig_${form.unit}`) })}
             </label>
@@ -524,7 +622,9 @@ function ItemsTab({ ctx, d, storeId, canEdit, money, fail, done }: Common) {
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => setForm({ id: null, th: '', en: '', unit: 'g', cost: '', low: '' })}
+            onClick={() =>
+              setForm({ id: null, th: '', en: '', unit: 'g', cost: '', low: '', barcode: '' })
+            }
           >
             {t.stockAddItem}
           </button>

@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 
 /** Test double for the Supabase client: table rows in, recorded writes + RPC calls out. */
-export type Write = { table: string; op: 'update' | 'insert'; values: unknown };
+export type Write = { table: string; op: 'update' | 'insert' | 'delete'; values: unknown };
 export type RpcCall = { fn: string; args: unknown };
 
 export function fakeDb(
@@ -16,9 +16,10 @@ export function fakeDb(
   const writes: Write[] = [];
   const rpcs: RpcCall[] = [];
   const from = vi.fn((table: string) => {
-    let op: 'select' | 'update' | 'insert' = 'select';
+    let op: 'select' | 'update' | 'insert' | 'delete' = 'select';
     const result = () => {
       if (op === 'insert') return { data: null, error: opts.insertError ?? null };
+      if (op === 'delete') return { data: null, error: null };
       if (op === 'update')
         return {
           data: Array.from({ length: opts.updatedRows ?? 1 }, () => ({ id: 'x' })),
@@ -27,7 +28,12 @@ export function fakeDb(
       return { data: tables[table] ?? [], error: null };
     };
     const chain: Record<string, unknown> = {};
-    for (const m of ['select', 'eq', 'is', 'gt', 'order', 'limit']) chain[m] = () => chain;
+    for (const m of ['select', 'eq', 'is', 'gt', 'or', 'order', 'limit']) chain[m] = () => chain;
+    chain.delete = () => {
+      op = 'delete';
+      writes.push({ table, op, values: null });
+      return chain;
+    };
     chain.update = (values: unknown) => {
       op = 'update';
       writes.push({ table, op, values });

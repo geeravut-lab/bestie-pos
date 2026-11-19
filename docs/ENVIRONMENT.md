@@ -93,6 +93,23 @@ real run. With **test** keys in Vercel (`STRIPE_SECRET_KEY=sk_test_…`, `STRIPE
 If a step differs from what Stripe actually returns (field names, the PromptPay e-mail rule, reader availability in Thailand),
 fix `functions/src/stripe.ts` and its tests — nothing else depends on Stripe's wire format.
 
+### The guided checker (`pnpm stripe:check`) — run it while you do the steps above
+It does not pay anything and changes nothing: it asks Stripe (test key) and the database (SELECT only) and tells you, in Thai, which
+step worked. Needs `SUPABASE_ACCESS_TOKEN` (a personal token, like `pnpm pilot:check`) and, optionally, `STRIPE_SECRET_KEY=sk_test_…`
+(a live key is refused). Without the Stripe key it still checks the database side.
+
+```bash
+SUPABASE_ACCESS_TOKEN=sbp_… STRIPE_SECRET_KEY=sk_test_… pnpm stripe:check --guided
+```
+
+`--guided` prints what to do on the tablet for each step, waits for Enter, then checks (type `s` to skip a step). Without `--guided`
+it checks everything that already happened in the last `--since 90` minutes (so Claude can run it for you once you say "done").
+Steps: 0 Stripe account / PromptPay enabled / webhook address and events / readers · 1 PromptPay paid and the bill closed by itself
+(receipt `A+…`, one payment of the right amount, the webhook arrived) · 2 cancelled QR, new QR, no hole in the receipt numbers ·
+3 cash after a cancel uses `A-…` · 4 changed amount → `needs_review`, bill stays open, audit line, managers told · 5 card reader
+(optional) · 6 guest pays from the table page (optional) · 7 several PromptPay shares on one bill (optional). It cannot judge the
+look of the QR, printers, or anything on the screen: look at those yourself.
+
 ### Guest PromptPay at the table (add to the test-mode run)
 1. In **Billing & points** choose the device whose receipts guest payments use.
 2. Open a table's QR page (`/t/<token>`) on a phone, order, let staff send the lines, press **Pay with PromptPay**: a QR appears.

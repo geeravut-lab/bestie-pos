@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@bestie/i18n';
@@ -93,6 +93,29 @@ describe('<ReportsPage>', () => {
     };
     expect(args.p.org_id).toBe('org-1');
     expect(args.p.store_id).toBeNull(); // all shops
+  });
+
+  it('highlights the period button whose figures are on screen, and drops it when the dates are typed', async () => {
+    const { client, rpc } = fakeClient();
+    mount(ctx(client));
+    await screen.findByText('฿535');
+    const pressed = (name: string) =>
+      screen.getByRole('button', { name }).getAttribute('aria-pressed');
+    expect(pressed('Today')).toBe('true'); // the page opens on today
+    expect(pressed('Last 7 days')).toBe('false');
+    await userEvent.click(screen.getByRole('button', { name: 'Last 7 days' }));
+    await waitFor(() => expect(pressed('Last 7 days')).toBe('true'));
+    expect(pressed('Today')).toBe('false'); // exactly one is lit
+    await userEvent.click(screen.getByRole('button', { name: 'This month' }));
+    await waitFor(() => expect(pressed('This month')).toBe('true'));
+    expect(pressed('Last 7 days')).toBe('false');
+    // typing a date by hand: the figures no longer belong to any quick button
+    const from = screen.getAllByDisplayValue(/^\d{4}-\d{2}-\d{2}$/)[0] as HTMLInputElement;
+    fireEvent.change(from, { target: { value: '2026-01-05' } });
+    await waitFor(() => expect(pressed('This month')).toBe('false'));
+    for (const n of ['Today', 'Yesterday', 'Last 7 days', 'Last 30 days', 'This month'])
+      expect(pressed(n)).toBe('false');
+    expect(rpc.mock.calls.filter((c) => c[0] === 'sales_report').length).toBeGreaterThan(2);
   });
 
   it('asks for one shop when picked, and switches tabs', async () => {

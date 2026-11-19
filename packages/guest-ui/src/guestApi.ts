@@ -1,6 +1,7 @@
 import { parseGuestBill, parseGuestMenu } from '@bestie/core';
 import type { CartLine, GuestBill, GuestMenu } from '@bestie/core';
-import { orderPayload } from '@bestie/core';
+import { orderPayload, parseFilter } from '@bestie/core';
+import type { DietFilter } from '@bestie/core';
 
 export type GuestPayInfo = {
   enabled: boolean;
@@ -15,6 +16,8 @@ export type GuestTable = {
   storeName: string;
   tableName: string;
   autoSend: boolean;
+  /** The shop switched the food assistant on (module ai.guest). The filter buttons work without it. */
+  ai: boolean;
   menu: GuestMenu;
   bill: GuestBill;
 };
@@ -105,6 +108,7 @@ export async function loadGuestTable(
         storeName: nameOf(b.store),
         tableName: nameOf(b.table),
         autoSend: b.autoSend === true,
+        ai: b.ai === true,
         menu: parseGuestMenu(b.menu),
         bill: parseGuestBill(b.bill),
         pay: parsePay(b.pay),
@@ -222,5 +226,34 @@ export async function cancelGuestPayment(
     });
   } catch {
     /* the QR expires by itself; the next "pay" press cancels a stale one */
+  }
+}
+
+export type GuestAiAnswer =
+  | { kind: 'filter'; filter: DietFilter }
+  | { kind: 'unavailable' }
+  | { kind: 'not_understood' }
+  | { kind: 'failed' };
+
+/** The guest's words → a filter (the page applies it to the menu with plain code; nothing else comes back). */
+export async function askGuestAi(
+  token: string,
+  text: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<GuestAiAnswer> {
+  try {
+    const res = await fetchImpl('/api/guest/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ t: token, text }),
+    });
+    const b = obj(await res.json().catch(() => null));
+    if (!res.ok) return { kind: 'failed' };
+    if (b.available !== true) return { kind: 'unavailable' };
+    if (b.understood !== true) return { kind: 'not_understood' };
+    const filter = parseFilter(b.filter);
+    return filter ? { kind: 'filter', filter } : { kind: 'not_understood' };
+  } catch {
+    return { kind: 'failed' };
   }
 }

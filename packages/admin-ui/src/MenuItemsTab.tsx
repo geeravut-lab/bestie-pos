@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import {
   CHANNELS,
+  EMPTY_FOOD,
   channelPricesToColumn,
+  foodProblems,
   formatTHB,
   itemProblems,
   localizedName,
@@ -9,7 +11,7 @@ import {
   priceInputValue,
   toLocalizedText,
 } from '@bestie/core';
-import type { Channel, ChannelPrices } from '@bestie/core';
+import type { Channel, ChannelPrices, ItemFood } from '@bestie/core';
 import { errorText, fmt, useI18n } from '@bestie/i18n';
 import type { Dict, ErrorKey } from '@bestie/i18n';
 import { AsyncButton } from '@bestie/ui';
@@ -18,6 +20,7 @@ import type { PageContext } from '@bestie/auth';
 import { deleteRow, nextSort, saveRow } from './menuData';
 import type { Cat, Item, Menu } from './menuData';
 import { ConfirmDelete, NameFields, NameForm } from './MenuParts';
+import { FoodInfoFields } from './FoodInfoFields';
 
 const tx = (t: Dict, key: string): string => (t as Record<string, string>)[key] ?? key;
 export const channelLabel = (t: Dict, c: Channel): string =>
@@ -82,6 +85,9 @@ export function MenuItemsTab({ ctx, storeId, menu, canEdit, onChanged }: Props) 
                   <span className="badge">{tx(t, `deviceStation_${item.station}`)}</span>
                 ) : null}
                 {!item.available ? <span className="badge badge-warn">{t.menuSoldOut}</span> : null}
+                {!item.food.verified ? (
+                  <span className="badge">{t.foodUnverifiedBadge}</span>
+                ) : null}
                 {canEdit ? (
                   <button
                     type="button"
@@ -267,6 +273,7 @@ function ItemForm({
   const [station, setStation] = useState<string>(item?.station ?? '');
   const [groupIds, setGroupIds] = useState<string[]>(item?.modifier_group_ids ?? []);
   const [available, setAvailable] = useState(item?.available ?? true);
+  const [food, setFood] = useState<ItemFood>(item?.food ?? EMPTY_FOOD);
   const [error, setError] = useState<ErrorKey | null>(null);
   const [saved, setSaved] = useState(false);
   const [confirm, setConfirm] = useState(false);
@@ -294,6 +301,10 @@ function ItemForm({
       station: station || null,
       modifier_group_ids: groupIds,
       available,
+      tags: food.tags,
+      spice_level: food.spice,
+      dietary_verified: food.verified && foodProblems(food).length === 0,
+      highlight: food.highlight,
     };
     const err = item
       ? await saveRow(ctx.client, 'menu_items', item.id, values)
@@ -415,6 +426,18 @@ function ItemForm({
           </label>
         ))}
       </fieldset>
+
+      <FoodInfoFields
+        idPrefix={`item-${id}`}
+        food={food}
+        onChange={(f) => {
+          setFood(f);
+          touch();
+        }}
+        client={ctx.client}
+        storeId={storeId}
+        name={{ th, en }}
+      />
 
       <label className="switch-row">
         <input

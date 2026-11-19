@@ -65,7 +65,7 @@ async function isPlatformAdmin(
   }
 }
 
-async function loadSettings(env: Env, fetchImpl: typeof fetch): Promise<AiSettings> {
+export async function loadSettings(env: Env, fetchImpl: typeof fetch): Promise<AiSettings> {
   try {
     const res = await fetchImpl(
       `${env.SUPABASE_URL}/rest/v1/ai_settings?select=route_overrides,model_overrides&id=eq.true`,

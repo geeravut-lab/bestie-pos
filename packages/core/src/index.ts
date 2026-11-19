@@ -37,3 +37,4 @@ export * from './guestCart';
 export * from './customers';
 export * from './splitTender';
 export * from './crypto';
+export * from './dietary';

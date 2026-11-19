@@ -125,3 +125,6 @@ The in-app bell and inbox (`/notifications`) work with nothing to set up. Delive
 - **Monthly cap:** `notification_settings.line_monthly_cap` (default 200 pushes a month — the free LINE plan) with `line_reserve` (default 20) kept for **urgent** notices (a payment that needs review, a large cash difference). Change them in the database; an admin screen comes later.
 - **If LINE rejects the token (401/403)** the tick stops and holds the queue for 6 hours (`notification_settings.halted_until`), then tries again.
 - Test: link LINE on the account page, take a PromptPay test payment (§6) → the owner gets a "Payment received ฿…" card within one tick.
+
+## 9. AI for guests and menu drafting (modules `ai.guest`, task `menu_tags`)
+Set `ANTHROPIC_API_KEY` and/or `GOOGLE_API_KEY` (server-only, Vercel). Then pick provider and model for the tasks `guest_menu_qa` (guest filter) and `menu_tags` (owner's tag draft) at `/ai` as platform admin and press **Test**. Switch the module **Guest menu assistant (AI)** on per shop at `/modules` (needs the Pro plan and QR ordering). Without a key, or with the module off, nothing breaks: the guest filter buttons and manual tags work as before. Check cost after a week: the target is under THB 1 per guest session with the small default models.

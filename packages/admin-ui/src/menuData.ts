@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { parseChannelPrices, parseLocalizedText, bySort } from '@bestie/core';
-import type { ChannelPrices, LocalizedText } from '@bestie/core';
+import { parseChannelPrices, parseFood, parseLocalizedText, bySort } from '@bestie/core';
+import type { ChannelPrices, ItemFood, LocalizedText } from '@bestie/core';
 import type { ErrorKey } from '@bestie/i18n';
 
 export type Cat = {
@@ -18,6 +18,7 @@ export type Item = {
   station: 'kitchen' | 'bar' | null;
   modifier_group_ids: string[];
   available: boolean;
+  food: ItemFood;
   sort: number;
   created_at: string;
 };
@@ -58,7 +59,7 @@ export async function loadMenu(client: SupabaseClient, storeId: string): Promise
     q('menu_categories', 'id, name, sort, active, created_at'),
     q(
       'menu_items',
-      'id, category_id, name, prices, station, modifier_group_ids, available, sort, created_at',
+      'id, category_id, name, prices, station, modifier_group_ids, available, tags, spice_level, dietary_verified, highlight, sort, created_at',
     ),
     q('modifier_groups', 'id, name, min_select, max_select, sort, created_at'),
     q(
@@ -90,6 +91,7 @@ export async function loadMenu(client: SupabaseClient, storeId: string): Promise
             ? r.modifier_group_ids.filter((x): x is string => typeof x === 'string')
             : [],
           available: r.available !== false,
+          food: parseFood(r),
           sort: num(r.sort),
           created_at: str(r.created_at),
         },

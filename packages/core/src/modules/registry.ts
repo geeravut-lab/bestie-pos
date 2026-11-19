@@ -43,6 +43,7 @@ export const MODULE_IDS = [
   'credit.topup.crypto',
   // platform
   'ai.assistant',
+  'ai.guest',
   'line.notify',
 ] as const;
 
@@ -165,6 +166,7 @@ export const MODULES: readonly ModuleDef[] = [
   },
 
   { id: 'ai.assistant', dependsOn: [], defaultProfiles: [], plan: 'pro', phase: 1 },
+  { id: 'ai.guest', dependsOn: ['order.qr'], defaultProfiles: [], plan: 'pro', phase: 1 },
   { id: 'line.notify', dependsOn: [], defaultProfiles: [], plan: 'basic', phase: 1 },
 ];
 

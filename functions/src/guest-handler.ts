@@ -99,6 +99,7 @@ export async function guestMenuResponse(
     return reply({
       ...head,
       autoSend: t.auto_send === true,
+      ai: t.ai_enabled === true,
       menu: menu.data,
       bill: bill.data,
       pay: payInfo(pay.data as PayCtx | null, stripeConfig(env) !== null),

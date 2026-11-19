@@ -197,6 +197,7 @@ const REQUIRED_VERCEL = [
   ['LINE_CHANNEL_SECRET', 'warn'],
   ['LINE_CHANNEL_ACCESS_TOKEN', 'warn'],
   ['LINE_CODE_SECRET', 'warn'],
+  ['LINE_BASIC_ID', 'warn'],
   ['AIVORA_APP_SLUG', 'warn'],
   ['VITE_AIVORA_APP_SLUG', 'warn'],
 ];

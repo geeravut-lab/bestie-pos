@@ -240,6 +240,12 @@ export function LineConnect() {
               </li>
             </ol>
           ) : null}
+          {code ? (
+            <details className="line-trouble">
+              <summary>{t.lineTroubleTitle}</summary>
+              <p className="muted">{t.lineTroubleBody}</p>
+            </details>
+          ) : null}
           <AsyncButton variant={code ? 'secondary' : 'primary'} onClick={start}>
             {code || state === 'pending' ? t.lineNewCode : t.lineConnect}
           </AsyncButton>

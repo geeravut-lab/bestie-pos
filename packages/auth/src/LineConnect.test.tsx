@@ -89,6 +89,9 @@ describe('<LineConnect>', () => {
     ).toBe('https://line.me/R/oaMessage/%40bestie/?ABCD2345');
     expect(calls.some((c) => c.method === 'POST')).toBe(true);
     expect(screen.getByRole('button', { name: 'Get a new code' })).toBeTruthy();
+    // a silent bot gets a hint of what to do next, right under the steps
+    expect(screen.getByText('Sent the code and the bot did not answer?')).toBeTruthy();
+    expect(screen.getByText(/Check the LINE connection/)).toBeTruthy();
   });
 
   it(

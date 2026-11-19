@@ -410,6 +410,51 @@ const th = {
   lineStep3: 'ส่งรหัสใน LINE',
   lineStep4: 'รอที่หน้านี้',
   lineStep4Body: 'หน้านี้จะเปลี่ยนเป็น "เชื่อมต่อแล้ว" เอง ต้องมีแอป LINE ติดตั้งอยู่บนเครื่องนี้',
+  lineDiagTitle: 'ตรวจการเชื่อมต่อ LINE',
+  lineDiagIntro:
+    'ถามตัวบอทของ LINE โดยตรง (โทเคน, ที่อยู่ Webhook, สวิตช์ "Use webhook", การทดสอบเรียก) แล้วเทียบกับสิ่งที่เซิร์ฟเวอร์ได้รับจริงใน 24 ชั่วโมง ใช้เมื่อส่งรหัสในแชต LINE แล้วบอทเงียบ',
+  lineDiagRun: 'ตรวจตอนนี้',
+  lineDiagFailed: 'ตรวจไม่สำเร็จ ลองใหม่อีกครั้ง',
+  lineDiagExpected: 'Webhook URL ที่ต้องตั้งใน LINE Developers → Messaging API: {url}',
+  lineDiagOa:
+    'ใน LINE Official Account Manager → ตั้งค่า → การตอบกลับ (Response settings) ต้องเปิด "Webhook" ด้วย ข้อความต้อนรับที่เห็นในแชตเป็นของ LINE เอง ไม่ได้มาจากระบบนี้',
+  lineDiagLevel_ok: 'ผ่าน',
+  lineDiagLevel_fail: 'ต้องแก้',
+  lineDiagLevel_warn: 'ควรตรวจ',
+  lineDiagLevel_info: 'ข้อมูล',
+  lineDiag_unknown: 'ผลการตรวจที่ไม่รู้จัก',
+  lineDiag_env_ok: 'ตัวแปรของ LINE ใน Vercel ครบทั้ง 4 ตัว',
+  lineDiag_env_fail: 'ขาดตัวแปรใน Vercel: {names} — ใส่ให้ครบแล้ว Redeploy',
+  lineDiag_token_ok: 'LINE ยอมรับโทเคนแล้ว (บัญชี: {name})',
+  lineDiag_token_fail:
+    'LINE ไม่ยอมรับโทเคน (รหัส {status}) — ออก Channel access token (long-lived) ใหม่ใน LINE Developers แล้วใส่ LINE_CHANNEL_ACCESS_TOKEN ใน Vercel จากนั้น Redeploy',
+  lineDiag_token_warn: 'เรียก LINE ไม่ได้ในตอนนี้ ลองใหม่อีกครั้ง',
+  lineDiag_basic_id_ok: 'LINE_BASIC_ID ตรงกับบัญชีของโทเคนนี้ ({id})',
+  lineDiag_basic_id_warn:
+    'LINE_BASIC_ID ที่ตั้งไว้ ({set}) ไม่ตรงกับบัญชีของโทเคน ({real}) — ปุ่ม "เพิ่มเพื่อน" จะพาไปบัญชีผิด',
+  lineDiag_webhook_url_ok: 'Webhook URL ถูกต้องและเปิดใช้งานแล้ว ({url})',
+  lineDiag_webhook_url_fail_none:
+    'ยังไม่ได้ตั้ง Webhook URL ใน LINE Developers → Messaging API → Webhook settings ให้ใส่ {expected} แล้วเปิด "Use webhook"',
+  lineDiag_webhook_url_fail_different: 'Webhook URL ไม่ตรง: ตั้งไว้ที่ {url} แต่ต้องเป็น {expected}',
+  lineDiag_webhook_url_fail_inactive:
+    'สวิตช์ "Use webhook" ปิดอยู่ใน LINE Developers ({url}) — เปิดแล้วกด Verify',
+  lineDiag_webhook_url_fail_token: 'ดึงที่อยู่ Webhook ไม่ได้เพราะโทเคนไม่ถูกต้อง',
+  lineDiag_webhook_url_warn: 'อ่านค่า Webhook จาก LINE ไม่ได้ในตอนนี้ ลองใหม่อีกครั้ง',
+  lineDiag_webhook_test_ok: 'LINE ทดสอบเรียก Webhook ของเราสำเร็จ (HTTP {status})',
+  lineDiag_webhook_test_fail:
+    'LINE เรียก Webhook ของเราแล้วไม่สำเร็จ: HTTP {status} {reason} — ถ้าเป็น 401 แปลว่า LINE_CHANNEL_SECRET ใน Vercel ไม่ตรงกับ Channel secret ใน LINE Developers',
+  lineDiag_webhook_test_warn: 'ทดสอบเรียก Webhook ไม่ได้ในตอนนี้ ลองใหม่อีกครั้ง',
+  lineDiag_recent_ok: 'มีข้อความจริงจาก LINE ถึงเรา {n} ครั้งใน 24 ชั่วโมงที่ผ่านมา',
+  lineDiag_recent_warn_none:
+    'ยังไม่เคยมีข้อความจริงจาก LINE ส่งมาถึงเราใน 24 ชั่วโมง ถ้าข้อ Webhook ด้านบนผ่านหมด ให้เปิด "Webhook" ใน LINE Official Account Manager → ตั้งค่า → การตอบกลับ แล้วลองส่งรหัสใหม่',
+  lineDiag_recent_fail_signature:
+    'มี {n} ครั้งที่ LINE ส่งมาแต่ลายเซ็นไม่ผ่าน — LINE_CHANNEL_SECRET ใน Vercel ไม่ตรงกับ Channel secret ใน LINE Developers',
+  lineDiag_recent_fail_reply:
+    'มี {n} ครั้งที่เราตอบกลับในแชตไม่สำเร็จ (LINE ตอบ {status}) — โทเคนใช้ตอบข้อความไม่ได้ ออกโทเคนใหม่',
+  lineDiag_pending_info: 'มีรหัสเชื่อมต่อที่รอยืนยันอยู่ {n} รายการ',
+  lineTroubleTitle: 'ส่งรหัสแล้วบอทไม่ตอบกลับ?',
+  lineTroubleBody:
+    'ส่งรหัสเป็นข้อความธรรมดาอย่างเดียว ภายใน 30 นาที ถ้าบอทเงียบสนิท (ไม่มีแม้ข้อความช่วยเหลือ) แปลว่าฝั่ง LINE ยังไม่ได้เชื่อมกับระบบ ให้ผู้ดูแลระบบเปิดหน้า "ตรวจการเชื่อมต่อ LINE" (/admin/line) แล้วทำตามข้อที่ขึ้นสีแดง หลังแก้ กด "ขอรหัสใหม่" แล้วลองอีกครั้ง',
   lineCopy: 'คัดลอก',
   lineCopied: 'คัดลอกแล้ว',
   lineAddFriend: 'เปิดหน้าเพิ่มเพื่อน',
@@ -2094,6 +2139,53 @@ const en = {
   lineStep4: 'Wait on this page',
   lineStep4Body:
     'This page switches to "connected" by itself. LINE must be installed on this device.',
+  lineDiagTitle: 'Check the LINE connection',
+  lineDiagIntro:
+    'Asks LINE about the bot directly (token, webhook address, the "Use webhook" switch, a test call) and sets it next to what this server really received in the last 24 hours. Use it when a code was sent in the LINE chat and the bot stayed silent.',
+  lineDiagRun: 'Check now',
+  lineDiagFailed: 'The check failed. Try again.',
+  lineDiagExpected: 'Webhook URL to set in LINE Developers → Messaging API: {url}',
+  lineDiagOa:
+    'In LINE Official Account Manager → Settings → Response settings, "Webhook" must be ON too. The welcome message you see in the chat is LINE\'s own, it does not come from this system.',
+  lineDiagLevel_ok: 'OK',
+  lineDiagLevel_fail: 'Fix',
+  lineDiagLevel_warn: 'Check',
+  lineDiagLevel_info: 'Info',
+  lineDiag_unknown: 'Unknown result',
+  lineDiag_env_ok: 'All 4 LINE variables are set in Vercel',
+  lineDiag_env_fail: 'Missing variables in Vercel: {names} — set them and redeploy',
+  lineDiag_token_ok: 'LINE accepts the token (account: {name})',
+  lineDiag_token_fail:
+    'LINE refuses the token (HTTP {status}) — issue a new long-lived Channel access token in LINE Developers, put it in LINE_CHANNEL_ACCESS_TOKEN in Vercel, then redeploy',
+  lineDiag_token_warn: 'Could not reach LINE right now. Try again.',
+  lineDiag_basic_id_ok: 'LINE_BASIC_ID matches the account of this token ({id})',
+  lineDiag_basic_id_warn:
+    'LINE_BASIC_ID ({set}) is not the account of this token ({real}) — the "Add friend" button would open the wrong account',
+  lineDiag_webhook_url_ok: 'The webhook address is right and switched on ({url})',
+  lineDiag_webhook_url_fail_none:
+    'No webhook URL is set in LINE Developers → Messaging API → Webhook settings. Enter {expected} and switch "Use webhook" on',
+  lineDiag_webhook_url_fail_different:
+    'The webhook URL differs: it is {url} but must be {expected}',
+  lineDiag_webhook_url_fail_inactive:
+    '"Use webhook" is OFF in LINE Developers ({url}) — switch it on and press Verify',
+  lineDiag_webhook_url_fail_token:
+    'Could not read the webhook address because the token is not valid',
+  lineDiag_webhook_url_warn: 'Could not read the webhook setting from LINE right now. Try again.',
+  lineDiag_webhook_test_ok: "LINE's test call to our webhook succeeded (HTTP {status})",
+  lineDiag_webhook_test_fail:
+    'LINE called our webhook and it failed: HTTP {status} {reason} — a 401 means LINE_CHANNEL_SECRET in Vercel is not the Channel secret in LINE Developers',
+  lineDiag_webhook_test_warn: 'Could not run the webhook test right now. Try again.',
+  lineDiag_recent_ok: '{n} real messages from LINE reached us in the last 24 hours',
+  lineDiag_recent_warn_none:
+    'No real message from LINE reached us in 24 hours. If every webhook check above passes, switch "Webhook" ON in LINE Official Account Manager → Settings → Response settings and send a new code',
+  lineDiag_recent_fail_signature:
+    '{n} calls from LINE failed the signature check — LINE_CHANNEL_SECRET in Vercel is not the Channel secret in LINE Developers',
+  lineDiag_recent_fail_reply:
+    '{n} times our reply in the chat failed (LINE answered {status}) — the token cannot answer messages; issue a new one',
+  lineDiag_pending_info: '{n} link codes are waiting to be used',
+  lineTroubleTitle: 'Sent the code and the bot did not answer?',
+  lineTroubleBody:
+    'Send the code as a plain message, nothing else, within 30 minutes. If the bot is completely silent (not even a help message), LINE is not connected to the system yet: ask the platform admin to open "Check the LINE connection" (/admin/line) and fix the items shown in red. Then press "Get a new code" and try again.',
   lineCopy: 'Copy',
   lineCopied: 'Copied',
   lineAddFriend: 'Open the add-friend page',

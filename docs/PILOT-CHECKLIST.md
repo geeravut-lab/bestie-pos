@@ -3,6 +3,14 @@
 For the person (owner or Bestie helper) setting up one pilot shop on Koh Phangan. Work top to bottom, tick as you go.
 Everything marked **(owner)** needs the shop owner's own accounts or paperwork. Last updated: 2026-11-18.
 
+## Quick check before you go (anyone with a Supabase access token)
+
+```bash
+SUPABASE_ACCESS_TOKEN=sbp_… VERCEL_TOKEN=… pnpm pilot:check -- --store "Shop name"
+```
+
+Read-only. It prints ✅ / ❌ (fix before go-live) / ⚠️ (decide on purpose) / ℹ️ for the platform (Google + Aivora login settings, production variables in Vercel, e-mail sending) and for the shop (tax ID, VAT and POS ID, menu stations, tables, PINs, devices, printers, Credit / crypto gates), then lists what it **cannot** check (Stripe test run, real printers, accountant / lawyer answers, a real Google and LINE login from a phone). `VERCEL_TOKEN` is optional; `--quiet` hides the ✅ lines, `--json` gives machine-readable output; exit code 1 means a ❌ is left.
+
 ## 0. Before the visit (office)
 
 - [ ] Shop details collected: legal name, **tax ID (13 digits)**, branch code (00000 for head office), address, VAT registered yes / no

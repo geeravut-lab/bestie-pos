@@ -34,10 +34,23 @@ export {
   verifyStripeSignature,
 } from './stripe.js';
 export {
+  paymentCancelResponse,
+  paymentChargeResponse,
+  paymentWebhookResponse,
   stripeCancelResponse,
   stripeChargeResponse,
   stripeWebhookResponse,
-} from './stripe-handler.js';
+} from './payment-handler.js';
+export type { PaymentDeps } from './payment-handler.js';
+export {
+  GATEWAYS,
+  GatewayError,
+  activeGatewayId,
+  gatewayFromEnv,
+  gatewayReady,
+  stripeGateway,
+} from './gateway.js';
+export type { GatewayEvent, PaymentGateway, StartedPayment } from './gateway.js';
 export {
   guestCallResponse,
   guestMenuResponse,

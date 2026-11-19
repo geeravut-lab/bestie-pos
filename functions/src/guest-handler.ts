@@ -9,12 +9,8 @@ import { computeBill } from '../../packages/core/src/tax.js';
 import type { BillBreakdown, PriceMode } from '../../packages/core/src/tax.js';
 import { readServerEnv } from './env.js';
 import { createRateLimiter } from './line.js';
-import {
-  cancelProviderPayment,
-  createStripeClient,
-  startPromptPay,
-  stripeConfig,
-} from './stripe.js';
+import { gatewayFromEnv, gatewayReady } from './gateway.js';
+import type { PaymentGateway } from './gateway.js';
 import type { StripeClient } from './stripe.js';
 
 type Env = Record<string, string | undefined>;
@@ -33,7 +29,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const allowRead = createRateLimiter(600, 60_000);
 const allowOrder = createRateLimiter(15, 60_000);
 
-export type GuestDeps = { fetchImpl?: typeof fetch; stripe?: StripeClient };
+export type GuestDeps = {
+  fetchImpl?: typeof fetch;
+  stripe?: StripeClient;
+  gateway?: PaymentGateway;
+};
 
 const allowPay = createRateLimiter(10, 60_000);
 
@@ -103,7 +103,7 @@ export async function guestMenuResponse(
       ai: t.ai_enabled === true,
       menu: menu.data,
       bill: bill.data,
-      pay: payInfo(pay.data as PayCtx | null, stripeConfig(env) !== null),
+      pay: payInfo(pay.data as PayCtx | null, deps.gateway ? true : gatewayReady(env)),
     });
   } catch {
     return reply({ error: 'server_error' }, 502);
@@ -267,8 +267,8 @@ export async function guestPayResponse(
 ): Promise<Response> {
   if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
   if (!allowPay(`pay:${clientKey(request)}`)) return reply({ error: 'rate_limited' }, 429);
-  const cfg = stripeConfig(env);
-  if (!cfg) return reply({ error: 'not_configured' }, 503);
+  const gateway = gatewayFromEnv(env, deps);
+  if (!gateway) return reply({ error: 'not_configured' }, 503);
   const body = parseBody(await request.text().catch(() => ''));
   if (!body || typeof body.token !== 'string' || !TOKEN.test(body.token))
     return reply({ error: 'invalid' }, 422);
@@ -287,7 +287,6 @@ export async function guestPayResponse(
     if (!bill || bill.total <= 0 || !c.order_id) return reply({ error: 'empty' }, 422);
     if (c.unsent) return reply({ error: 'unconfirmed' }, 409);
 
-    const stripe = deps.stripe ?? createStripeClient(cfg.secretKey, fetchImpl);
     // a QR that is already on screen for exactly this bill is shown again (a reload must not strand or duplicate it)
     if (c.live) {
       const fresh =
@@ -307,7 +306,7 @@ export async function guestPayResponse(
         p_attempt: c.live.id,
       });
       const ref = (gone.data as { provider_ref?: string | null } | null)?.provider_ref;
-      if (ref) await cancelProviderPayment(stripe, { providerRef: ref, readerId: null });
+      if (ref) await gateway.cancel({ providerRef: ref, readerId: null });
     }
 
     const snapshot = {
@@ -339,11 +338,10 @@ export async function guestPayResponse(
     }
     const attemptId = begun.data;
     try {
-      const started = await startPromptPay(stripe, {
+      const started = await gateway.startPromptPay({
         attemptId,
         orderId: c.order_id,
         amount: bill.total,
-        siteHost: cfg.siteHost,
       });
       const expires = new Date(Date.now() + 15 * 60_000).toISOString();
       await call('attach_payment_intent', {
@@ -351,6 +349,7 @@ export async function guestPayResponse(
         p_ref: started.providerRef,
         p_qr: started.qrImageUrl,
         p_expires: expires,
+        p_provider: gateway.id,
       });
       return reply({
         attempt_id: attemptId,
@@ -429,10 +428,9 @@ export async function guestPayCancelResponse(
     if (r.code === 'P0002') return reply({ error: 'not_found' }, 404);
     if (!r.ok) return reply({ error: 'server_error' }, 502);
     const out = r.data as { status?: string; provider_ref?: string | null };
-    const cfg = stripeConfig(env);
-    if (out.status === 'canceled' && out.provider_ref && cfg) {
-      const stripe = deps.stripe ?? createStripeClient(cfg.secretKey, fetchImpl);
-      await cancelProviderPayment(stripe, { providerRef: out.provider_ref, readerId: null });
+    const gateway = gatewayFromEnv(env, deps);
+    if (out.status === 'canceled' && out.provider_ref && gateway) {
+      await gateway.cancel({ providerRef: out.provider_ref, readerId: null });
     }
     return reply({ status: out.status ?? 'unknown' });
   } catch {

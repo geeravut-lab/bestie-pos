@@ -1,14 +1,7 @@
 import { readServerEnv } from './env.js';
 import { createRateLimiter } from './line.js';
-import {
-  StripeError,
-  cancelProviderPayment,
-  createStripeClient,
-  startPromptPay,
-  startReaderPayment,
-  stripeConfig,
-  verifyStripeSignature,
-} from './stripe.js';
+import { GatewayError, gatewayFromEnv } from './gateway.js';
+import type { PaymentGateway } from './gateway.js';
 import type { StripeClient } from './stripe.js';
 
 type Env = Record<string, string | undefined>;
@@ -19,7 +12,13 @@ const HEADERS = {
 };
 const reply = (body: unknown, status = 200) => Response.json(body, { status, headers: HEADERS });
 
-export type StripeDeps = { fetchImpl?: typeof fetch; stripe?: StripeClient };
+/** `gateway` replaces the configured provider (tests, or a second provider); `stripe` is the Stripe client a test may fake. */
+export type PaymentDeps = {
+  fetchImpl?: typeof fetch;
+  stripe?: StripeClient;
+  gateway?: PaymentGateway;
+};
+export type StripeDeps = PaymentDeps;
 
 const allowCharge = createRateLimiter(30, 60_000); // per signed-in user: a till does not need more
 
@@ -96,18 +95,18 @@ function refusal(r: Rpc): Response {
 }
 
 /**
- * POST /api/stripe/charge — the till asks for a PromptPay QR or a card-reader payment for ONE bill.
+ * POST /api/<provider>/charge — the till asks for a PromptPay QR or a card-reader payment for ONE bill.
  *   body: { snapshot: { order_id, device_id, staff_id, tender, subtotal, … payable } }   (what the till showed the guest)
- * The database function checks permission and the bill; only then is Stripe called. Nothing is "paid" here.
+ * The database function checks permission and the bill; only then is the provider called. Nothing is "paid" here.
  */
-export async function stripeChargeResponse(
+export async function paymentChargeResponse(
   request: Request,
   env: Env = process.env,
-  deps: StripeDeps = {},
+  deps: PaymentDeps = {},
 ): Promise<Response> {
   if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
-  const cfg = stripeConfig(env);
-  if (!cfg) return reply({ error: 'not_configured' }, 503);
+  const gateway = gatewayFromEnv(env, deps);
+  if (!gateway) return reply({ error: 'not_configured' }, 503);
   const fetchImpl = deps.fetchImpl ?? fetch;
   try {
     const { supabaseUrl, serviceRoleKey } = readServerEnv(env);
@@ -144,16 +143,14 @@ export async function stripeChargeResponse(
     );
     if (!attempt) return reply({ error: 'server_error' }, 502);
     // 0A000 = Credit switched off in this shop (refusal() maps the other codes)
-    const stripe = deps.stripe ?? createStripeClient(cfg.secretKey, fetchImpl);
 
     try {
       let started;
       if (attempt.tender === 'promptpay') {
-        started = await startPromptPay(stripe, {
+        started = await gateway.startPromptPay({
           attemptId,
           orderId: attempt.order_id,
           amount: attempt.amount,
-          siteHost: cfg.siteHost,
         });
       } else {
         const dev = await selectOne<{ stripe_reader_id: string | null }>(
@@ -162,8 +159,8 @@ export async function stripeChargeResponse(
           serviceRoleKey,
           `devices?id=eq.${attempt.device_id}&select=stripe_reader_id`,
         );
-        if (!dev?.stripe_reader_id) throw new StripeError(422, 'no_reader');
-        started = await startReaderPayment(stripe, {
+        if (!dev?.stripe_reader_id) throw new GatewayError(422, 'no_reader');
+        started = await gateway.startReader({
           attemptId,
           orderId: attempt.order_id,
           amount: attempt.amount,
@@ -176,6 +173,7 @@ export async function stripeChargeResponse(
         p_ref: started.providerRef,
         p_qr: started.qrImageUrl,
         p_expires: expires,
+        p_provider: gateway.id,
       });
       return reply({
         attempt_id: attemptId,
@@ -185,8 +183,9 @@ export async function stripeChargeResponse(
         expires_at: expires,
       });
     } catch (e) {
-      const code = e instanceof StripeError ? e.code : 'provider_error';
-      console.error('[stripe] start failed', code);
+      // a provider's own error code (Stripe: "resource_missing" …) is safe to log and show; anything else is "provider_error"
+      const code = e instanceof GatewayError ? e.code : 'provider_error';
+      console.error(`[${gateway.id}] start failed`, code);
       await rpc(fetchImpl, svc, 'fail_payment_attempt', {
         p_attempt: attemptId,
         p_status: 'failed',
@@ -195,20 +194,20 @@ export async function stripeChargeResponse(
       return reply({ error: 'provider_error', code }, 502);
     }
   } catch (e) {
-    console.error('[stripe] charge failed', e instanceof Error ? e.message : 'unknown');
+    console.error('[payment] charge failed', e instanceof Error ? e.message : 'unknown');
     return reply({ error: 'server_error' }, 500);
   }
 }
 
-/** POST /api/stripe/cancel  { attempt_id } — stop waiting: cancels at Stripe too. A payment that already went through still closes the bill via the webhook. */
-export async function stripeCancelResponse(
+/** POST /api/stripe/cancel  { attempt_id } — stop waiting: cancels at the provider too. A payment that already went through still closes the bill via the webhook. */
+export async function paymentCancelResponse(
   request: Request,
   env: Env = process.env,
-  deps: StripeDeps = {},
+  deps: PaymentDeps = {},
 ): Promise<Response> {
   if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
-  const cfg = stripeConfig(env);
-  if (!cfg) return reply({ error: 'not_configured' }, 503);
+  const gateway = gatewayFromEnv(env, deps);
+  if (!gateway) return reply({ error: 'not_configured' }, 503);
   const fetchImpl = deps.fetchImpl ?? fetch;
   try {
     const { supabaseUrl, serviceRoleKey } = readServerEnv(env);
@@ -229,101 +228,86 @@ export async function stripeCancelResponse(
       tender?: string;
     };
     if (out.status === 'canceled' && out.provider_ref) {
-      const stripe = deps.stripe ?? createStripeClient(cfg.secretKey, fetchImpl);
-      await cancelProviderPayment(stripe, {
+      await gateway.cancel({
         providerRef: out.provider_ref,
         readerId: out.tender === 'gateway' ? (out.reader_id ?? null) : null,
       });
     }
     return reply({ status: out.status ?? 'unknown' });
   } catch (e) {
-    console.error('[stripe] cancel failed', e instanceof Error ? e.message : 'unknown');
+    console.error('[payment] cancel failed', e instanceof Error ? e.message : 'unknown');
     return reply({ error: 'server_error' }, 500);
   }
 }
 
-type StripeEvent = {
-  id?: string;
-  type?: string;
-  data?: {
-    object?: {
-      id?: string;
-      amount?: number;
-      amount_received?: number;
-      currency?: string;
-      metadata?: Record<string, string>;
-      last_payment_error?: { code?: string };
-    };
-  };
-};
-
 /**
- * POST /api/stripe/webhook — Stripe → us. Raw body first, signature second, JSON last.
- * `payment_intent.succeeded` is the ONLY thing that closes a bill here. Answers: 400 bad signature · 200 handled / ignored ·
- * 500 we could not process it (Stripe retries — the database functions are safe to repeat).
+ * POST /api/<provider>/webhook — the provider → us. Raw body first, signature second, JSON last (the adapter does both).
+ * A succeeded event is the ONLY thing that closes a bill here. Answers: 400 bad signature · 200 handled / ignored ·
+ * 500 we could not process it (the provider retries — the database functions are safe to repeat).
  */
-export async function stripeWebhookResponse(
+export async function paymentWebhookResponse(
   request: Request,
   env: Env = process.env,
-  deps: StripeDeps = {},
+  deps: PaymentDeps = {},
 ): Promise<Response> {
   if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
-  const cfg = stripeConfig(env);
-  if (!cfg) return reply({ error: 'not_configured' }, 503);
+  const gateway = gatewayFromEnv(env, deps);
+  if (!gateway) return reply({ error: 'not_configured' }, 503);
   const fetchImpl = deps.fetchImpl ?? fetch;
   const rawBody = await request.text(); // BEFORE any JSON parsing: the signature is over the exact bytes
-  if (
-    !verifyStripeSignature({
-      rawBody,
-      header: request.headers.get('stripe-signature'),
-      secret: cfg.webhookSecret,
-    })
-  )
-    return reply({ error: 'bad_signature' }, 400);
-  let event: StripeEvent;
-  try {
-    event = JSON.parse(rawBody) as StripeEvent;
-  } catch {
-    return reply({ error: 'bad_payload' }, 400);
-  }
+  const event = gateway.readWebhook({ rawBody, headers: request.headers });
+  if (!event) return reply({ error: 'bad_signature' }, 400);
   try {
     const { supabaseUrl, serviceRoleKey } = readServerEnv(env);
     const svc = { url: supabaseUrl, apikey: serviceRoleKey, bearer: serviceRoleKey };
-    const obj = event.data?.object;
-    const attemptId = obj?.metadata?.attempt_id;
-    const known = typeof attemptId === 'string' && /^[0-9a-f-]{36}$/i.test(attemptId);
 
-    if (event.type === 'payment_intent.succeeded' && known && typeof obj?.id === 'string') {
+    if (event.kind !== 'ignored') {
+      // an event may only settle an attempt that THIS provider started (a second provider can never close another one's bill)
+      const attempt = await selectOne<{ provider: string }>(
+        fetchImpl,
+        supabaseUrl,
+        serviceRoleKey,
+        `payment_attempts?id=eq.${event.attemptId}&select=provider`,
+      );
+      if (typeof attempt?.provider === 'string' && attempt.provider !== gateway.id) {
+        console.error(`[${gateway.id}] event for an attempt of another provider`, event.attemptId);
+        return reply({ received: true });
+      }
+    }
+
+    if (event.kind === 'succeeded') {
       const r = await rpc(fetchImpl, svc, 'confirm_payment_attempt', {
-        p_attempt: attemptId,
-        p_ref: obj.id,
-        p_amount: obj.amount_received ?? obj.amount ?? 0,
-        p_currency: obj.currency ?? '',
+        p_attempt: event.attemptId,
+        p_ref: event.providerRef,
+        p_amount: event.amount,
+        p_currency: event.currency,
       });
       if (!r.ok) {
-        console.error('[stripe] confirm failed', r.code ?? r.status);
+        console.error(`[${gateway.id}] confirm failed`, r.code ?? r.status);
         return reply({ error: 'confirm_failed' }, 500);
       }
-      if (r.data === 'needs_review') console.error('[stripe] payment needs review', attemptId);
-    } else if (
-      (event.type === 'payment_intent.payment_failed' ||
-        event.type === 'payment_intent.canceled') &&
-      known
-    ) {
+      if (r.data === 'needs_review')
+        console.error(`[${gateway.id}] payment needs review`, event.attemptId);
+    } else if (event.kind === 'failed' || event.kind === 'canceled') {
       await rpc(fetchImpl, svc, 'fail_payment_attempt', {
-        p_attempt: attemptId,
-        p_status: event.type === 'payment_intent.canceled' ? 'canceled' : 'failed',
-        p_error: obj?.last_payment_error?.code ?? event.type,
+        p_attempt: event.attemptId,
+        p_status: event.kind,
+        p_error: event.error,
       });
     }
-    if (typeof event.id === 'string')
+    if (event.eventId)
       await rpc(fetchImpl, svc, 'record_stripe_event', {
-        p_id: event.id,
-        p_type: event.type ?? '',
+        p_id: event.eventId,
+        p_type: event.type,
       });
     return reply({ received: true });
   } catch (e) {
-    console.error('[stripe] webhook failed', e instanceof Error ? e.message : 'unknown');
+    console.error(`[${gateway.id}] webhook failed`, e instanceof Error ? e.message : 'unknown');
     return reply({ error: 'server_error' }, 500);
   }
 }
+
+/** The names the Stripe routes and the older tests use. */
+export const stripeChargeResponse = paymentChargeResponse;
+export const stripeCancelResponse = paymentCancelResponse;
+export const stripeWebhookResponse = paymentWebhookResponse;

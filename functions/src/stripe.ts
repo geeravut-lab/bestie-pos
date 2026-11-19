@@ -6,6 +6,7 @@
  * Card data never touches Bestie (the reader / Stripe handle it); we store Stripe's ids and amounts only.
  */
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { GatewayError } from './gateway-error.js';
 
 export type StripeConfig = { secretKey: string; webhookSecret: string; siteHost: string };
 
@@ -64,13 +65,9 @@ export function stripeForm(params: Record<string, unknown>): string {
   return out.join('&');
 }
 
-export class StripeError extends Error {
-  constructor(
-    readonly status: number,
-    /** Stripe's machine code ("resource_missing", "payment_intent_unexpected_state" …) — safe to log and show as a code. */
-    readonly code: string,
-  ) {
-    super(`stripe ${status} ${code}`);
+export class StripeError extends GatewayError {
+  constructor(status: number, code: string) {
+    super(status, code);
     this.name = 'StripeError';
   }
 }

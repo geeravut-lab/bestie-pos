@@ -210,4 +210,17 @@ describe('appointments and resources in the database mirror the registry', () =>
     expect(m![2]!.split(',').sort()).toEqual(allowed('deposits').sort());
     expect(MODULE_BY_ID.deposits.dependsOn).toEqual([m![3]]);
   });
+  it('commission: same default profiles and plan tiers', () => {
+    const tipsSql = readFileSync(
+      new URL(readdirSync(dir).find((f) => f.endsWith('_commission_tips.sql')) ?? '', dir),
+      'utf8',
+    );
+    const m = /-- registry:commission profiles=([a-z,]+) plan=([a-z,]+)/.exec(tipsSql);
+    expect(m).not.toBeNull();
+    expect(m![1]!.split(',').sort()).toEqual([...MODULE_BY_ID.commission.defaultProfiles].sort());
+    const allowedPlans = (Object.keys(PLAN_RANK) as (keyof typeof PLAN_RANK)[]).filter(
+      (p) => PLAN_RANK[p] >= PLAN_RANK[MODULE_BY_ID.commission.plan],
+    );
+    expect(m![2]!.split(',').sort()).toEqual(allowedPlans.sort());
+  });
 });

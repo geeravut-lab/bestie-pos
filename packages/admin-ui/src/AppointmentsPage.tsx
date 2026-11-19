@@ -53,6 +53,7 @@ type Loaded = {
   services: Service[];
   deposits: Deposit[];
   tills: Till[];
+  people: { id: string; name: string }[];
 };
 type View = 'provider' | 'place';
 type Draft = {
@@ -88,9 +89,9 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
     placeId: string;
   } | null>(null);
   const [error, setError] = useState<ErrorKey | null>(null);
-  const [problem, setProblem] = useState<'bad' | 'provider' | 'place' | 'off' | 'deposit' | null>(
-    null,
-  );
+  const [problem, setProblem] = useState<
+    'bad' | 'provider' | 'place' | 'off' | 'deposit' | 'tip' | null
+  >(null);
   const [dep, setDep] = useState<{
     amount: string;
     method: DepositMethod;
@@ -98,6 +99,14 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
     ref: string;
   } | null>(null);
   const [settleTill, setSettleTill] = useState('');
+  const [tip, setTip] = useState<{
+    staff: string;
+    amount: string;
+    method: DepositMethod;
+    till: string;
+  } | null>(null);
+  const [tipSaved, setTipSaved] = useState(false);
+  const commissionOn = ctx.isModuleOn ? ctx.isModuleOn('commission') : true;
   const canTakeMoney = ctx.isOwner || ctx.permissions.includes('payment.take');
   const canRefund = ctx.isOwner || ctx.permissions.includes('refund.create');
   const depositsOn = ctx.isModuleOn ? ctx.isModuleOn('deposits') : true;
@@ -109,7 +118,7 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
       const [res, ap, menu] = await Promise.all([
         ctx.client
           .from('resources')
-          .select('id, name, kind, active, sort')
+          .select('id, name, kind, active, sort, staff_id')
           .eq('store_id', storeId)
           .is('deleted_at', null)
           .order('sort'),
@@ -132,7 +141,7 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
       if (res.error || ap.error || menu.error) throw new Error('load');
       const appts = parseAppointments(ap.data);
       // deposits and the tills they went into: only when there is something to show (and a person who may see money)
-      const [dep, dev] = await Promise.all([
+      const [dep, dev, ppl] = await Promise.all([
         appts.length > 0
           ? ctx.client
               .from('appointment_deposits')
@@ -150,8 +159,20 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
           .eq('active', true)
           .eq('role', 'cashier')
           .order('name'),
+        ctx.client
+          .from('staff')
+          .select('id, display_name')
+          .eq('org_id', ctx.orgId)
+          .eq('active', true)
+          .order('display_name'),
       ]);
       return {
+        people: ppl.error
+          ? []
+          : ((ppl.data ?? []) as { id: string; display_name: string }[]).map((x) => ({
+              id: x.id,
+              name: x.display_name,
+            })),
         deposits: dep.error ? [] : parseDeposits(dep.data),
         tills: dev.error
           ? []
@@ -300,6 +321,31 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
     if (err) return fail(err);
     reload();
   };
+  const takeTip = async (a: Appointment) => {
+    if (!tip || !storeId) return;
+    setError(null);
+    setProblem(null);
+    setTipSaved(false);
+    const amount = parsePriceInput(tip.amount);
+    if (!tip.staff || amount === null || amount < 1 || (tip.method === 'cash' && !tip.till))
+      return setProblem('tip');
+    const { error: err } = await ctx.client.rpc('record_tip', {
+      p: {
+        store_id: storeId,
+        staff_id: tip.staff,
+        amount,
+        method: tip.method,
+        device_id: tip.method === 'cash' ? tip.till : null,
+        appointment_id: a.id,
+      },
+    });
+    if (err) {
+      if (err.code === '22023') return setProblem('tip');
+      return fail(err);
+    }
+    setTip(null);
+    setTipSaved(true);
+  };
   const openBill = async (a: Appointment) => {
     setError(null);
     setProblem(null);
@@ -373,6 +419,8 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
       {error ? <Notice kind="error">{errorText(error, t)}</Notice> : null}
       {problem === 'off' ? <Notice kind="info">{t.calModuleOff}</Notice> : null}
       {problem === 'deposit' ? <Notice kind="error">{t.calDepositBad}</Notice> : null}
+      {problem === 'tip' ? <Notice kind="error">{t.calTipBad}</Notice> : null}
+      {tipSaved ? <Notice kind="success">{t.calTipSaved}</Notice> : null}
       {problem === 'provider' ? <Notice kind="error">{t.calBusyProvider}</Notice> : null}
       {problem === 'place' ? <Notice kind="error">{t.calBusyPlace}</Notice> : null}
 
@@ -582,6 +630,124 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
               onSettle={settle}
               money={(n) => formatTHB(n, locale)}
             />
+          ) : null}
+          {commissionOn &&
+          d &&
+          canTakeMoney &&
+          sel.status !== 'cancelled' &&
+          sel.status !== 'no_show' ? (
+            <div className="cal-deposits">
+              <h3>{t.calTip}</h3>
+              {tip ? (
+                <form
+                  className="auth-form"
+                  onSubmit={(e) => e.preventDefault()}
+                  aria-label={t.calTipTake}
+                >
+                  <div className="form-row">
+                    <label className="label" htmlFor="tip-staff">
+                      {t.calTipFor}
+                    </label>
+                    <select
+                      id="tip-staff"
+                      className="field"
+                      value={tip.staff}
+                      onChange={(e) => setTip({ ...tip, staff: e.target.value })}
+                    >
+                      <option value="">{t.calNone}</option>
+                      {d.people.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="filters">
+                    <div className="form-row">
+                      <label className="label" htmlFor="tip-amount">
+                        {t.calTipAmount}
+                      </label>
+                      <input
+                        id="tip-amount"
+                        className="field tabular"
+                        inputMode="decimal"
+                        value={tip.amount}
+                        onChange={(e) => setTip({ ...tip, amount: e.target.value })}
+                      />
+                    </div>
+                    <div className="form-row">
+                      <label className="label" htmlFor="tip-method">
+                        {t.calTipMethod}
+                      </label>
+                      <select
+                        id="tip-method"
+                        className="field"
+                        value={tip.method}
+                        onChange={(e) =>
+                          setTip({ ...tip, method: e.target.value as DepositMethod })
+                        }
+                      >
+                        {DEPOSIT_METHODS.map((m) => (
+                          <option key={m} value={m}>
+                            {tx(t, `calDepMethod_${m}`)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  {tip.method === 'cash' ? (
+                    <div className="form-row">
+                      <label className="label" htmlFor="tip-till">
+                        {t.calTipTill}
+                      </label>
+                      <select
+                        id="tip-till"
+                        className="field"
+                        value={tip.till}
+                        onChange={(e) => setTip({ ...tip, till: e.target.value })}
+                      >
+                        <option value="">{t.calNone}</option>
+                        {d.tills.map((x) => (
+                          <option key={x.id} value={x.id}>
+                            {x.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
+                  <div className="actions">
+                    <AsyncButton type="submit" onClick={() => takeTip(sel)}>
+                      {t.calTipSave}
+                    </AsyncButton>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setTip(null)}
+                    >
+                      {t.menuCancel}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="actions">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setTipSaved(false);
+                      setTip({
+                        staff: d.resources.find((r) => r.id === sel.providerId)?.staffId ?? '',
+                        amount: '',
+                        method: 'cash',
+                        till: d.tills[0]?.id ?? '',
+                      });
+                    }}
+                  >
+                    {t.calTipTake}
+                  </button>
+                </div>
+              )}
+            </div>
           ) : null}
           {canBook && canBill(sel) ? (
             <div className="actions">

@@ -11,7 +11,7 @@ afterEach(cleanup);
 
 const tables = () => ({
   resources: [
-    { id: 'nok', name: 'Nok', kind: 'stylist', active: true, sort: 1 },
+    { id: 'nok', name: 'Nok', kind: 'stylist', active: true, sort: 1, staff_id: 'st1' },
     { id: 'mai', name: 'Mai', kind: 'therapist', active: true, sort: 2 },
     { id: 'room1', name: 'Room 1', kind: 'room', active: true, sort: 3 },
   ],
@@ -109,6 +109,10 @@ const tables = () => ({
     },
   ],
   devices: [{ id: 't1', name: 'Counter' }],
+  staff: [
+    { id: 'st1', display_name: 'Nok Staff' },
+    { id: 'st2', display_name: 'Mai Staff' },
+  ],
   menu_items: [
     {
       id: 'svc1',
@@ -419,6 +423,62 @@ describe('<AppointmentsPage> billing and deposits', () => {
   });
 });
 
+describe('<AppointmentsPage> tips', () => {
+  const full = ['order.create', 'payment.take'] as PageContext['permissions'];
+  it('takes a tip for the stylist of the visit (linked person preselected), cash into the till, in satang', async () => {
+    const db = fakeDb(tables());
+    mount(ctx(db.client, { permissions: full }));
+    await openDay();
+    await userEvent.click(await screen.findByText('10:00 Anna')); // Nok, linked to Nok Staff
+    await userEvent.click(screen.getByRole('button', { name: 'Take a tip' }));
+    expect((screen.getByLabelText('Tip for') as HTMLSelectElement).value).toBe('st1');
+    await userEvent.type(screen.getByLabelText('Amount (baht)'), '50');
+    await userEvent.click(screen.getByRole('button', { name: 'Save the tip' }));
+    await waitFor(() => expect(db.rpcs).toHaveLength(1));
+    expect(db.rpcs[0]).toEqual({
+      fn: 'record_tip',
+      args: {
+        p: {
+          store_id: 's1',
+          staff_id: 'st1',
+          amount: 5000,
+          method: 'cash',
+          device_id: 't1',
+          appointment_id: 'a1',
+        },
+      },
+    });
+    expect(await screen.findByText('Tip saved')).toBeTruthy();
+  });
+
+  it('refuses a tip without an amount before anything is sent; no tips for a cancelled or missed visit; none without payment.take', async () => {
+    const db = fakeDb(tables());
+    mount(ctx(db.client, { permissions: full }));
+    await openDay();
+    await userEvent.click(await screen.findByText('10:00 Anna'));
+    await userEvent.click(screen.getByRole('button', { name: 'Take a tip' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save the tip' }));
+    expect(await screen.findByText(/Pick a person, enter the amount/)).toBeTruthy();
+    expect(db.rpcs).toHaveLength(0);
+    await userEvent.click(screen.getByText('17:00 Dan')); // no-show
+    expect(screen.queryByRole('button', { name: 'Take a tip' })).toBeNull();
+    cleanup();
+    mount(ctx(fakeDb(tables()).client, { permissions: ['order.create'] }));
+    await openDay();
+    await userEvent.click(await screen.findByText('10:00 Anna'));
+    expect(screen.queryByRole('button', { name: 'Take a tip' })).toBeNull();
+  });
+
+  it('with the commission module off there is no tip button', async () => {
+    mount(
+      ctx(fakeDb(tables()).client, { permissions: full, isModuleOn: (id) => id !== 'commission' }),
+    );
+    await openDay();
+    await userEvent.click(await screen.findByText('10:00 Anna'));
+    expect(screen.queryByRole('button', { name: 'Take a tip' })).toBeNull();
+  });
+});
+
 describe('<ResourcesPage>', () => {
   const mountR = (c: PageContext) =>
     render(
@@ -465,6 +525,26 @@ describe('<ResourcesPage>', () => {
       op: 'update',
       values: { active: false },
     });
+  });
+
+  it('links a stylist to the staff member behind them', async () => {
+    const db = fakeDb(tables());
+    mountR(rctx(db.client));
+    const row = (await screen.findByText('Nok')).closest('li')!;
+    await userEvent.selectOptions(
+      within(row).getByLabelText(/Staff member behind this stylist/),
+      'st2',
+    );
+    await waitFor(() => expect(db.writes).toHaveLength(1));
+    expect(db.writes[0]).toMatchObject({
+      table: 'resources',
+      op: 'update',
+      values: { staff_id: 'st2' },
+    });
+    // a room has nobody behind it
+    expect(
+      within(screen.getByText('Room 1').closest('li')!).queryByLabelText(/Staff member behind/),
+    ).toBeNull();
   });
 
   it('someone without menu.edit only looks', async () => {

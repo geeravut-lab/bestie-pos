@@ -46,7 +46,7 @@ jobs:
       - name: The service-role key must never reach a browser bundle
         run: "! grep -rilE 'service_role' apps/*/dist"
 
-      - name: "Install Playwright browser (the Ubuntu mirrors time out now and then, so retry)"
+      - name: 'Install Playwright browser (the Ubuntu mirrors time out now and then, so retry)'
         run: |
           for i in 1 2 3 4; do
             sudo apt-get update -o Acquire::Retries=3 || true

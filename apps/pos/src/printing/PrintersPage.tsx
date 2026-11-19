@@ -174,6 +174,15 @@ export function PrintersPage({ ctx }: { ctx: PageContext }) {
           );
         })}
       </ul>
+      <div className="actions">
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => ctx.navigate('/print-station')}
+        >
+          {t.stationOpen}
+        </button>
+      </div>
       {canManage ? (
         adding ? (
           <AddPrinter

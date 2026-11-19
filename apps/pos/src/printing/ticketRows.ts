@@ -1,5 +1,5 @@
 import { localizedName } from '@bestie/core';
-import type { LineDoc, OrderDoc, TicketStation } from '@bestie/core';
+import type { LineDoc, OrderDoc, PrintJob, TicketStation } from '@bestie/core';
 import { dict, fmt } from '@bestie/i18n';
 import type { ReceiptRow } from './rows';
 
@@ -48,6 +48,47 @@ export function buildTicketRows(p: {
     rows.push({
       kind: 'row',
       left: `${l.quantity} × ${localizedName(l.name, 'th')}`,
+      right: '',
+      strong: true,
+      ...(subs.length > 0 ? { sub: subs.join(' · ') } : {}),
+    });
+  }
+  rows.push({ kind: 'rule' });
+  return rows;
+}
+
+/** The same ticket from a queued server job (guest QR orders the server sent to the kitchen). */
+export function buildJobTicketRows(job: PrintJob): ReceiptRow[] {
+  const d = dict.th;
+  const rows: ReceiptRow[] = [
+    {
+      kind: 'center',
+      text: (d as Record<string, string>)[`ticketTitle_${job.station}`] ?? job.station,
+      strong: true,
+      big: true,
+    },
+    { kind: 'center', text: fmt(d.ticketOrder, { number: job.orderNumber }), strong: true },
+    {
+      kind: 'center',
+      text: job.tableName ? fmt(d.ticketTable, { name: job.tableName }) : d.ticketChannel_qr,
+      strong: true,
+      big: true,
+    },
+  ];
+  if (job.sentAt)
+    rows.push({
+      kind: 'center',
+      text: fmt(d.ticketTime, { time: CLOCK.format(new Date(job.sentAt)) }),
+    });
+  rows.push({ kind: 'rule' });
+  for (const l of job.lines) {
+    const subs: string[] = [];
+    if (l.modifiers.length > 0) subs.push(l.modifiers.join(', '));
+    if (l.seat) subs.push(fmt(d.ticketSeat, { n: l.seat }));
+    if (l.note) subs.push(fmt(d.ticketNote, { note: l.note }));
+    rows.push({
+      kind: 'row',
+      left: `${l.quantity} × ${l.nameTh}`,
       right: '',
       strong: true,
       ...(subs.length > 0 ? { sub: subs.join(' · ') } : {}),

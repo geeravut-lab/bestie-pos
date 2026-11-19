@@ -11,6 +11,8 @@ export function fakeDb(
     updatedRows?: number;
     rpc?: Record<string, { data?: unknown; error?: { code: string; message?: string } | null }>;
     insertError?: { code: string } | null;
+    /** the database refuses an update (for example a unique violation) */
+    updateError?: { code: string } | null;
   } = {},
 ) {
   const writes: Write[] = [];
@@ -22,8 +24,10 @@ export function fakeDb(
       if (op === 'delete') return { data: null, error: null };
       if (op === 'update')
         return {
-          data: Array.from({ length: opts.updatedRows ?? 1 }, () => ({ id: 'x' })),
-          error: null,
+          data: opts.updateError
+            ? null
+            : Array.from({ length: opts.updatedRows ?? 1 }, () => ({ id: 'x' })),
+          error: opts.updateError ?? null,
         };
       return { data: tables[table] ?? [], error: null };
     };

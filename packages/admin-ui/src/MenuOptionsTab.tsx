@@ -5,6 +5,8 @@ import {
   groupProblems,
   localizedName,
   nameProblems,
+  parseCode,
+  parseSku,
   parseDeltaInput,
   priceInputValue,
   toLocalizedText,
@@ -19,7 +21,7 @@ import { translateName } from './aiApi';
 import { deleteRow, nextSort, saveRow } from './menuData';
 import type { Group, Menu, Opt } from './menuData';
 import { channelLabel } from './MenuItemsTab';
-import { ConfirmDelete, NameFields } from './MenuParts';
+import { CodeFields, ConfirmDelete, NameFields } from './MenuParts';
 
 type Props = {
   ctx: PageContext;
@@ -360,6 +362,8 @@ function OptionForm({
   const [th, setTh] = useState(option?.name.th ?? '');
   const [en, setEn] = useState(option?.name.en ?? '');
   const [delta, setDelta] = useState(option ? priceInputValue(option.price_delta) : '');
+  const [barcode, setBarcode] = useState(option?.barcode ?? '');
+  const [sku, setSku] = useState(option?.sku ?? '');
   const [chan, setChan] = useState<Record<string, string>>(
     Object.fromEntries(
       CHANNELS.map((c) => [
@@ -383,7 +387,10 @@ function OptionForm({
       if (v === null) return setError('err_menu_invalid');
       if (v !== base) channelDelta[c] = v; // equal to the base change = no override needed
     }
-    const values = { name, price_delta: base, channel_delta: channelDelta };
+    const bc = parseCode(barcode);
+    const sk = parseSku(sku);
+    if (bc === 'bad' || sk === 'bad') return setError('err_menu_invalid');
+    const values = { name, price_delta: base, channel_delta: channelDelta, barcode: bc, sku: sk };
     const err = option
       ? await saveRow(ctx.client, 'modifier_options', option.id, values)
       : await saveRow(ctx.client, 'modifier_options', null, {
@@ -430,6 +437,13 @@ function OptionForm({
             onChange={(e) => setDelta(e.target.value)}
           />
         </div>
+        <CodeFields
+          idPrefix={`opt-${id}`}
+          barcode={barcode}
+          sku={sku}
+          onBarcode={setBarcode}
+          onSku={setSku}
+        />
       </div>
       <fieldset className="audit-group">
         <legend>{t.optionChannelDelta}</legend>

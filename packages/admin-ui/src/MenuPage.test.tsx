@@ -193,6 +193,48 @@ describe('<MenuPage> items', () => {
     });
   });
 
+  it('saves a barcode and a SKU with the item (empty = none) and refuses a bad code before the server', async () => {
+    const db = fakeDb(tables());
+    mount(ctx(db.client));
+    await ready();
+    await userEvent.click(within(itemRow('Pad Thai')).getByRole('button', { name: 'Edit' }));
+    const row = itemRow('Pad Thai');
+    await userEvent.type(within(row).getByLabelText('Barcode (scanned at the till)'), 'PAD-0001');
+    await userEvent.type(within(row).getByLabelText(/^SKU/), 'PAD');
+    await userEvent.click(within(row).getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(db.writes).toHaveLength(1));
+    expect(db.writes[0]).toMatchObject({
+      table: 'menu_items',
+      values: { barcode: 'PAD-0001', sku: 'PAD' },
+    });
+
+    const bad = fakeDb(tables());
+    cleanup();
+    mount(ctx(bad.client));
+    await ready();
+    await userEvent.click(within(itemRow('Pad Thai')).getByRole('button', { name: 'Edit' }));
+    await userEvent.type(
+      within(itemRow('Pad Thai')).getByLabelText('Barcode (scanned at the till)'),
+      'a b',
+    );
+    await userEvent.click(within(itemRow('Pad Thai')).getByRole('button', { name: 'Save' }));
+    expect(await within(itemRow('Pad Thai')).findByText(/menu details are not valid/)).toBeTruthy();
+    expect(bad.writes).toHaveLength(0);
+  });
+
+  it('a barcode the shop already uses is reported in plain words', async () => {
+    const db = fakeDb(tables(), { updateError: { code: '23505' } });
+    mount(ctx(db.client));
+    await ready();
+    await userEvent.click(within(itemRow('Pad Thai')).getByRole('button', { name: 'Edit' }));
+    await userEvent.type(
+      within(itemRow('Pad Thai')).getByLabelText('Barcode (scanned at the till)'),
+      'TAKEN-1',
+    );
+    await userEvent.click(within(itemRow('Pad Thai')).getByRole('button', { name: 'Save' }));
+    expect(await within(itemRow('Pad Thai')).findByText(/already used in this shop/)).toBeTruthy();
+  });
+
   it('a salon / spa menu (appointments on) has a service length, saved as minutes; others do not see the field', async () => {
     const db = fakeDb(tables());
     mount(ctx(db.client, { isModuleOn: () => true }));

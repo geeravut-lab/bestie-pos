@@ -1177,6 +1177,16 @@ const th = {
   optionNone: 'ยังไม่มีตัวเลือกในกลุ่มนี้',
   optionFree: 'ไม่คิดเพิ่ม',
   err_menu_invalid: 'ข้อมูลเมนูไม่ถูกต้อง กรุณาตรวจชื่อ ราคา และจำนวนที่เลือกได้',
+  menuBarcode: 'บาร์โค้ด (สแกนที่เครื่องรับเงิน)',
+  menuSku: 'รหัส SKU (รหัสสินค้าของร้าน)',
+  menuCodeHint: 'ตัวอักษรอังกฤษ ตัวเลข และขีด 4–40 ตัว ใช้ซ้ำในร้านเดียวกันไม่ได้',
+  err_menu_barcode: 'บาร์โค้ดนี้ถูกใช้แล้วในร้านนี้ กรุณาใช้รหัสอื่น',
+  scanLabel: 'สแกนบาร์โค้ด',
+  scanAdd: 'เพิ่ม',
+  scanNotFound: 'ไม่พบสินค้าที่มีบาร์โค้ดนี้',
+  scanSoldOut: 'สินค้านี้ปิดขายอยู่',
+  scanAmbiguous: 'บาร์โค้ดนี้ใช้กับหลายเมนู กรุณาเลือกเมนูจากหน้าจอ',
+  scanAdded: 'เพิ่มแล้ว: {name}',
 
   // ── offline sync, device binding, PIN lock ────────────────────────────────
   syncOffline: 'ออฟไลน์ ทำงานต่อได้',
@@ -3084,6 +3094,16 @@ const en = {
   optionFree: 'No extra charge',
   err_menu_invalid:
     'The menu details are not valid. Check the names, prices and how many can be picked.',
+  menuBarcode: 'Barcode (scanned at the till)',
+  menuSku: "SKU (the shop's own stock code)",
+  menuCodeHint: 'Letters, digits and dashes, 4–40 characters. It cannot be used twice in one shop.',
+  err_menu_barcode: 'This barcode is already used in this shop. Please use another.',
+  scanLabel: 'Scan a barcode',
+  scanAdd: 'Add',
+  scanNotFound: 'No item has this barcode.',
+  scanSoldOut: 'This item is switched off.',
+  scanAmbiguous: 'This barcode belongs to several dishes. Please pick the dish on the screen.',
+  scanAdded: 'Added: {name}',
 
   // ── offline sync, device binding, PIN lock ────────────────────────────────
   syncOffline: 'Offline — you can keep working',

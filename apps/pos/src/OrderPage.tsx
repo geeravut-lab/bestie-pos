@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   addLine,
   formatTHB,
@@ -14,6 +14,8 @@ import {
   setCovers,
   setNote,
   setQuantity,
+  resolveScan,
+  validateSelection,
   voidSentLine,
 } from '@bestie/core';
 import type {
@@ -96,6 +98,9 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
     text: string;
   } | null>(null);
   const [cat, setCat] = useState('');
+  const [scan, setScan] = useState('');
+  const [scanNote, setScanNote] = useState<{ kind: 'info' | 'success'; text: string } | null>(null);
+  const scanBox = useRef<HTMLInputElement>(null);
   const [picking, setPicking] = useState<{ item: Item; groups: OrderGroupInput[] } | null>(null);
   const [paying, setPaying] = useState(false);
   // PromptPay / card shares already paid and held on this bill (the bill is locked until it closes or a manager releases them)
@@ -231,6 +236,45 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
     );
   };
 
+  // A barcode scanner types the code and presses Enter; the same box works for typing a code by hand. Works offline (the cached menu).
+  const doScan = async () => {
+    const code = scan;
+    setScan('');
+    setScanNote(null);
+    const r = resolveScan(menu, code);
+    if (r.kind === 'not_found') setScanNote({ kind: 'info', text: t.scanNotFound });
+    else if (r.kind === 'sold_out') setScanNote({ kind: 'info', text: t.scanSoldOut });
+    else if (r.kind === 'ambiguous') setScanNote({ kind: 'info', text: t.scanAmbiguous });
+    else {
+      const item = menu.items.find((i) => i.id === r.itemId);
+      if (item) {
+        const groups = item.modifier_group_ids
+          .map((id) => groupInput(menu, id))
+          .filter((g): g is OrderGroupInput => g !== null);
+        const selected = r.optionId ? [r.optionId] : [];
+        if (validateSelection(groups, selected).length > 0) {
+          setPicking({ item, groups }); // other choices are still needed: the person finishes on the sheet
+        } else {
+          await apply((o) =>
+            addLine(o, {
+              lineId: crypto.randomUUID(),
+              item: itemInput(item),
+              groups,
+              selected,
+              quantity: 1,
+              staffId: ctx.staffId,
+            }),
+          );
+          setScanNote({
+            kind: 'success',
+            text: fmt(t.scanAdded, { name: localizedName(item.name, lang) }),
+          });
+        }
+      }
+    }
+    scanBox.current?.focus();
+  };
+
   const cats = menu.cats.filter((c) => c.active);
   const shown = menu.items.filter(
     (i) => cats.some((c) => c.id === i.category_id) && (cat === '' || i.category_id === cat),
@@ -267,6 +311,31 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
 
       <div className="order-screen">
         <section className="card admin-card" aria-label={t.orderItems}>
+          {canEdit ? (
+            <form className="form-row" onSubmit={(e) => e.preventDefault()}>
+              <label className="label" htmlFor="order-scan">
+                {t.scanLabel}
+              </label>
+              <input
+                id="order-scan"
+                ref={scanBox}
+                className="field tabular"
+                autoComplete="off"
+                maxLength={60}
+                value={scan}
+                onChange={(e) => setScan(e.target.value)}
+              />
+              <AsyncButton
+                type="submit"
+                variant="secondary"
+                disabled={scan.trim() === ''}
+                onClick={doScan}
+              >
+                {t.scanAdd}
+              </AsyncButton>
+              {scanNote ? <Notice kind={scanNote.kind}>{scanNote.text}</Notice> : null}
+            </form>
+          ) : null}
           <div className="chips" role="group" aria-label={t.orderItems}>
             <button
               type="button"

@@ -6,6 +6,7 @@ import type { ErrorKey } from '@bestie/i18n';
 import { AsyncButton, Spinner } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
+import { BookingLinkPanel } from './BookingLinkPanel';
 import { tx } from './stockInput';
 import { useRemote } from './useRemote';
 
@@ -190,6 +191,9 @@ export function ResourcesPage({ ctx }: { ctx: PageContext }) {
             {t.resAdd}
           </button>
         </div>
+      ) : null}
+      {storeId && ctx.isModuleOn?.('booking.online') ? (
+        <BookingLinkPanel ctx={ctx} storeId={storeId} />
       ) : null}
     </div>
   );

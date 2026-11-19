@@ -64,7 +64,11 @@ describe('module registry', () => {
       'credit.topup.crypto',
       'tender.credit',
     ]);
-    expect(dependentsOf('appointments').sort()).toEqual(['deposits', 'resources']);
+    expect(dependentsOf('appointments').sort()).toEqual([
+      'booking.online',
+      'deposits',
+      'resources',
+    ]);
     expect(dependentClosure('stock').sort()).toEqual(['recipe.cost', 'stock']);
   });
 });

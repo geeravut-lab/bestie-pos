@@ -236,4 +236,22 @@ describe('appointments and resources in the database mirror the registry', () =>
     );
     expect(m![2]!.split(',').sort()).toEqual(allowedPlans.sort());
   });
+  it('booking.online: off for every profile, same plan tiers, same dependency', () => {
+    const sql = readFileSync(
+      new URL(readdirSync(dir).find((f) => f.endsWith('_online_booking.sql')) ?? '', dir),
+      'utf8',
+    );
+    const m =
+      /-- registry:booking\.online profiles=([a-z,]*) plan=([a-z,]+) depends=([a-z.]+)/.exec(sql);
+    expect(m).not.toBeNull();
+    expect(MODULE_BY_ID['booking.online'].defaultProfiles).toEqual([]);
+    expect(m![1]).toBe('');
+    const allowedPlans = (Object.keys(PLAN_RANK) as (keyof typeof PLAN_RANK)[]).filter(
+      (p) => PLAN_RANK[p] >= PLAN_RANK[MODULE_BY_ID['booking.online'].plan],
+    );
+    expect(m![2]!.split(',').sort()).toEqual(allowedPlans.sort());
+    expect(MODULE_BY_ID['booking.online'].dependsOn).toEqual([m![3]]);
+    // the database's list of known module ids must include it
+    expect(sql).toContain("'booking.online'");
+  });
 });

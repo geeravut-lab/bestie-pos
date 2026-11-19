@@ -55,6 +55,14 @@ export async function notifyTickResponse(
       );
       summaries = typeof n === 'number' ? n : 0;
     }
+    // appointments starting within 90 minutes tell the provider's linked staff member (once each)
+    const reminded = await callRpc(
+      supabaseUrl,
+      serviceRoleKey,
+      'appointment_reminders',
+      { p_minutes: 90 },
+      f,
+    ).catch(() => 0);
     const cfg = lineConfig(env);
     const delivery = cfg
       ? await deliverQueue({
@@ -74,6 +82,7 @@ export async function notifyTickResponse(
       : null;
     return reply({
       summaries,
+      reminders: typeof reminded === 'number' ? reminded : 0,
       line: cfg ? 'configured' : 'not_configured',
       delivery,
       tidied: typeof tidied === 'number' ? tidied : 0,

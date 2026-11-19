@@ -30,11 +30,11 @@ end $$;
 
 -- pay an open bill. p_legs: [{"t":"cash"}] one cash payment (the till's own receipt series A-…) ·
 --   [{"t":"credit","a":10000},{"t":"cash"}] split (server series A+…; a missing amount = what is left) · [{"t":"cash","equal":3}] three equal cash payers
-create or replace function demo.pay_order(p_order uuid, p_pay_by text, p_pay_device text, p_legs jsonb) returns text language plpgsql as $$
+create or replace function demo.pay_order(p_order uuid, p_pay_by text, p_pay_device text, p_legs jsonb, p_at timestamptz default null) returns text language plpgsql as $$
 declare
   o public.orders%rowtype; b jsonb; dev uuid; dcode text; v_held bigint; v_due bigint; v_left bigint;
   leg jsonb; legs jsonb := '[]'::jsonb; a bigint; n int; i int; v_no text; v_pay jsonb;
-  v_payload jsonb; v_tender bigint; v_local boolean;
+  v_payload jsonb; v_tender bigint; v_local boolean; v_when timestamptz := coalesce(p_at, now());
 begin
   select * into o from public.orders where id = p_order;
   dev := demo.device((select name from public.stores where id = o.store_id), p_pay_device);
@@ -67,13 +67,13 @@ begin
     if leg ->> 't' = 'cash' then
       v_tender := case when a % 10000 = 0 then a else ((a / 5000) + 1) * 5000 end;   -- the guest hands over a round note
       if v_tender < a then v_tender := a; end if;
-      v_pay := v_pay || jsonb_build_object('id', gen_random_uuid(), 'tender', 'cash', 'amount', a, 'tendered', v_tender, 'change', v_tender - a);
+      v_pay := v_pay || jsonb_build_object('id', gen_random_uuid(), 'tender', 'cash', 'amount', a, 'tendered', v_tender, 'change', v_tender - a, 'created_at', v_when);
     else
-      v_pay := v_pay || jsonb_build_object('id', gen_random_uuid(), 'tender', leg ->> 't', 'amount', a);
+      v_pay := v_pay || jsonb_build_object('id', gen_random_uuid(), 'tender', leg ->> 't', 'amount', a, 'created_at', v_when);
     end if;
   end loop;
 
-  v_payload := b || jsonb_build_object('order_id', p_order, 'device_id', dev, 'staff_id', demo.staff(p_pay_by), 'issued_at', now(), 'lang', 'th', 'payments', v_pay);
+  v_payload := b || jsonb_build_object('order_id', p_order, 'device_id', dev, 'staff_id', demo.staff(p_pay_by), 'issued_at', v_when, 'lang', 'th', 'payments', v_pay);
   if v_local then
     v_no := dcode || '-' || lpad(((select count(*) from public.receipts where device_id = dev and number like dcode || '-%') + 1)::text, 6, '0');
     perform demo.run(p_pay_by, format('select public.close_order(%L::jsonb)', (v_payload || jsonb_build_object('receipt_number', v_no))::text));
@@ -86,20 +86,21 @@ end $$;
 -- open a bill, fill it (as the waiter / cashier), send it to the kitchen, let the kitchen bump it, attach a member, use points, pay it
 create or replace function demo.sell(
   p_open_by text, p_store text, p_open_device text, p_channel text, p_table text, p_items jsonb,
-  p_customer text, p_points int, p_pay_by text, p_pay_device text, p_legs jsonb, p_kds text default null
+  p_customer text, p_points int, p_pay_by text, p_pay_device text, p_legs jsonb, p_kds text default null, p_at timestamptz default null
 ) returns text language plpgsql as $$
 declare
   v_org uuid := demo.org(); v_store uuid := demo.store(p_store); v_order uuid := gen_random_uuid();
   v_dev uuid := demo.device(p_store, p_open_device); v_letter text; v_n int; v_number text; v_tbl uuid;
   it jsonb; mi public.menu_items%rowtype; v_price int; v_mods jsonb; v_opt record; v_ids text; v_status text;
+  v_at timestamptz := coalesce(p_at, now()); v_date date := (coalesce(p_at, now()) at time zone 'Asia/Bangkok')::date;
 begin
   select code into v_letter from public.devices where id = v_dev;
-  select count(*) + 1 into v_n from public.orders where store_id = v_store and business_date = (now() at time zone 'Asia/Bangkok')::date and number ~ ('^' || v_letter || '[0-9]+$');
+  select count(*) + 1 into v_n from public.orders where store_id = v_store and business_date = v_date and number ~ ('^' || v_letter || '[0-9]+$');
   v_number := v_letter || lpad(v_n::text, 3, '0');
   if p_table is not null then select id into v_tbl from public.dining_tables where store_id = v_store and name = p_table; end if;
-  perform demo.run(p_open_by, format($q$insert into public.orders (id, org_id, store_id, number, business_date, channel, table_id, covers, opened_by, device_id)
-     values (%L, %L, %L, %L, (now() at time zone 'Asia/Bangkok')::date, %L, %L, %s, %L, %L)$q$,
-     v_order, v_org, v_store, v_number, p_channel, v_tbl, case when v_tbl is null then 'null' else '2' end, demo.staff(p_open_by), v_dev));
+  perform demo.run(p_open_by, format($q$insert into public.orders (id, org_id, store_id, number, business_date, channel, table_id, covers, opened_by, device_id, created_at)
+     values (%L, %L, %L, %L, %L, %L, %L, %s, %L, %L, %L)$q$,
+     v_order, v_org, v_store, v_number, v_date, p_channel, v_tbl, case when v_tbl is null then 'null' else '2' end, demo.staff(p_open_by), v_dev, v_at));
 
   for it in select * from jsonb_array_elements(p_items) loop
     select * into mi from public.menu_items where id = demo.item(p_store, it ->> 'n');
@@ -115,15 +116,15 @@ begin
       v_price := v_price + v_opt.delta;
       v_mods := v_mods || jsonb_build_object('id', v_opt.id, 'name', v_opt.name, 'priceDelta', v_opt.delta);
     end loop;
-    perform demo.run(p_open_by, format($q$insert into public.order_lines (org_id, store_id, order_id, item_id, name, unit_price, quantity, modifiers, note, station, created_by)
-       values (%L, %L, %L, %L, %L::jsonb, %s, %s, %L::jsonb, %L, %L, %L)$q$,
-       v_org, v_store, v_order, mi.id, mi.name::text, v_price, coalesce((it ->> 'q')::int, 1), v_mods::text, it ->> 'note', mi.station, demo.staff(p_open_by)));
+    perform demo.run(p_open_by, format($q$insert into public.order_lines (org_id, store_id, order_id, item_id, name, unit_price, quantity, modifiers, note, station, created_by, created_at)
+       values (%L, %L, %L, %L, %L::jsonb, %s, %s, %L::jsonb, %L, %L, %L, %L)$q$,
+       v_org, v_store, v_order, mi.id, mi.name::text, v_price, coalesce((it ->> 'q')::int, 1), v_mods::text, it ->> 'note', mi.station, demo.staff(p_open_by), v_at));
   end loop;
 
   -- "send to kitchen / bar": the lines become history
-  perform demo.run(p_open_by, format($q$update public.order_lines set status = 'sent', sent_at = now() where order_id = %L and status = 'new'$q$, v_order));
+  perform demo.run(p_open_by, format($q$update public.order_lines set status = 'sent', sent_at = %L where order_id = %L and status = 'new'$q$, v_at + interval '2 minutes', v_order));
   if exists (select 1 from public.order_lines where order_id = v_order and status = 'new') then
-    update public.order_lines set status = 'sent', sent_at = now() where order_id = v_order and status = 'new';
+    update public.order_lines set status = 'sent', sent_at = v_at + interval '2 minutes' where order_id = v_order and status = 'new';
   end if;
   -- the kitchen / bar screen bumps the dishes, the waiter marks them served
   if p_kds is not null then
@@ -140,7 +141,11 @@ begin
       perform demo.run(p_pay_by, format($q$select public.set_order_points(%L, %s)$q$, v_order, p_points));
     end if;
   end if;
-  return demo.pay_order(v_order, p_pay_by, p_pay_device, p_legs);
+  v_number := demo.pay_order(v_order, p_pay_by, p_pay_device, p_legs, case when p_at is null then null else p_at + interval '40 minutes' end);
+  if p_at is not null then   -- history: the kitchen has long since served it
+    update public.order_lines set status = 'served' where order_id = v_order and status in ('sent', 'ready');
+  end if;
+  return v_number;
 end $$;
 
 create or replace function demo.open_shift(p_by text, p_store text, p_device text, p_cash bigint) returns void language plpgsql as $$

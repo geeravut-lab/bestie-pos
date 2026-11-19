@@ -92,6 +92,9 @@ export function ModulesPage({ ctx }: { ctx: PageContext }) {
         >
           {t.aiUsageTitle}
         </button>
+        <button type="button" className="btn btn-secondary" onClick={() => ctx.navigate('/ask')}>
+          {t.askShopTitle}
+        </button>
       </div>
       {!canEdit ? <Notice kind="info">{t.modulesReadOnly}</Notice> : null}
       {data.stores.length > 0 ? (

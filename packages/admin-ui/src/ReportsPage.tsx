@@ -178,6 +178,14 @@ export function ReportsPage({ ctx }: { ctx: PageContext }) {
         </div>
       </section>
 
+      {ctx.isModuleOn?.('ai.assistant') ? (
+        <div className="actions">
+          <button type="button" className="btn btn-secondary" onClick={() => ctx.navigate('/ask')}>
+            {t.askShopTitle}
+          </button>
+        </div>
+      ) : null}
+
       <div className="tabs" role="tablist">
         {TABS.map((k) => (
           <button

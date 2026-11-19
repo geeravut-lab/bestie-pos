@@ -131,3 +131,25 @@ describe('tender.promptpay and tender.gateway in the database mirror the registr
     }
   });
 });
+
+/** "Ask my shop" (owner assistant): off for every profile, Pro and up, no dependencies — the SQL copy must say the same. */
+describe('ai.assistant in the database mirrors the registry', () => {
+  const dir = new URL('../../../supabase/migrations/', import.meta.url);
+  const file = readdirSync(dir).find((f) => f.endsWith('_ask_shop.sql')) ?? '';
+  const sql = readFileSync(new URL(file, dir), 'utf8');
+  const marker = /-- registry:ai\.assistant profiles=([a-z,]*) plan=([a-z,]+)/.exec(sql);
+  const m = MODULE_BY_ID['ai.assistant'];
+
+  it('has the marker, is off by default and has no dependencies', () => {
+    expect(marker).not.toBeNull();
+    expect(m.defaultProfiles).toEqual([]);
+    expect(marker![1]).toBe('');
+    expect(m.dependsOn).toEqual([]);
+  });
+  it('same plan tiers', () => {
+    const allowed = (Object.keys(PLAN_RANK) as (keyof typeof PLAN_RANK)[]).filter(
+      (p) => PLAN_RANK[p] >= PLAN_RANK[m.plan],
+    );
+    expect(marker![2]!.split(',').sort()).toEqual(allowed.sort());
+  });
+});

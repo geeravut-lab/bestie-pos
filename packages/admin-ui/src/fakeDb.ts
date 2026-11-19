@@ -27,7 +27,7 @@ export function fakeDb(
       return { data: tables[table] ?? [], error: null };
     };
     const chain: Record<string, unknown> = {};
-    for (const m of ['select', 'eq', 'is', 'gt', 'order']) chain[m] = () => chain;
+    for (const m of ['select', 'eq', 'is', 'gt', 'order', 'limit']) chain[m] = () => chain;
     chain.update = (values: unknown) => {
       op = 'update';
       writes.push({ table, op, values });

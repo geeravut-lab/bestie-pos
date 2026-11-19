@@ -25,6 +25,7 @@ import { AskShopPage } from './AskShopPage';
 import { FeedbackPage } from './FeedbackPage';
 import { RolesPage } from './RolesPage';
 import { ShopInfoPage } from './ShopInfoPage';
+import { StockPage } from './StockPage';
 import { AuditPage } from './AuditPage';
 import { AiPromptsPage, AiSettingsPage } from './AiPages';
 import { BillingPage } from './BillingPage';
@@ -63,6 +64,7 @@ export function adminPages(ctx: PageContext): ReactNode | null {
   if (ctx.path === '/menu') return <MenuPage ctx={ctx} />;
   if (ctx.path === '/modules') return <ModulesPage ctx={ctx} />;
   if (ctx.path === '/staff') return <StaffPage ctx={ctx} />;
+  if (ctx.path === '/stock') return <StockPage ctx={ctx} />;
   if (ctx.path === '/staff/roles') return <RolesPage ctx={ctx} />;
   if (ctx.path === '/crypto') return <CryptoPage ctx={ctx} />;
   if (ctx.path === '/customers') return <CustomersPage ctx={ctx} />;

@@ -52,6 +52,7 @@ import {
 } from './onlinePay';
 import type { OnlinePay } from './onlinePay';
 import { usePosStore } from './posData';
+import { latestTicketLines, printTickets, ticketPrinters } from './printing/kitchenPrint';
 
 const channelText = (t: Dict, c: Channel): string =>
   (t as Record<string, string>)[`channel_${c.replace('-', '_')}`] ?? c;
@@ -90,6 +91,10 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
   const openOrders = useOpenOrders(order?.storeId ?? null);
   const { pending } = useOutboxCounts();
   const netUp = useOnline();
+  const [ticketNote, setTicketNote] = useState<{
+    kind: 'info' | 'error' | 'success';
+    text: string;
+  } | null>(null);
   const [cat, setCat] = useState('');
   const [picking, setPicking] = useState<{ item: Item; groups: OrderGroupInput[] } | null>(null);
   const [paying, setPaying] = useState(false);
@@ -134,6 +139,47 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
     (o) => o.id !== order.id && o.storeId === order.storeId,
   );
   const lineCount = liveLines(order).reduce((a, l) => a + l.quantity, 0);
+
+  /** Print the kitchen / bar tickets for these lines on the shop's ticket printers. Never blocks the order; says what happened. */
+  const printLines = async (o: OrderDoc, lines: LineDoc[], quiet: boolean) => {
+    if (lines.length === 0) return;
+    const printers = await ticketPrinters(ctx.client, o.storeId);
+    if (printers.length === 0) {
+      if (!quiet) setTicketNote({ kind: 'info', text: t.ticketNoPrinter });
+      return;
+    }
+    const results = await printTickets({
+      order: o,
+      lines,
+      printers,
+      tableName: tables.find((x) => x.id === o.tableId)?.name ?? null,
+    });
+    const failed = results.filter((r) => !r.ok);
+    if (failed.length > 0)
+      setTicketNote({
+        kind: 'error',
+        text: failed.map((r) => fmt(t.ticketFailed, { name: r.printer.name })).join(' '),
+      });
+    else if (results.length > 0 && !quiet)
+      setTicketNote({ kind: 'success', text: t.ticketPrinted });
+    else setTicketNote(null);
+  };
+  const printLatest = async (quiet: boolean) => {
+    setTicketNote(null);
+    await printLines(order, latestTicketLines(order), quiet);
+  };
+  const sendToKitchen = async () => {
+    setError(null);
+    setTicketNote(null);
+    let sent: LineDoc[] = [];
+    const err = await changeOrder(order.id, (o) => {
+      const r = sendNew(o, Date.now());
+      sent = r.sent;
+      return r.order;
+    });
+    if (err) return setError(err);
+    await printLines(order, sent, true);
+  };
 
   const apply = async (fn: (o: OrderDoc) => OrderDoc) => {
     setError(null);
@@ -306,13 +352,15 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
           ) : null}
           {canEdit ? (
             <>
-              <AsyncButton
-                variant="secondary"
-                disabled={!hasUnsent(order)}
-                onClick={() => apply((o) => sendNew(o, Date.now()).order)}
-              >
+              <AsyncButton variant="secondary" disabled={!hasUnsent(order)} onClick={sendToKitchen}>
                 {hasUnsent(order) ? t.orderSend : t.orderSendNothing}
               </AsyncButton>
+              {latestTicketLines(order).length > 0 ? (
+                <AsyncButton variant="secondary" onClick={() => printLatest(false)}>
+                  {t.ticketReprint}
+                </AsyncButton>
+              ) : null}
+              {ticketNote ? <Notice kind={ticketNote.kind}>{ticketNote.text}</Notice> : null}
               {lineCount >= 2 ? (
                 <AsyncButton variant="secondary" onClick={() => setSplitting(true)}>
                   {t.splitButton}

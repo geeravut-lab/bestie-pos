@@ -1,6 +1,12 @@
 import { useState } from 'react';
-import { PRINTER_KINDS, newPrinterId, printerProblems, printersToColumn } from '@bestie/core';
-import type { CustomPrinterKind, PaperMm, Printer } from '@bestie/core';
+import {
+  PRINTER_KINDS,
+  TICKET_STATIONS,
+  newPrinterId,
+  printerProblems,
+  printersToColumn,
+} from '@bestie/core';
+import type { CustomPrinterKind, PaperMm, Printer, TicketStation } from '@bestie/core';
 import { errorText, fmt, useI18n } from '@bestie/i18n';
 import type { Dict, ErrorKey } from '@bestie/i18n';
 import { AsyncButton } from '@bestie/ui';
@@ -85,6 +91,11 @@ export function PrintersPage({ ctx }: { ctx: PageContext }) {
                     {p.paperMm === 58 ? t.printerPaper58 : t.printerPaper80}
                   </span>
                 )}
+                {(p.stations ?? []).map((st) => (
+                  <span key={st} className="badge">
+                    {fmt(t.printerStationBadge, { name: tx(t, `printerStation_${st}`) })}
+                  </span>
+                ))}
                 {isShop ? <span className="badge">{t.printerShopDefault}</span> : null}
                 {isHere ? <span className="badge">{t.printerThisTablet}</span> : null}
               </div>
@@ -203,6 +214,7 @@ function AddPrinter({
   const [paper, setPaper] = useState<PaperMm>(80);
   const [cutter, setCutter] = useState(true);
   const [drawer, setDrawer] = useState(false);
+  const [stations, setStations] = useState<TicketStation[]>([]);
   const [bridge, setBridge] = useState('');
   const [baud, setBaud] = useState('9600');
   const [bad, setBad] = useState(false);
@@ -217,6 +229,7 @@ function AddPrinter({
       drawer,
       ...(kind === 'network' ? { bridgeUrl: bridge.trim() } : {}),
       ...(kind === 'serial' ? { baud: Number(baud) } : {}),
+      ...(stations.length > 0 ? { stations } : {}),
     };
     if (printerProblems(p).length > 0) return setBad(true);
     setBad(false);
@@ -310,6 +323,24 @@ function AddPrinter({
         <input type="checkbox" checked={drawer} onChange={(e) => setDrawer(e.target.checked)} />
         <span>{t.printerDrawer}</span>
       </label>
+      <fieldset className="form-row">
+        <legend className="label">{t.printerStations}</legend>
+        {TICKET_STATIONS.map((st) => (
+          <label key={st} className="check-row">
+            <input
+              type="checkbox"
+              checked={stations.includes(st)}
+              onChange={(e) =>
+                setStations((cur) =>
+                  e.target.checked ? [...cur, st] : cur.filter((x) => x !== st),
+                )
+              }
+            />
+            <span>{tx(t, `printerStation_${st}`)}</span>
+          </label>
+        ))}
+        <p className="muted">{t.printerStationsNote}</p>
+      </fieldset>
       {bad ? <Notice kind="error">{t.printerInvalid}</Notice> : null}
       <div className="actions">
         <AsyncButton type="submit" onClick={submit}>

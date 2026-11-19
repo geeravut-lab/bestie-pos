@@ -39,7 +39,10 @@ const allowAskTable = createRateLimiter(40, 10 * 60_000);
 const allowFeedback = createRateLimiter(6, 60_000);
 
 /** A small JSON object from the request body, or null. */
-async function jsonObject(request: Request, max: number): Promise<Record<string, unknown> | null> {
+export async function jsonObject(
+  request: Request,
+  max: number,
+): Promise<Record<string, unknown> | null> {
   const raw = await request.text().catch(() => '');
   if (raw.length >= max) return null;
   try {
@@ -50,12 +53,12 @@ async function jsonObject(request: Request, max: number): Promise<Record<string,
   }
 }
 
-const clientKey = (r: Request): string =>
+export const clientKey = (r: Request): string =>
   r.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
   r.headers.get('x-real-ip') ||
   'unknown';
 
-async function rpc(
+export async function rpc(
   f: typeof fetch,
   url: string,
   key: string,

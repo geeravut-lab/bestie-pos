@@ -49,5 +49,6 @@ export * from './shopInfo';
 export * from './stock';
 export * from './purchasing';
 export * from './appointments';
+export * from './onlineBooking';
 export * from './commission';
 export * from './packages';

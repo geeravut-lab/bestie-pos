@@ -1,7 +1,9 @@
 import { I18nProvider, LANG_STORAGE_KEY, isLang } from '@bestie/i18n';
 import type { Lang } from '@bestie/i18n';
+import { BookingPage } from './BookingPage';
 import { GuestTablePage } from './GuestTablePage';
 
+export { BookingPage } from './BookingPage';
 export { GuestTablePage } from './GuestTablePage';
 export { loadGuestTable, placeGuestOrder } from './guestApi';
 
@@ -28,6 +30,17 @@ export function GuestRoot({ token }: { token: string }) {
     <I18nProvider initialLang={startLang()}>
       <main className="guest-root">
         <GuestTablePage token={token} />
+      </main>
+    </I18nProvider>
+  );
+}
+
+/** Whole guest screen for a shop's booking link (`/book/<token>`). */
+export function BookingRoot({ token }: { token: string }) {
+  return (
+    <I18nProvider initialLang={startLang()}>
+      <main className="guest-root">
+        <BookingPage token={token} />
       </main>
     </I18nProvider>
   );

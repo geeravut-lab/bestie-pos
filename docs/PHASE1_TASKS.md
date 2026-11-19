@@ -99,7 +99,7 @@ Work top to bottom. One PR per task. Tick when merged.
 - [x] Supabase Auth: owner e-mail sign-up / sign-in, shop onboarding (`create_org`), profiles + roles tables (role never comes from SSO), live role home from the DB
 - [x] Staff PIN login with lockout (server: 5 wrong tries lock 15 min; tablet: same rule for the offline check)
 - [x] Google login — owner created the OAuth client and enabled the provider (checked 2026-11-19: enabled, Site URL + redirect URLs right, SMTP set). Still to do by hand: one real login from a phone
-- [ ] LINE login via Aivora SSO — code ready and unit-tested; the owner registered the slug and `AIVORA_APP_SLUG` + `VITE_AIVORA_APP_SLUG` are set in Vercel production (checked 2026-11-19; the production build is newer than the variable). **Not tried with a real ticket from the Launcher** (single use, 60 s — cannot be simulated from the build sandbox, which also cannot reach the hub): the owner presses the LINE button once on a phone and tells us what happens
+- [x] LINE login via Aivora SSO — **the owner logged in with LINE from a phone on 2026-11-19 and it works** (`/sso/callback`, `/api/sso-exchange`, `aivora_links`, synthetic e-mail). The account page now shows the **name Aivora sent** instead of the made-up address (e-mail and Google accounts still show their e-mail), a LINE account has no password form, and a long name wraps instead of stretching the page on a phone.
 - [x] Change password (re-auth, sign out other devices); audit + LINE notice of the change arrive with §11 / §14
 
 ## 13. AI assistant  _(AI-PROVIDER-MODEL, AI-PROMPTS-RULES; roles in KNOWLEDGE-MAPPING §B)_

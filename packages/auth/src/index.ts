@@ -31,3 +31,5 @@ export { useBrand } from './useBrand';
 export { NotificationBell, NotificationsPage } from './Notifications';
 export { useStoreTheme } from './useStoreTheme';
 export { useCardImages } from './useCardImages';
+export { accountLabel, isAivoraUser } from './account';
+export type { AccountLabel, AccountUser } from './account';

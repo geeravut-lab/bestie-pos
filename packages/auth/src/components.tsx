@@ -5,6 +5,7 @@ import type { ErrorKey } from '@bestie/i18n';
 import { isInviteCodeShape, normalizeInviteCode } from '@bestie/core';
 import { AsyncButton, Brand, LangSwitch, Spinner } from '@bestie/ui';
 import type { PublicEnv } from '@bestie/supabase';
+import { accountLabel, isAivoraUser } from './account';
 import { useAuth } from './context';
 import { LineConnect } from './LineConnect';
 import { authErrorCode, passwordChangeProblem, signUpProblem } from './errors';
@@ -468,7 +469,25 @@ export function AccountPage() {
 
   // Only accounts that actually have an e-mail password can change one (Google / LINE accounts have none).
   const providers = (user?.app_metadata?.providers as string[] | undefined) ?? [];
-  const hasPassword = Boolean(user?.email) && providers.includes('email');
+  const hasPassword = Boolean(user?.email) && providers.includes('email') && !isAivoraUser(user);
+  // a LINE account made before the hub name was kept in the account: the profile row may still have it
+  const [profileName, setProfileName] = useState<string | null>(null);
+  useEffect(() => {
+    if (!client || !user || !isAivoraUser(user)) return;
+    let alive = true;
+    void client
+      .from('profiles')
+      .select('display_name')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (alive) setProfileName((data as { display_name?: string } | null)?.display_name ?? null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [client, user]);
+  const who = accountLabel(user, profileName);
 
   const change = async () => {
     if (!client || !user?.email) return;
@@ -502,7 +521,13 @@ export function AccountPage() {
         <h1>{t.accountTitle}</h1>
         <p className="muted">
           {t.accountSignedInAs}{' '}
-          <strong>{user?.email ?? user?.user_metadata?.display_name ?? ''}</strong>
+          <strong className="account-name">
+            {who.kind === 'text'
+              ? who.text
+              : who.kind === 'line-anonymous'
+                ? t.accountLineUser
+                : ''}
+          </strong>
         </p>
         <AsyncButton variant="secondary" onClick={signOut}>
           {t.authSignOut}

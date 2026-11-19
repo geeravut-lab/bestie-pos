@@ -60,6 +60,7 @@ export const ART_IDS = [
   'guestMenu',
   'pass',
   'book',
+  'calendar',
   'pay',
   'home',
   'account',
@@ -122,6 +123,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   item('guestMenu', '/g/menu', 'navGuestMenu', 'hintGuestMenu'),
   item('pass', '/g/pass', 'navPass', 'hintPass', ['loyalty.network']),
   item('book', '/g/book', 'navBook', 'hintBook', ['appointments']),
+  item('calendar', '/calendar', 'navCalendar', 'hintCalendar', ['appointments']),
   item('pay', '/g/pay', 'navPay', 'hintPay', ['tender.promptpay']),
 ];
 
@@ -154,7 +156,7 @@ export const ROLE_LAYOUT: Readonly<Record<AppRole, RoleLayout>> = {
   manager: {
     center: 'sell',
     tabs: ['home', 'orders', 'reports'],
-    cards: ['reports', 'sell', 'menu', 'stock', 'staff', 'credit', 'points', 'audit'],
+    cards: ['reports', 'sell', 'calendar', 'menu', 'stock', 'staff', 'credit', 'points', 'audit'],
   },
   owner: {
     center: 'dashboard',

@@ -21,6 +21,9 @@ select coalesce(jsonb_agg(x order by x.name), '[]'::jsonb) as stores from (
          (select count(*) from public.modifier_groups g
             where g.store_id = s.id and g.deleted_at is null and g.min_select >
               (select count(*) from public.modifier_options m where m.group_id = g.id and m.deleted_at is null)) as groups_short,
+         (select count(*) from public.resources r where r.store_id = s.id and r.deleted_at is null and r.active and r.kind in ('stylist', 'therapist')) as providers,
+         (select count(*) from public.resources r where r.store_id = s.id and r.deleted_at is null and r.active and r.kind in ('room', 'bed', 'chair')) as places,
+         (select count(*) from public.menu_items i where i.store_id = s.id and i.deleted_at is null and i.duration_min is not null) as timed_services,
          (select count(*) from public.dining_tables t where t.store_id = s.id and t.deleted_at is null and t.active) as tables,
          (select count(*) from public.devices d where d.store_id = s.id and d.active) as devices,
          (select count(*) from public.devices d where d.store_id = s.id and d.active and d.role = 'cashier') as cashier_devices,
@@ -99,6 +102,19 @@ export function checkStore(snap) {
   if (snap.profile === 'restaurant') {
     if (n(snap.tables) > 0) out.push(ok('menu', 'tables', `โต๊ะ ${snap.tables} โต๊ะ`));
     else out.push(fail('menu', 'tables', 'ร้านอาหารแต่ยังไม่มีโต๊ะที่ /tables'));
+  }
+
+  // ── appointments (salon / spa) ──
+  if (['salon', 'spa'].includes(snap.profile)) {
+    if (n(snap.providers) > 0)
+      out.push(ok('menu', 'providers', `ช่าง/ผู้ให้บริการ ${snap.providers} คน`));
+    else out.push(fail('menu', 'providers', 'ยังไม่มีช่าง/หมอนวดที่ /resources — ลงนัดหมายในปฏิทินไม่ได้'));
+    if (n(snap.timed_services) > 0)
+      out.push(ok('menu', 'timed', `บริการที่ตั้งระยะเวลาแล้ว ${snap.timed_services} รายการ`));
+    else
+      out.push(warn('menu', 'timed', 'ยังไม่มีบริการที่ตั้งระยะเวลา (นาที) ในเมนู — ต้องใส่ความยาวทุกครั้งที่จอง'));
+    if (snap.profile === 'spa' && n(snap.places) === 0)
+      out.push(warn('menu', 'places', 'สปายังไม่มีห้อง/เตียงที่ /resources (เปิดโมดูล "ห้อง/เตียง" ก่อน)'));
   }
 
   // ── people ──

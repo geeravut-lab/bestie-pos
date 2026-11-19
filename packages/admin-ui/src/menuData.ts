@@ -16,6 +16,8 @@ export type Item = {
   name: LocalizedText;
   prices: ChannelPrices;
   station: 'kitchen' | 'bar' | null;
+  /** Length of a service in minutes (salon / spa menus); null = not a timed service. */
+  duration_min: number | null;
   modifier_group_ids: string[];
   available: boolean;
   food: ItemFood;
@@ -59,7 +61,7 @@ export async function loadMenu(client: SupabaseClient, storeId: string): Promise
     q('menu_categories', 'id, name, sort, active, created_at'),
     q(
       'menu_items',
-      'id, category_id, name, prices, station, modifier_group_ids, available, tags, spice_level, dietary_verified, highlight, sort, created_at',
+      'id, category_id, name, prices, station, duration_min, modifier_group_ids, available, tags, spice_level, dietary_verified, highlight, sort, created_at',
     ),
     q('modifier_groups', 'id, name, min_select, max_select, sort, created_at'),
     q(
@@ -87,6 +89,7 @@ export async function loadMenu(client: SupabaseClient, storeId: string): Promise
           name: parseLocalizedText(r.name),
           prices,
           station: r.station === 'kitchen' || r.station === 'bar' ? r.station : null,
+          duration_min: typeof r.duration_min === 'number' ? r.duration_min : null,
           modifier_group_ids: Array.isArray(r.modifier_group_ids)
             ? r.modifier_group_ids.filter((x): x is string => typeof x === 'string')
             : [],

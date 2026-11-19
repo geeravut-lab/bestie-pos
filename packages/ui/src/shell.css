@@ -1928,3 +1928,100 @@ a.nav-card[aria-busy='true'] {
   height: 100%;
   background: var(--bp-primary);
 }
+
+/* ── appointment calendar (day view, one column per stylist / room) ── */
+.cal {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  border: 1px solid var(--bp-line);
+  border-radius: var(--bp-radius-card);
+  background: var(--bp-surface);
+  margin-block: 12px;
+}
+.cal-axis {
+  position: relative;
+  flex: 0 0 52px;
+  margin-top: 52px;
+  color: var(--bp-muted);
+  font-size: 12px;
+}
+.cal-axis span {
+  position: absolute;
+  right: 6px;
+  transform: translateY(-50%);
+}
+.cal-col {
+  flex: 1 0 150px;
+  min-width: 150px;
+  border-left: 1px solid var(--bp-line);
+}
+.cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 52px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--bp-line);
+  background: var(--bp-mint);
+}
+.cal-add {
+  min-width: var(--bp-touch);
+  min-height: 36px;
+  padding: 0 10px;
+}
+.cal-body {
+  position: relative;
+  cursor: pointer;
+}
+.cal-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--bp-line);
+  pointer-events: none;
+}
+.cal-appt {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  overflow: hidden;
+  padding: 4px 6px;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  color: var(--bp-ink);
+  background: var(--bp-info-bg);
+  border: 1px solid var(--bp-field-border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.cal-appt[aria-pressed='true'] {
+  outline: 3px solid var(--bp-primary);
+  outline-offset: 1px;
+}
+.cal-confirmed {
+  background: var(--bp-success-bg);
+}
+.cal-arrived {
+  background: var(--bp-warning-bg);
+}
+.cal-in_service {
+  background: var(--bp-sun);
+}
+.cal-done {
+  background: var(--bp-disabled-bg);
+  color: var(--bp-muted);
+}
+.cal-cancelled,
+.cal-no_show {
+  background: var(--bp-danger-bg);
+  color: var(--bp-danger-fg);
+  text-decoration: line-through;
+}
+.cal-bar {
+  align-items: flex-end;
+}

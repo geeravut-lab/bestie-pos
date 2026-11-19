@@ -272,6 +272,7 @@ function ItemForm({
     ),
   );
   const [station, setStation] = useState<string>(item?.station ?? '');
+  const [duration, setDuration] = useState(item?.duration_min ? String(item.duration_min) : '');
   const [groupIds, setGroupIds] = useState<string[]>(item?.modifier_group_ids ?? []);
   const [available, setAvailable] = useState(item?.available ?? true);
   const [food, setFood] = useState<ItemFood>(item?.food ?? EMPTY_FOOD);
@@ -279,6 +280,8 @@ function ItemForm({
   const [saved, setSaved] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const touch = () => setSaved(false);
+  // a salon / spa menu sells services that last a number of minutes
+  const timed = ctx.isModuleOn?.('appointments') === true;
 
   const save = async () => {
     setError(null);
@@ -292,6 +295,9 @@ function ItemForm({
       overrides[c] = v;
     }
     const name = toLocalizedText(th, en);
+    const minutes =
+      duration.trim() === '' ? null : /^\d{1,3}$/.test(duration.trim()) ? Number(duration) : NaN;
+    if (minutes !== null && !(minutes >= 5 && minutes <= 720)) return setError('err_menu_invalid');
     if (itemProblems({ name, base: baseSatang, categoryId, station: station || null }).length > 0)
       return setError('err_menu_invalid');
     const prices: ChannelPrices = channelPricesToColumn({ base: baseSatang!, ...overrides });
@@ -300,6 +306,7 @@ function ItemForm({
       prices,
       category_id: categoryId,
       station: station || null,
+      ...(timed ? { duration_min: minutes } : {}),
       modifier_group_ids: groupIds,
       available,
       tags: food.tags,
@@ -390,6 +397,24 @@ function ItemForm({
             <option value="bar">{t.deviceStation_bar}</option>
           </select>
         </div>
+        {timed ? (
+          <div className="form-row">
+            <label className="label" htmlFor={`item-${id}-minutes`}>
+              {t.menuItemDuration}
+            </label>
+            <input
+              id={`item-${id}-minutes`}
+              className="field tabular"
+              inputMode="numeric"
+              maxLength={3}
+              value={duration}
+              onChange={(e) => {
+                setDuration(e.target.value);
+                touch();
+              }}
+            />
+          </div>
+        ) : null}
       </div>
 
       <fieldset className="audit-group">

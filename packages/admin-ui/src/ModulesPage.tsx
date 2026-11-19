@@ -284,7 +284,12 @@ function AddShopCard({ ctx, onAdded }: { ctx: PageContext; onAdded: () => void }
   const [profile, setProfile] = useState<string>('restaurant');
   const [error, setError] = useState<ErrorKey | null>(null);
   const [done, setDone] = useState(false);
-  const names: Record<string, string> = { restaurant: t.profileRestaurant, cafe: t.profileCafe };
+  const names: Record<string, string> = {
+    restaurant: t.profileRestaurant,
+    cafe: t.profileCafe,
+    salon: t.profileSalon,
+    spa: t.profileSpa,
+  };
 
   const add = async () => {
     setError(null);

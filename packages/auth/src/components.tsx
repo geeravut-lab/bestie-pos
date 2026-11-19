@@ -206,8 +206,8 @@ export function LoginPage({ env }: { env: PublicEnv }) {
 const PROFILE_CHOICES = [
   { id: 'restaurant', live: true },
   { id: 'cafe', live: true },
-  { id: 'salon', live: false },
-  { id: 'spa', live: false },
+  { id: 'salon', live: true },
+  { id: 'spa', live: true },
   { id: 'resort', live: false },
   { id: 'retail', live: false },
   { id: 'tours', live: false },

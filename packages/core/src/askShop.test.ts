@@ -74,4 +74,15 @@ describe('the figures pack', () => {
     expect(p.text).toContain('Previous period: no data.');
     expect(p.text).not.toContain('Change vs previous');
   });
+
+  it('names every shop when the report spans several', () => {
+    const cur = report('2026-11-13', '2026-11-19', 1200000, 12);
+    cur.byStore = [
+      { storeId: 'a', name: 'Beach', bills: 7, payable: 800000 },
+      { storeId: 'b', name: 'Town', bills: 5, payable: 400000 },
+    ];
+    const p = buildFiguresPack({ shopName: 'All 2 shops together', current: cur, previous: null });
+    expect(p.text).toContain('Beach: 8,000 THB, 7 bills');
+    expect(unverifiedNumbers('Beach made 8,000 THB and Town 4,000 THB.', p.allowed)).toEqual([]);
+  });
 });

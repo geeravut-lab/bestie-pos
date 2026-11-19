@@ -50,6 +50,10 @@ const fakeFetch = (o: { allowed?: boolean; fails?: boolean } = {}) =>
         auth: String((init?.headers as Record<string, string>).Authorization),
         body,
       });
+      if (fn === 'ask_shop_context_all')
+        return Response.json(
+          o.allowed === false ? null : { org_id: ORG, store_ids: [STORE, 'x'], count: 2 },
+        );
       if (fn === 'ask_shop_context')
         return Response.json(
           o.allowed === false ? null : { org_id: ORG, store_id: STORE, name: 'Acme' },
@@ -108,6 +112,36 @@ describe('POST /api/ask/shop', () => {
     expect(reports.every((c) => c.auth.startsWith('Bearer jwt-'))).toBe(true);
     expect(calls.find((c) => c.fn === 'log_ai_usage')!.auth).toBe('Bearer svc');
     expect(JSON.stringify(calls.find((c) => c.fn === 'log_ai_usage')!.body)).not.toContain('sales');
+  });
+
+  it('all shops together: asks the all-shops gate, reads the report with no shop filter, names the group', async () => {
+    calls.length = 0;
+    const res = await ask(
+      { org_id: ORG, preset: 'last7', question: 'How is the whole business doing?' },
+      fakeFetch(),
+      'Sales were 12,000 THB.',
+    );
+    const b = (await res.json()) as { available: boolean; figures: string };
+    expect(b.available).toBe(true);
+    expect(b.figures).toContain('Shop: All 2 shops together');
+    expect(calls.some((c) => c.fn === 'ask_shop_context_all')).toBe(true);
+    const reports = calls.filter((c) => c.fn === 'sales_report');
+    expect(reports.every((c) => (c.body as { p: { store_id: unknown } }).p.store_id === null)).toBe(
+      true,
+    );
+    expect(
+      (calls.find((c) => c.fn === 'log_ai_usage')!.body as { p: { store_id: string } }).p.store_id,
+    ).toBe(STORE);
+    expect(
+      (
+        await ask(
+          { org_id: ORG, preset: 'last7', question: 'sales?' },
+          fakeFetch({ allowed: false }),
+          'x',
+        )
+      ).status,
+    ).toBe(403);
+    expect((await ask({ preset: 'last7', question: 'sales?' }, fakeFetch(), 'x')).status).toBe(422);
   });
 
   it('lists a number the figures do not contain instead of trusting it', async () => {

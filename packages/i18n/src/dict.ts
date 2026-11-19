@@ -1010,6 +1010,7 @@ const th = {
   menuTranslate: 'แปลเป็นอังกฤษด้วย AI',
   menuTranslated: 'AI แปลให้แล้ว กรุณาตรวจก่อนบันทึก',
   askShopTitle: 'ถามร้านของฉัน',
+  askShopThisShop: 'ร้านที่ใช้อยู่ตอนนี้',
   askShopIntro:
     'ถามเป็นภาษาคนว่าร้านขายเป็นอย่างไร ผู้ช่วยอ่านจากรายงานของร้านเท่านั้น ไม่แก้ไขอะไร และตัวเลขทุกตัวมาจากรายงาน ผู้ช่วยแค่อธิบายให้ฟัง',
   askShopOff: 'ยังไม่ได้เปิดผู้ช่วย AI ของร้านนี้ (หน้า "เปิด/ปิดฟีเจอร์" ต้องแผน Pro ขึ้นไป)',
@@ -2412,6 +2413,7 @@ const en = {
   menuTranslate: 'Translate to English with AI',
   menuTranslated: 'Translated by AI. Please check before saving.',
   askShopTitle: 'Ask my shop',
+  askShopThisShop: 'The shop I am signed in to',
   askShopIntro:
     'Ask in plain words how the shop is doing. The assistant only reads your shop’s reports, changes nothing, and every figure comes from those reports: it just explains them.',
   askShopOff: 'The AI assistant is not switched on for this shop (Modules page; Pro plan and up).',

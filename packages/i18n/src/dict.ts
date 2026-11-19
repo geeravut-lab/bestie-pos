@@ -1229,6 +1229,15 @@ const th = {
   printerKindNote_network:
     'เครื่องพิมพ์ LAN/WiFi เบราว์เซอร์ต่อตรงไม่ได้ ต้องรันโปรแกรมกลางเล็ก ๆ (tools/print-bridge) บนคอมพิวเตอร์ในร้านเพื่อส่งต่อ',
   printerUnsupported: 'เบราว์เซอร์นี้ใช้วิธีนี้ไม่ได้',
+  stationTitle: 'จุดพิมพ์ใบสั่ง',
+  stationIntro:
+    'เปิดหน้านี้ค้างไว้ที่แท็บเล็ตหรือคอมพิวเตอร์ของร้าน หน้านี้จะพิมพ์ใบสั่งครัว/บาร์ของออเดอร์ที่ลูกค้าสั่งจาก QR แล้วระบบส่งเข้าครัวเอง (ใบสั่งที่พนักงานส่งจากแท็บเล็ต แท็บเล็ตนั้นพิมพ์ให้เอง) ต้องเปิดหน้านี้ไว้และไม่ปิดหน้าจอ',
+  stationPickPrinter: 'เลือกเครื่องพิมพ์ที่หน้านี้ดูแล (ต้องเป็นเครื่องที่แท็บเล็ต/คอมพิวเตอร์เครื่องนี้ส่งถึงได้)',
+  stationWaiting: 'กำลังรอใบสั่งใหม่…',
+  stationLog: 'ใบสั่งล่าสุด',
+  stationPrinted: 'พิมพ์ใบสั่ง {number} ที่ {name} แล้ว',
+  stationFailed: 'พิมพ์ใบสั่ง {number} ที่ {name} ไม่สำเร็จ (ระบบจะลองใหม่)',
+  stationOpen: 'เปิดจุดพิมพ์ใบสั่ง',
   printerStations: 'พิมพ์ใบสั่งครัวของ',
   printerStationBadge: 'ใบสั่ง: {name}',
   printerStation_kitchen: 'ครัว',
@@ -2639,6 +2648,16 @@ const en = {
   printerKindNote_network:
     'LAN / WiFi printers cannot be reached by a browser directly: run the small bridge program (tools/print-bridge) on a computer in the shop to forward the data.',
   printerUnsupported: 'This browser cannot use this method',
+  stationTitle: 'Print station',
+  stationIntro:
+    'Keep this page open on a tablet or computer at the shop. It prints the kitchen / bar tickets of orders guests placed from the table QR that the system sent to the kitchen by itself (tickets from staff tablets are printed by that tablet). The page must stay open and the screen awake.',
+  stationPickPrinter:
+    'Tick the printers this page looks after (only printers this device can reach).',
+  stationWaiting: 'Waiting for new tickets…',
+  stationLog: 'Latest tickets',
+  stationPrinted: 'Ticket {number} printed on {name}',
+  stationFailed: 'Ticket {number} did not print on {name} (it will be tried again)',
+  stationOpen: 'Open the print station',
   printerStations: 'Print kitchen tickets for',
   printerStationBadge: 'Tickets: {name}',
   printerStation_kitchen: 'Kitchen',

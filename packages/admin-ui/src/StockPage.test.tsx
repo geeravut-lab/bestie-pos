@@ -76,7 +76,8 @@ describe('<StockPage>', () => {
   it('lists stock with kg display, low and negative badges', async () => {
     mount(ctx(fakeDb(tables()).client));
     expect(await screen.findByText('Rice noodles')).toBeTruthy();
-    expect(screen.getByText('4.2 kg')).toBeTruthy();
+    // the print-only count sheet shows the quantity too, once its portal has mounted
+    expect(screen.getAllByText('4.2 kg').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Running low')).toHaveLength(1); // the eggs: 8 ≤ 10
     expect(screen.getAllByText('Negative')).toHaveLength(1); // the oil
   });

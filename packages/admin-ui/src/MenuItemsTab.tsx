@@ -7,6 +7,7 @@ import {
   formatTHB,
   itemProblems,
   localizedName,
+  menuImageUrl,
   parseCode,
   parseSku,
   parsePriceInput,
@@ -22,6 +23,7 @@ import type { PageContext } from '@bestie/auth';
 import { translateName } from './aiApi';
 import { deleteRow, nextSort, saveRow } from './menuData';
 import type { Cat, Item, Menu } from './menuData';
+import { ItemPhoto } from './ItemPhoto';
 import { CodeFields, ConfirmDelete, NameFields, NameForm } from './MenuParts';
 import { FoodInfoFields } from './FoodInfoFields';
 
@@ -81,6 +83,14 @@ export function MenuItemsTab({ ctx, storeId, menu, canEdit, onChanged }: Props) 
           {shown.map((item) => (
             <li key={item.id} className="member-row">
               <div className="member-head">
+                {menuImageUrl(item.id, item.image_v) ? (
+                  <img
+                    className="item-thumb"
+                    src={menuImageUrl(item.id, item.image_v)!}
+                    alt={fmt(t.menuPhotoAlt, { name: localizedName(item.name, lang) })}
+                    loading="lazy"
+                  />
+                ) : null}
                 <strong>{localizedName(item.name, lang)}</strong>
                 <span className="tabular">{formatTHB(item.prices.base, locale)}</span>
                 <span className="muted">{catName(item.category_id)}</span>
@@ -113,6 +123,7 @@ export function MenuItemsTab({ ctx, storeId, menu, canEdit, onChanged }: Props) 
                     onChanged();
                   }}
                   onCancel={() => setEditing(null)}
+                  onChanged={onChanged}
                 />
               ) : null}
             </li>
@@ -250,6 +261,7 @@ function ItemForm({
   defaultCategory,
   onDone,
   onCancel,
+  onChanged,
 }: {
   ctx: PageContext;
   storeId: string;
@@ -258,6 +270,8 @@ function ItemForm({
   defaultCategory?: string;
   onDone: () => void;
   onCancel: () => void;
+  /** Reload the menu without closing the form (a picture was changed). */
+  onChanged?: () => void;
 }) {
   const { t, lang } = useI18n();
   const id = item?.id ?? 'new';
@@ -434,6 +448,16 @@ function ItemForm({
           />
         </div>
       </div>
+
+      {item ? (
+        <ItemPhoto
+          ctx={ctx}
+          itemId={item.id}
+          itemName={localizedName(item.name, lang)}
+          version={item.image_v}
+          onChanged={onChanged ?? onDone}
+        />
+      ) : null}
 
       <fieldset className="audit-group">
         <legend>{t.menuChannelPrices}</legend>

@@ -250,6 +250,22 @@ describe('<OrderPage>', () => {
     expect((await getOrder(ID))?.lines).toHaveLength(0);
   });
 
+  it('an item with a picture shows it on its button (by the versioned address); one without shows none', async () => {
+    bindTablet();
+    await seed();
+    const tables = baseTables();
+    (tables.menu_items as { id: string; image_v?: number }[]).find((i) => i.id === 'i1')!.image_v =
+      4;
+    mountEn(<OrderPage ctx={pageCtx(posClient(tables), { path: `/order/${ID}` })} orderId={ID} />);
+    const padThai = await screen.findByRole('button', { name: /Pad Thai/ });
+    expect(padThai.querySelector('img.item-pic')?.getAttribute('src')).toBe(
+      '/api/menu-image?i=i1&v=4',
+    );
+    expect(
+      (await screen.findByRole('button', { name: /Fried rice/ })).querySelector('img'),
+    ).toBeNull();
+  });
+
   it('two taps in the same instant never overwrite each other', async () => {
     bindTablet();
     await seed();

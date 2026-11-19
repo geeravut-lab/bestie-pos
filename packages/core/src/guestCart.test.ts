@@ -167,3 +167,17 @@ describe('the basket kept on the guest’s phone', () => {
     ); // from the future
   });
 });
+
+describe('the picture of a dish', () => {
+  const m = parseGuestMenu({
+    items: [
+      { id: 'a', name: { th: 'ก' }, price: 100, image_v: 3 },
+      { id: 'b', name: { th: 'ข' }, price: 100 },
+      { id: 'c', name: { th: 'ค' }, price: 100, image_v: 0 },
+      { id: 'd', name: { th: 'ง' }, price: 100, image_v: 'x' },
+    ],
+  });
+  it('is its version, or null when there is none or the value is not a positive number', () => {
+    expect(m.items.map((i) => i.imageV)).toEqual([3, null, null, null]);
+  });
+});

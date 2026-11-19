@@ -40,6 +40,7 @@ import type { PosTable } from './posData';
 import { changeOrder, mergeBills, payCash, splitBill } from './orderActions';
 import { SplitSheet } from './SplitSheet';
 import { LoadFailed, Loading, Page } from './PosBits';
+import { CameraScan } from './CameraScan';
 import { ModifierSheet } from './ModifierSheet';
 import { ManagerVoid } from './ManagerVoid';
 import { OrderCustomer } from './OrderCustomer';
@@ -238,8 +239,8 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
   };
 
   // A barcode scanner types the code and presses Enter; the same box works for typing a code by hand. Works offline (the cached menu).
-  const doScan = async () => {
-    const code = scan;
+  const doScan = async (typed?: string) => {
+    const code = typed ?? scan;
     setScan('');
     setScanNote(null);
     const r = resolveScan(menu, code);
@@ -330,11 +331,12 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
                 type="submit"
                 variant="secondary"
                 disabled={scan.trim() === ''}
-                onClick={doScan}
+                onClick={() => doScan()}
               >
                 {t.scanAdd}
               </AsyncButton>
               {scanNote ? <Notice kind={scanNote.kind}>{scanNote.text}</Notice> : null}
+              <CameraScan onCode={(c) => doScan(c)} />
             </form>
           ) : null}
           <div className="chips" role="group" aria-label={t.orderItems}>

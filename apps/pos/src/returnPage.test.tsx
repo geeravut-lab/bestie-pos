@@ -1,6 +1,6 @@
 import { cleanup, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetOfflineDb } from '@bestie/offline';
 import { ReturnPage } from './ReturnPage';
 import { bindTablet, mountEn, pageCtx, posClient } from './testKit';
@@ -94,5 +94,51 @@ describe('<ReturnPage>', () => {
     mountEn(<ReturnPage ctx={pageCtx(c, manager)} orderId="o1" />);
     expect(await screen.findByText(/already been returned/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Confirm the return' })).toBeNull();
+  });
+
+  it('prints a return slip with the shop, the numbers and the signature line — only while printing', async () => {
+    const print = vi.fn();
+    vi.stubGlobal('print', print);
+    const c = posClient(
+      tables({
+        receipts: [
+          {
+            number: 'A-000001',
+            payable: 70000,
+            seller_name: 'Island Shop Co.',
+            seller_tax_id: '0105560123456',
+            branch_code: '00001',
+            pos_id: 'POS-77',
+          },
+        ],
+        order_returns: [
+          {
+            id: 'r-1',
+            number: 'RT-0001',
+            refund_method: 'cash',
+            amount: 30000,
+            reason: 'defective',
+            created_at: '2026-11-19T10:00:00Z',
+            receipt_id: 'rc-1',
+            staff_id: 's-1',
+          },
+        ],
+        order_return_lines: [
+          {
+            name: { th: 'เสื้อ', en: 'T-shirt' },
+            quantity: 1,
+            unit_price: 30000,
+            order_line_id: 'l-tee',
+          },
+        ],
+        staff: [{ display_name: 'Mali' }],
+      }),
+    );
+    mountEn(<ReturnPage ctx={pageCtx(c, manager)} orderId="o1" />);
+    await screen.findByText('Earlier returns of this bill');
+    expect(document.getElementById('print-root')).toBeNull();
+    await userEvent.click(await screen.findByRole('button', { name: 'Print the return slip' }));
+    await waitFor(() => expect(print).toHaveBeenCalled());
+    vi.unstubAllGlobals();
   });
 });

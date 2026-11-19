@@ -2217,3 +2217,58 @@ a.nav-card[aria-busy='true'] {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+/* ── the return slip (80 mm paper) ─────────────────────────────────────── */
+.return-slip {
+  color: var(--bp-ink);
+  font-size: 10pt;
+  width: 72mm;
+}
+.return-slip h1 {
+  font-size: 12pt;
+  margin: 0 0 1mm;
+}
+.return-slip h2 {
+  font-size: 11pt;
+  margin: 3mm 0 1mm;
+}
+.return-slip p {
+  margin: 0 0 1.5mm;
+}
+.return-slip table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2mm 0;
+}
+.return-slip td {
+  padding: 0.5mm 0;
+  vertical-align: top;
+}
+.return-slip td:last-child {
+  text-align: end;
+  white-space: nowrap;
+}
+.return-slip-sign {
+  margin-top: 12mm !important;
+  border-top: 1px solid var(--bp-ink);
+  padding-top: 1mm;
+  font-size: 9pt;
+}
+.return-slip-note {
+  font-size: 8pt;
+  opacity: 0.75;
+}
+
+/* ── camera barcode scan on the order screen ──────────────────────────── */
+.camera-scan {
+  display: grid;
+  gap: 0.5rem;
+  margin-block: 0.5rem;
+}
+.camera-scan video {
+  width: 100%;
+  max-height: 40vh;
+  object-fit: cover;
+  border-radius: var(--bp-radius-card);
+  background: var(--bp-ink);
+}

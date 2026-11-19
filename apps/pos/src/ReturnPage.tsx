@@ -16,6 +16,7 @@ import { AsyncButton } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
 import { LoadFailed, Loading, Page } from './PosBits';
+import { ReturnSlipButton } from './ReturnSlip';
 import { usePosStore } from './posData';
 
 type SoldLine = {
@@ -33,6 +34,7 @@ type Loaded = {
   lines: SoldLine[];
   payments: PaidByTender[];
   returns: { method: ReturnMethod; amount: number }[];
+  earlier: { id: string; number: string; amount: number }[];
 };
 
 const num = (v: unknown): number => (typeof v === 'number' ? v : Number(v) || 0);
@@ -45,7 +47,7 @@ async function loadBill(ctx: PageContext, orderId: string): Promise<Loaded | nul
     c.from('order_lines').select('id, name, unit_price, quantity, status').eq('order_id', orderId),
     c.from('payments').select('tender, amount').eq('order_id', orderId).eq('status', 'confirmed'),
     c.from('order_return_lines').select('order_line_id, quantity').eq('order_id', orderId),
-    c.from('order_returns').select('refund_method, amount').eq('order_id', orderId),
+    c.from('order_returns').select('id, number, refund_method, amount').eq('order_id', orderId),
   ]);
   for (const r of [ord, rec, lines, pays, rlines, rets])
     if (r.error) throw new Error(r.error.message);
@@ -73,6 +75,11 @@ async function loadBill(ctx: PageContext, orderId: string): Promise<Loaded | nul
     })),
     returns: ((rets.data ?? []) as { refund_method: ReturnMethod; amount: number }[]).map((r) => ({
       method: r.refund_method,
+      amount: num(r.amount),
+    })),
+    earlier: ((rets.data ?? []) as { id: string; number: string; amount: number }[]).map((r) => ({
+      id: String(r.id),
+      number: String(r.number),
       amount: num(r.amount),
     })),
   };
@@ -103,6 +110,7 @@ export function ReturnPage({ ctx, orderId }: { ctx: PageContext; orderId: string
   const [note, setNote] = useState('');
   const [error, setError] = useState<ErrorKey | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  const [doneId, setDoneId] = useState<string | null>(null);
   // one id per attempt: pressing the button twice, or a retry after a lost answer, can never return twice
   const [attemptId, setAttemptId] = useState(() => crypto.randomUUID());
 
@@ -187,6 +195,7 @@ export function ReturnPage({ ctx, orderId }: { ctx: PageContext; orderId: string
         amount: formatTHB(num(r?.amount), locale),
       }) + (r?.points_reversed ? ` · ${fmt(t.returnPointsBack, { n: r.points_reversed })}` : ''),
     );
+    setDoneId(attemptId);
     setQty({});
     setAttemptId(crypto.randomUUID());
     bill.reload();
@@ -199,6 +208,7 @@ export function ReturnPage({ ctx, orderId }: { ctx: PageContext; orderId: string
       </p>
       {!online ? <Notice kind="info">{t.returnOnline}</Notice> : null}
       {done ? <Notice kind="success">{done}</Notice> : null}
+      {doneId ? <ReturnSlipButton ctx={ctx} returnId={doneId} /> : null}
       {error ? <Notice kind="error">{errorText(error, t)}</Notice> : null}
       {left === 0 ? <Notice kind="info">{t.returnNothingLeft}</Notice> : null}
 
@@ -325,6 +335,20 @@ export function ReturnPage({ ctx, orderId }: { ctx: PageContext; orderId: string
               {t.returnSubmit}
             </AsyncButton>
           </div>
+        </>
+      ) : null}
+      {data.earlier.length > 0 ? (
+        <>
+          <h2>{t.returnEarlier}</h2>
+          <ul className="member-list">
+            {data.earlier.map((e) => (
+              <li key={e.id} className="member-row">
+                <strong className="tabular">{e.number}</strong>
+                <span className="tabular">{formatTHB(e.amount, locale)}</span>
+                <ReturnSlipButton ctx={ctx} returnId={e.id} />
+              </li>
+            ))}
+          </ul>
         </>
       ) : null}
     </Page>

@@ -16,6 +16,7 @@ export { TendersPage } from './TendersPage';
 export { ThemePage } from './ThemePage';
 export { AiPromptsPage, AiSettingsPage } from './AiPages';
 export { useRemote } from './useRemote';
+export { PrintPortal } from './PrintPortal';
 export { loadMenu } from './menuData';
 export type { Cat, Group, Item, Menu, Opt } from './menuData';
 import type { ReactNode } from 'react';

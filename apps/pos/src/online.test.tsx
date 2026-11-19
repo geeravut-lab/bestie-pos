@@ -292,6 +292,68 @@ describe('startOnlinePayment', () => {
     });
   });
 
+  it('a split bill sends its cash / Credit shares with the digital share and rounds only the cash', async () => {
+    await seed(true); // 160.00 total
+    const f = stubFetch(200, { attempt_id: 'att-s', amount: 5975, qr_image_url: null });
+    const r = await startOnlinePayment({
+      client: client(),
+      orderId: ID,
+      tender: 'promptpay',
+      binding,
+      billConfig: cfg,
+      staffId: 'st1',
+      lang: 'en',
+      split: {
+        rule: 'nearest-50',
+        creditBalance: 9000,
+        legs: [
+          { tender: 'credit', amount: 5000 },
+          { tender: 'cash', amount: 5025, tendered: 6000 },
+          { tender: 'promptpay', amount: 5975 },
+        ],
+      },
+    });
+    expect(r).toMatchObject({ charge: { attemptId: 'att-s', tender: 'promptpay', amount: 5975 } });
+    const snap = JSON.parse((f.mock.calls[0] as unknown as [string, RequestInit])[1].body as string)
+      .snapshot as {
+      legs: { id: string; tender: string; amount: number }[];
+      rounding: number;
+      payable: number;
+      total: number;
+    };
+    expect(snap.legs.map((l) => [l.tender, l.amount])).toEqual([
+      ['credit', 5000],
+      ['cash', 5050],
+    ]);
+    expect(snap.legs.every((l) => /^[0-9a-f-]{36}$/.test(l.id))).toBe(true);
+    expect(snap.rounding).toBe(25);
+    expect(snap.payable).toBe(snap.total + 25);
+  });
+
+  it('a split that does not add up to the bill is not started', async () => {
+    await seed(true);
+    const f = stubFetch(200, { attempt_id: 'x' });
+    expect(
+      await startOnlinePayment({
+        client: client(),
+        orderId: ID,
+        tender: 'promptpay',
+        binding,
+        billConfig: cfg,
+        lang: 'en',
+        split: {
+          rule: 'none',
+          creditBalance: null,
+          legs: [
+            { tender: 'cash', amount: 5000 },
+            { tender: 'promptpay', amount: 5000 },
+          ],
+        },
+      }),
+    ).toEqual({ error: 'err_pay_failed' });
+    expect(f).not.toHaveBeenCalled();
+  });
+
   it('does not ask the server while the bill has not reached it yet', async () => {
     await seed(true);
     const f = stubFetch(200, { attempt_id: 'x' });

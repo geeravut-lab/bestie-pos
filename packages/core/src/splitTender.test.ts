@@ -88,4 +88,48 @@ describe('planSplit', () => {
     expect(plan.problems).toEqual([]);
     expect(plan.payments.map((p) => p.amount)).toEqual([7000, 7000, 7000]);
   });
+
+  it('one PromptPay / card share rides with cash and Credit legs; it is charged exactly', () => {
+    const plan = planSplit({
+      ...base,
+      rule: 'nearest-25' as never,
+      creditBalance: 90000,
+      legs: [
+        { tender: 'credit', amount: 5000 },
+        { tender: 'cash', amount: 6010, tendered: 7000 },
+        { tender: 'promptpay', amount: 9990 },
+      ],
+    });
+    expect(plan.problems).toEqual([]);
+    expect(plan.digital).toEqual({ tender: 'promptpay', amount: 9990 });
+    // the cash leg carries the rounding; the digital share and Credit stay exact
+    expect(plan.payments.map((x) => x.tender)).toEqual(['credit', 'cash']);
+    const cash = plan.payments[1]!;
+    expect(plan.digital!.amount + 5000 + cash.amount).toBe(plan.payable);
+  });
+  it('a second digital share, or a digital share that does not cover the bill, is refused', () => {
+    expect(
+      planSplit({
+        ...base,
+        legs: [
+          { tender: 'promptpay', amount: 10000 },
+          { tender: 'gateway', amount: 11000 },
+        ],
+      }).problems,
+    ).toContain('one_digital_only');
+    const short = planSplit({
+      ...base,
+      legs: [
+        { tender: 'cash', amount: 5000 },
+        { tender: 'gateway', amount: 5000 },
+      ],
+    });
+    expect(short.problems).toEqual(['not_whole_bill']);
+    expect(short.digital).toBeNull();
+    expect(short.payments).toEqual([]);
+  });
+  it('a bill with no digital share has none', () => {
+    const plan = planSplit({ ...base, legs: [{ tender: 'cash', amount: 21000 }] });
+    expect(plan.digital).toBeNull();
+  });
 });

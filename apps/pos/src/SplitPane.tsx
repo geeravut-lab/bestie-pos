@@ -5,8 +5,14 @@ import { errorText, fmt, useI18n } from '@bestie/i18n';
 import type { ErrorKey } from '@bestie/i18n';
 import { AsyncButton } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
+import { OnlinePane } from './OnlinePane';
+import type { OnlinePay } from './onlinePay';
 
-type Row = { tender: 'cash' | 'credit'; amount: string; tendered: string };
+type Row = {
+  tender: 'cash' | 'credit' | 'promptpay' | 'gateway';
+  amount: string;
+  tendered: string;
+};
 
 /** Split one bill between payers: each share paid in cash or from the customer's Bestie Credit. One receipt. */
 export function SplitPane({
@@ -14,6 +20,8 @@ export function SplitPane({
   rule,
   locale,
   online,
+  pay,
+  methods = { promptpay: false, gateway: false },
   credit,
   onPay,
   onClose,
@@ -22,6 +30,9 @@ export function SplitPane({
   rule: RoundingRule;
   locale: 'th-TH' | 'en-GB';
   online: boolean;
+  /** The online-payment helper: lets ONE share be PromptPay or card (the bill then closes when the provider confirms). */
+  pay?: OnlinePay;
+  methods?: { promptpay: boolean; gateway: boolean };
   /** null = no customer on the bill or Credit is off in this shop. */
   credit: { name: string; balance: Satang } | null;
   onPay: (legs: SplitLeg[]) => Promise<ErrorKey | null>;
@@ -31,6 +42,11 @@ export function SplitPane({
   const [people, setPeople] = useState(2);
   const [rows, setRows] = useState<Row[]>([]);
   const [error, setError] = useState<ErrorKey | null>(null);
+  const [digital, setDigital] = useState<{
+    tender: 'promptpay' | 'gateway';
+    amount: Satang;
+    legs: SplitLeg[];
+  } | null>(null);
   const money = (n: Satang) => formatTHB(n, locale);
 
   const legs: SplitLeg[] = rows.map((r) => ({
@@ -56,6 +72,20 @@ export function SplitPane({
     setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
 
   if (!online) return <Notice kind="info">{t.paySplitOnlineOnly}</Notice>;
+  if (digital && pay)
+    return (
+      <>
+        <Notice kind="info">{t.paySplitDigitalNote}</Notice>
+        <OnlinePane
+          tender={digital.tender}
+          total={digital.amount}
+          locale={locale}
+          online={pay}
+          legs={digital.legs}
+          onClose={() => setDigital(null)}
+        />
+      </>
+    );
 
   return (
     <div className="split-pane">
@@ -101,10 +131,16 @@ export function SplitPane({
                     id={`split-t-${i}`}
                     className="field"
                     value={r.tender}
-                    onChange={(e) => update(i, { tender: e.target.value as 'cash' | 'credit' })}
+                    onChange={(e) => update(i, { tender: e.target.value as Row['tender'] })}
                   >
                     <option value="cash">{t.paySplitCash}</option>
                     {credit ? <option value="credit">{t.paySplitCredit}</option> : null}
+                    {pay && methods.promptpay ? (
+                      <option value="promptpay">{t.paySplitPromptPay}</option>
+                    ) : null}
+                    {pay && methods.gateway && pay.hasReader ? (
+                      <option value="gateway">{t.paySplitCard}</option>
+                    ) : null}
                   </select>
                 </div>
                 <div className="form-row">
@@ -185,11 +221,15 @@ export function SplitPane({
           disabled={plan.problems.length > 0}
           onClick={async () => {
             setError(null);
+            if (plan.digital) {
+              setDigital({ ...plan.digital, legs });
+              return;
+            }
             const err = await onPay(legs);
             if (err) setError(err);
           }}
         >
-          {t.paySplitConfirm}
+          {plan.digital ? t.paySplitDigitalStart : t.paySplitConfirm}
         </AsyncButton>
         <button type="button" className="btn btn-secondary" onClick={onClose}>
           {t.menuCancel}

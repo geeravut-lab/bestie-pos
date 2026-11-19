@@ -16,7 +16,15 @@ import {
   setQuantity,
   voidSentLine,
 } from '@bestie/core';
-import type { Channel, LineDoc, OrderDoc, OrderGroupInput, OrderItemInput } from '@bestie/core';
+import type {
+  Channel,
+  LineDoc,
+  OrderDoc,
+  OrderGroupInput,
+  OrderItemInput,
+  RoundingRule,
+  Satang,
+} from '@bestie/core';
 import type { Item, Menu } from '@bestie/admin-ui';
 import { errorText, fmt, useI18n } from '@bestie/i18n';
 import type { Dict, ErrorKey } from '@bestie/i18n';
@@ -424,6 +432,10 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
             config.defaultLang,
             netUp,
             () => ctx.navigate(`/receipt/${order.id}`),
+            {
+              rule: config.cashRounding,
+              creditBalance: splitInfo.data ? splitInfo.data.balance : null,
+            },
           )}
           onClose={() => setPaying(false)}
           splitCredit={
@@ -662,11 +674,12 @@ function onlinePay(
   lang: 'th' | 'en',
   available: boolean,
   done: () => void,
+  split?: { rule: RoundingRule; creditBalance: Satang | null },
 ): OnlinePay {
   return {
     available,
     hasReader: binding.reader === true,
-    start: (tender) =>
+    start: (tender, legs) =>
       startOnlinePayment({
         client: ctx.client,
         orderId,
@@ -675,6 +688,7 @@ function onlinePay(
         billConfig,
         staffId: ctx.staffId,
         lang,
+        split: legs && split ? { legs, ...split } : undefined,
       }),
     cancel: (attemptId) => cancelOnlinePayment(ctx.client, attemptId),
     status: (attemptId) => readAttempt(ctx.client, attemptId),

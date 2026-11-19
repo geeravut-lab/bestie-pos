@@ -77,6 +77,74 @@ describe('<SplitPane>', () => {
     expect(screen.getByText('Not enough Credit.')).toBeTruthy();
   });
 
+  it('offers PromptPay / card only when the shop switched them on (card also needs a reader)', async () => {
+    mount();
+    await userEvent.click(screen.getByRole('button', { name: 'Add a payer' }));
+    expect(screen.queryByRole('option', { name: 'PromptPay (QR)' })).toBeNull();
+    cleanup();
+    mount({ pay: online(), methods: { promptpay: true, gateway: true } });
+    await userEvent.click(screen.getByRole('button', { name: 'Add a payer' }));
+    expect(screen.getByRole('option', { name: 'PromptPay (QR)' })).toBeTruthy();
+    expect(screen.queryByRole('option', { name: 'Card (reader)' })).toBeNull(); // no reader on this device
+    cleanup();
+    mount({ pay: { ...online(), hasReader: true }, methods: { promptpay: true, gateway: true } });
+    await userEvent.click(screen.getByRole('button', { name: 'Add a payer' }));
+    expect(screen.getByRole('option', { name: 'Card (reader)' })).toBeTruthy();
+  });
+
+  it('a split with one PromptPay share goes to the QR step with the cash / Credit shares riding along, and does not close by itself', async () => {
+    const start = vi.fn(async () => ({
+      charge: { attemptId: 'a1', tender: 'promptpay' as const, amount: 10000, qrImageUrl: null },
+    }));
+    const { onPay } = mount({
+      credit: { name: 'Anna', balance: 90000 },
+      pay: { ...online(), start },
+      methods: { promptpay: true, gateway: false },
+    });
+    const add = screen.getByRole('button', { name: 'Add a payer' });
+    await userEvent.click(add);
+    await userEvent.click(add);
+    await userEvent.click(add);
+    const set = async (n: number, tender: string, amount: string) => {
+      await userEvent.selectOptions(screen.getByLabelText(`Payer ${n} pays with`), tender);
+      const a = screen.getByLabelText(`Payer ${n} share (THB)`);
+      await userEvent.clear(a);
+      await userEvent.type(a, amount);
+    };
+    await set(1, 'credit', '50');
+    await set(2, 'cash', '60');
+    await set(3, 'promptpay', '100');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Continue to the PromptPay / card payment' }),
+    );
+    expect(await screen.findByText(/Collect the cash and use the Credit shares now/)).toBeTruthy();
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Show QR for the guest to scan' }),
+    );
+    await waitFor(() => expect(start).toHaveBeenCalledTimes(1));
+    const [tender, legs] = start.mock.calls[0] as unknown as [
+      string,
+      { tender: string; amount: number }[],
+    ];
+    expect(tender).toBe('promptpay');
+    expect(legs.map((l) => [l.tender, l.amount])).toEqual([
+      ['credit', 5000],
+      ['cash', 6000],
+      ['promptpay', 10000],
+    ]);
+    expect(onPay).not.toHaveBeenCalled();
+  });
+
+  it('two PromptPay / card shares are refused', async () => {
+    mount({ pay: online(), methods: { promptpay: true, gateway: false } });
+    const add = screen.getByRole('button', { name: 'Add a payer' });
+    await userEvent.click(add);
+    await userEvent.click(add);
+    await userEvent.selectOptions(screen.getByLabelText('Payer 1 pays with'), 'promptpay');
+    await userEvent.selectOptions(screen.getByLabelText('Payer 2 pays with'), 'promptpay');
+    expect(screen.getByText('Only one person can pay by PromptPay / card on a bill.')).toBeTruthy();
+  });
+
   it('says it needs a connection offline', () => {
     mount({ online: false });
     expect(screen.getByText('Splitting a payment needs a connection.')).toBeTruthy();

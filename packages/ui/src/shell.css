@@ -2169,3 +2169,51 @@ a.nav-card[aria-busy='true'] {
     border-color: transparent;
   }
 }
+
+/* ── who is signed in and in which role (top bar) ───────────────────────── */
+.role-chip {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 11rem;
+  min-height: var(--bp-touch);
+  padding: 0 0.75rem;
+  border-radius: var(--bp-radius-pill);
+  background: var(--bp-surface);
+  border: 2px solid var(--bp-field-border);
+  color: var(--bp-ink);
+  font-size: 0.8125rem;
+  line-height: 1.15;
+}
+.role-chip strong,
+.role-chip-place {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.role-chip-place {
+  font-size: 0.6875rem;
+  color: var(--bp-muted);
+}
+/* on a phone the top bar is full: the role is on the home card and the account page instead */
+@media (max-width: 640px) {
+  .role-chip {
+    display: none;
+  }
+}
+
+/* label / value pairs (account, booking confirmation) */
+.kv {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0.5rem 0;
+}
+.kv dt {
+  color: var(--bp-muted);
+}
+.kv dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

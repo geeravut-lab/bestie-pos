@@ -82,3 +82,91 @@ describe('<AccountPage> who is signed in', () => {
     expect(screen.queryByLabelText('Current password')).toBeNull();
   });
 });
+
+describe('<AccountPage> my role', () => {
+  const EMAIL_USER = {
+    id: 'u9',
+    email: 'cashier.cafe.demo@bestiedemo.example',
+    app_metadata: { provider: 'email', providers: ['email'] },
+    user_metadata: {},
+  };
+  const staffRow = (builtIn: string | null, name: string, storeId: string | null) => ({
+    id: 's1',
+    user_id: 'u9',
+    org_id: 'o1',
+    store_id: storeId,
+    display_name: 'Demo',
+    active: true,
+    roles: { built_in: builtIn, name, permissions: ['order.create'], hidden_modules: [] },
+    orgs: { name: '[DEMO] Island Group', legal_sign_off: {} },
+  });
+  const STORE = {
+    id: 'st1',
+    org_id: 'o1',
+    legal_entity_id: 'le',
+    name: 'Breeze Café',
+    profile: 'cafe',
+    plan: 'pro',
+    module_overrides: {},
+    theme: {},
+    deleted_at: null,
+  };
+  function roleClient(staff: unknown, platformAdmin = false) {
+    const auth = {
+      getSession: vi.fn(async () => ({ data: { session: { user: EMAIL_USER } } })),
+      onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: () => {} } } })),
+      signOut: vi.fn(async () => ({ error: null })),
+    };
+    const from = vi.fn((table: string) => {
+      if (table === 'staff')
+        return {
+          select: () => ({ eq: () => ({ eq: async () => ({ data: [staff], error: null }) }) }),
+        };
+      if (table === 'stores')
+        return { select: () => ({ is: async () => ({ data: [STORE], error: null }) }) };
+      return {
+        select: () => ({
+          maybeSingle: async () => ({ data: null, error: null }),
+          eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }),
+        }),
+      };
+    });
+    const channel = () => {
+      const ch: Record<string, unknown> = {};
+      ch.on = () => ch;
+      ch.subscribe = () => ch;
+      return ch;
+    };
+    return {
+      auth,
+      from,
+      rpc: vi.fn(async () => ({ data: platformAdmin, error: null })),
+      channel,
+      removeChannel: vi.fn(),
+      realtime: { setAuth: vi.fn() },
+    } as never;
+  }
+
+  it('shows the role, the group and the shop of the signed-in person', async () => {
+    mount(roleClient(staffRow('cashier', 'Cashier', 'st1')));
+    expect(await screen.findByText('My role')).toBeTruthy();
+    expect(screen.getByText('Cashier')).toBeTruthy();
+    expect(screen.getByText('[DEMO] Island Group')).toBeTruthy();
+    expect(screen.getByText('Breeze Café')).toBeTruthy();
+    expect(screen.getByText('No')).toBeTruthy(); // not a platform administrator
+    expect(screen.getByText(/The shop owner role cannot open those pages/)).toBeTruthy();
+  });
+
+  it('a role the shop made itself shows under its own name; a group-wide role says "all shops"', async () => {
+    mount(roleClient(staffRow(null, 'Stock keeper', null)));
+    expect(await screen.findByText('Stock keeper')).toBeTruthy();
+    expect(screen.getByText('All shops of the group')).toBeTruthy();
+  });
+
+  it('says so for a platform administrator', async () => {
+    mount(roleClient(staffRow('owner', 'Owner', null), true));
+    await screen.findByText('My role');
+    expect(screen.getByText('Yes')).toBeTruthy();
+    expect(screen.queryByText(/cannot open those pages/)).toBeNull();
+  });
+});

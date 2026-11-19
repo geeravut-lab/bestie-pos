@@ -96,7 +96,7 @@ function stubApi(handlers: Record<string, (init: RequestInit) => unknown>) {
 describe('<AiSettingsPage>', () => {
   it('is for platform admins only', () => {
     mount(<AiSettingsPage ctx={ctx(fakeClient().client, false)} onNavigate={() => {}} />);
-    expect(screen.getByRole('alert').textContent).toContain('platform admins');
+    expect(screen.getByRole('alert').textContent).toContain('platform administrator');
   });
 
   it('shows which providers have a key (never the key) and disables providers without one', async () => {

@@ -107,6 +107,6 @@ describe('<LineSettingsPage>', () => {
 
   it('is for the platform admin only', async () => {
     mount(ctx(withUsage().client, false));
-    expect(await screen.findByText('This page is for platform admins only')).toBeTruthy();
+    expect(await screen.findByText(/platform administrator only/)).toBeTruthy();
   });
 });

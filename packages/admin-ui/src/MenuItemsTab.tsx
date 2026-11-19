@@ -7,6 +7,8 @@ import {
   formatTHB,
   itemProblems,
   localizedName,
+  parseCode,
+  parseSku,
   parsePriceInput,
   priceInputValue,
   toLocalizedText,
@@ -20,7 +22,7 @@ import type { PageContext } from '@bestie/auth';
 import { translateName } from './aiApi';
 import { deleteRow, nextSort, saveRow } from './menuData';
 import type { Cat, Item, Menu } from './menuData';
-import { ConfirmDelete, NameFields, NameForm } from './MenuParts';
+import { CodeFields, ConfirmDelete, NameFields, NameForm } from './MenuParts';
 import { FoodInfoFields } from './FoodInfoFields';
 
 const tx = (t: Dict, key: string): string => (t as Record<string, string>)[key] ?? key;
@@ -273,6 +275,8 @@ function ItemForm({
   );
   const [station, setStation] = useState<string>(item?.station ?? '');
   const [duration, setDuration] = useState(item?.duration_min ? String(item.duration_min) : '');
+  const [barcode, setBarcode] = useState(item?.barcode ?? '');
+  const [sku, setSku] = useState(item?.sku ?? '');
   const [groupIds, setGroupIds] = useState<string[]>(item?.modifier_group_ids ?? []);
   const [available, setAvailable] = useState(item?.available ?? true);
   const [food, setFood] = useState<ItemFood>(item?.food ?? EMPTY_FOOD);
@@ -298,6 +302,9 @@ function ItemForm({
     const minutes =
       duration.trim() === '' ? null : /^\d{1,3}$/.test(duration.trim()) ? Number(duration) : NaN;
     if (minutes !== null && !(minutes >= 5 && minutes <= 720)) return setError('err_menu_invalid');
+    const bc = parseCode(barcode);
+    const sk = parseSku(sku);
+    if (bc === 'bad' || sk === 'bad') return setError('err_menu_invalid');
     if (itemProblems({ name, base: baseSatang, categoryId, station: station || null }).length > 0)
       return setError('err_menu_invalid');
     const prices: ChannelPrices = channelPricesToColumn({ base: baseSatang!, ...overrides });
@@ -307,6 +314,8 @@ function ItemForm({
       category_id: categoryId,
       station: station || null,
       ...(timed ? { duration_min: minutes } : {}),
+      barcode: bc,
+      sku: sk,
       modifier_group_ids: groupIds,
       available,
       tags: food.tags,
@@ -415,6 +424,15 @@ function ItemForm({
             />
           </div>
         ) : null}
+        <div onChange={touch}>
+          <CodeFields
+            idPrefix={`item-${id}`}
+            barcode={barcode}
+            sku={sku}
+            onBarcode={setBarcode}
+            onSku={setSku}
+          />
+        </div>
       </div>
 
       <fieldset className="audit-group">

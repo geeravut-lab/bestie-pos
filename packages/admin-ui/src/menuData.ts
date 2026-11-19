@@ -18,6 +18,9 @@ export type Item = {
   station: 'kitchen' | 'bar' | null;
   /** Length of a service in minutes (salon / spa menus); null = not a timed service. */
   duration_min: number | null;
+  /** What a scanner reads / the shop's own stock code (retail); null = none. */
+  barcode?: string | null;
+  sku?: string | null;
   modifier_group_ids: string[];
   available: boolean;
   food: ItemFood;
@@ -38,6 +41,9 @@ export type Opt = {
   name: LocalizedText;
   price_delta: number;
   channel_delta: Record<string, number>;
+  /** A variant (size, colour…) may have its own barcode and SKU. */
+  barcode?: string | null;
+  sku?: string | null;
   active: boolean;
   sort: number;
   created_at: string;
@@ -61,12 +67,12 @@ export async function loadMenu(client: SupabaseClient, storeId: string): Promise
     q('menu_categories', 'id, name, sort, active, created_at'),
     q(
       'menu_items',
-      'id, category_id, name, prices, station, duration_min, modifier_group_ids, available, tags, spice_level, dietary_verified, highlight, sort, created_at',
+      'id, category_id, name, prices, station, duration_min, barcode, sku, modifier_group_ids, available, tags, spice_level, dietary_verified, highlight, sort, created_at',
     ),
     q('modifier_groups', 'id, name, min_select, max_select, sort, created_at'),
     q(
       'modifier_options',
-      'id, group_id, name, price_delta, channel_delta, active, sort, created_at',
+      'id, group_id, name, price_delta, channel_delta, barcode, sku, active, sort, created_at',
     ),
   ]);
   if (cats.error || items.error || groups.error || opts.error) throw new Error('load');
@@ -90,6 +96,8 @@ export async function loadMenu(client: SupabaseClient, storeId: string): Promise
           prices,
           station: r.station === 'kitchen' || r.station === 'bar' ? r.station : null,
           duration_min: typeof r.duration_min === 'number' ? r.duration_min : null,
+          barcode: typeof r.barcode === 'string' ? r.barcode : null,
+          sku: typeof r.sku === 'string' ? r.sku : null,
           modifier_group_ids: Array.isArray(r.modifier_group_ids)
             ? r.modifier_group_ids.filter((x): x is string => typeof x === 'string')
             : [],
@@ -113,6 +121,8 @@ export async function loadMenu(client: SupabaseClient, storeId: string): Promise
       group_id: str(r.group_id),
       name: parseLocalizedText(r.name),
       price_delta: num(r.price_delta),
+      barcode: typeof r.barcode === 'string' ? r.barcode : null,
+      sku: typeof r.sku === 'string' ? r.sku : null,
       channel_delta:
         r.channel_delta && typeof r.channel_delta === 'object' && !Array.isArray(r.channel_delta)
           ? Object.fromEntries(
@@ -137,7 +147,13 @@ export type MenuTable = 'menu_categories' | 'menu_items' | 'modifier_groups' | '
 
 /** A database refusal → the sentence key the person sees. */
 export const menuError = (code: string | undefined): ErrorKey =>
-  code === '42501' ? 'err_forbidden' : code === '23514' ? 'err_menu_invalid' : 'err_save_failed';
+  code === '42501'
+    ? 'err_forbidden'
+    : code === '23514'
+      ? 'err_menu_invalid'
+      : code === '23505'
+        ? 'err_menu_barcode'
+        : 'err_save_failed';
 
 /** Create (client-generated uuid, offline-first) or change a row; an update that touched 0 rows is a failure. */
 export async function saveRow(

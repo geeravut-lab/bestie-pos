@@ -210,6 +210,46 @@ describe('<OrderPage>', () => {
     ).toBe(true);
   });
 
+  it('a scanned item barcode adds the item; scanning again raises the quantity (same box, Enter key)', async () => {
+    bindTablet();
+    await seed();
+    mount();
+    const box = await screen.findByLabelText('Scan a barcode');
+    await userEvent.type(box, 'pad-0001{Enter}');
+    await waitFor(async () => expect((await getOrder(ID))?.lines[0]?.quantity).toBe(1));
+    expect(await screen.findByText('Added: Pad Thai')).toBeTruthy();
+    expect((box as HTMLInputElement).value).toBe(''); // ready for the next scan
+    await userEvent.type(box, 'PAD-0001{Enter}');
+    await waitFor(async () => expect((await getOrder(ID))?.lines[0]?.quantity).toBe(2));
+    expect((await getOrder(ID))?.lines).toHaveLength(1);
+  });
+
+  it('a variant barcode adds the item with that option chosen and priced in', async () => {
+    bindTablet();
+    await seed();
+    mount();
+    await userEvent.type(await screen.findByLabelText('Scan a barcode'), 'EGG-0001{Enter}');
+    await waitFor(async () =>
+      expect((await getOrder(ID))?.lines[0]).toMatchObject({
+        unitPrice: 7000,
+        modifiers: [{ id: 'o1', priceDelta: 1000 }],
+      }),
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('an unknown code and a switched-off item say so and add nothing', async () => {
+    bindTablet();
+    await seed();
+    mount();
+    const box = await screen.findByLabelText('Scan a barcode');
+    await userEvent.type(box, 'NOPE-9999{Enter}');
+    expect(await screen.findByText('No item has this barcode.')).toBeTruthy();
+    await userEvent.type(box, 'TOM-0001{Enter}');
+    expect(await screen.findByText('This item is switched off.')).toBeTruthy();
+    expect((await getOrder(ID))?.lines).toHaveLength(0);
+  });
+
   it('two taps in the same instant never overwrite each other', async () => {
     bindTablet();
     await seed();

@@ -155,3 +155,51 @@ export function ConfirmDelete({
     </div>
   );
 }
+
+/** Barcode (what the till's scanner reads) and SKU (the shop's own code) of an item or a variant. */
+export function CodeFields({
+  idPrefix,
+  barcode,
+  sku,
+  onBarcode,
+  onSku,
+}: {
+  idPrefix: string;
+  barcode: string;
+  sku: string;
+  onBarcode: (v: string) => void;
+  onSku: (v: string) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <>
+      <div className="form-row">
+        <label className="label" htmlFor={`${idPrefix}-barcode`}>
+          {t.menuBarcode}
+        </label>
+        <input
+          id={`${idPrefix}-barcode`}
+          className="field tabular"
+          maxLength={40}
+          autoComplete="off"
+          value={barcode}
+          onChange={(e) => onBarcode(e.target.value)}
+        />
+        <p className="muted">{t.menuCodeHint}</p>
+      </div>
+      <div className="form-row">
+        <label className="label" htmlFor={`${idPrefix}-sku`}>
+          {t.menuSku}
+        </label>
+        <input
+          id={`${idPrefix}-sku`}
+          className="field tabular"
+          maxLength={40}
+          autoComplete="off"
+          value={sku}
+          onChange={(e) => onSku(e.target.value)}
+        />
+      </div>
+    </>
+  );
+}

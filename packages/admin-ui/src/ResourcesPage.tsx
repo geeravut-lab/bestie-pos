@@ -18,11 +18,24 @@ export function ResourcesPage({ ctx }: { ctx: PageContext }) {
   const [form, setForm] = useState<{ name: string; kind: ResourceKind } | null>(null);
   const [error, setError] = useState<ErrorKey | null>(null);
   const [bad, setBad] = useState(false);
+  const people = useRemote<{ id: string; name: string }[]>(async () => {
+    const r = await ctx.client
+      .from('staff')
+      .select('id, display_name')
+      .eq('org_id', ctx.orgId)
+      .eq('active', true)
+      .order('display_name');
+    if (r.error) return [];
+    return ((r.data ?? []) as { id: string; display_name: string }[]).map((x) => ({
+      id: x.id,
+      name: x.display_name,
+    }));
+  }, ctx.orgId);
   const data = useRemote<Resource[]>(async () => {
     if (!storeId) throw new Error('shop');
     const r = await ctx.client
       .from('resources')
-      .select('id, name, kind, active, sort')
+      .select('id, name, kind, active, sort, staff_id')
       .eq('store_id', storeId)
       .is('deleted_at', null)
       .order('sort');
@@ -49,6 +62,16 @@ export function ResourcesPage({ ctx }: { ctx: PageContext }) {
       return setError(err.code === '42501' ? 'err_forbidden' : 'err_save_failed');
     }
     setForm(null);
+    data.reload();
+  };
+  const link = async (r: Resource, staffId: string) => {
+    setError(null);
+    const { error: err } = await ctx.client
+      .from('resources')
+      .update({ staff_id: staffId || null })
+      .eq('id', r.id)
+      .select('id');
+    if (err) return setError(err.code === '42501' ? 'err_forbidden' : 'err_save_failed');
     data.reload();
   };
   const toggle = async (r: Resource) => {
@@ -82,6 +105,26 @@ export function ResourcesPage({ ctx }: { ctx: PageContext }) {
               <span className="badge">{tx(t, `resKind_${r.kind}`)}</span>
               {!r.active ? <span className="muted">{t.resInactive}</span> : null}
             </div>
+            {canEdit && (r.kind === 'stylist' || r.kind === 'therapist') ? (
+              <div className="form-row">
+                <label className="label" htmlFor={`res-person-${r.id}`}>
+                  {t.resPerson}
+                </label>
+                <select
+                  id={`res-person-${r.id}`}
+                  className="field"
+                  value={r.staffId ?? ''}
+                  onChange={(e) => void link(r, e.target.value)}
+                >
+                  <option value="">{t.resNoPerson}</option>
+                  {(people.data ?? []).map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
             {canEdit ? (
               <div className="actions">
                 <AsyncButton variant="secondary" onClick={() => toggle(r)}>

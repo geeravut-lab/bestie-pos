@@ -113,6 +113,15 @@ export function StaffPage({ ctx }: { ctx: PageContext }) {
           >
             {t.rolesManage}
           </button>
+          {ctx.isModuleOn?.('commission') ? (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => ctx.navigate('/commission')}
+            >
+              {t.commTitle}
+            </button>
+          ) : null}
         </div>
       ) : null}
       <Members

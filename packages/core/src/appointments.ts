@@ -36,6 +36,8 @@ export type Resource = {
   kind: ResourceKind;
   active: boolean;
   sort: number;
+  /** The staff member behind a stylist / therapist (commission and tips go to them). */
+  staffId: string | null;
 };
 export type Appointment = {
   id: string;
@@ -208,6 +210,7 @@ export function parseResources(raw: unknown): Resource[] {
       kind: r.kind as ResourceKind,
       active: r.active !== false,
       sort: int(r.sort),
+      staffId: str(r.staff_id),
     });
   }
   return out.sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name));

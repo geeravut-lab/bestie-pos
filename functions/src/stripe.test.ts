@@ -15,7 +15,7 @@ import {
   stripeCancelResponse,
   stripeChargeResponse,
   stripeWebhookResponse,
-} from './stripe-handler.js';
+} from './payment-handler.js';
 
 const SECRET = 'whsec_test_secret';
 const NOW = 1_800_000_000_000;
@@ -241,7 +241,13 @@ function backend(
     }
     if (url.includes('/rest/v1/payment_attempts'))
       return json(200, [
-        over.attempt ?? { amount: 21000, tender: 'promptpay', order_id: 'o1', device_id: 'd1' },
+        over.attempt ?? {
+          amount: 21000,
+          tender: 'promptpay',
+          order_id: 'o1',
+          device_id: 'd1',
+          provider: 'stripe',
+        },
       ]);
     if (url.includes('/rest/v1/devices'))
       return json(200, [

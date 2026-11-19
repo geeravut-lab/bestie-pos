@@ -178,4 +178,9 @@ select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select *
 -- the owner can switch a payment method off: no new attempt of that kind
 update public.stores set module_overrides = '{"tender.gateway": true, "tender.promptpay": false}' where id = (select v::uuid from t_out where k='store');
 select t_err('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$select public.begin_payment_attempt(t_begin('10000000-0000-4000-8000-000000000003'))$$, '0A000', 'PromptPay switched off in the shop: refused');
+-- the gateway adapter records which provider started an attempt
+select t_rows(null, 'service_role', $$select public.attach_payment_intent((select v::uuid from t_out where k='att4'), 'pi_ok', 'https://qr.example/2.png', now() + interval '1 hour', 'acme')$$, 1, 'attach with a provider name');
+select t_rows(null, 'service_role', $$select 1 from public.payment_attempts where id = (select v::uuid from t_out where k='att4') and provider = 'acme'$$, 1, 'the provider is stored on the attempt');
+select t_err(null, 'service_role', $$select public.attach_payment_intent((select v::uuid from t_out where k='att4'), 'pi_ok', null, null, 'Bad Name!')$$, '22023', 'a malformed provider name is refused');
+select t_rows(null, 'service_role', $$select 1 from public.payment_attempts where id = (select v::uuid from t_out where k='att1') and provider = 'stripe'$$, 1, 'older attempts and calls without a provider keep stripe');
 \echo ALL CARD PAYMENT TESTS PASSED

@@ -30,6 +30,7 @@ Server only (Vercel Functions in `apps/*/api`, code in `functions/`) — **never
 | `SUPABASE_URL` | same URL, read by server functions |
 | `SUPABASE_SERVICE_ROLE_KEY` | bypasses RLS. SSO exchange, webhooks, cron only. Never logged, never returned. |
 | `LINE_CHANNEL_SECRET`, `LINE_CHANNEL_ACCESS_TOKEN`, `LINE_BASIC_ID`, `LINE_CODE_SECRET` | LINE webhook signature, push, OA id for links, HMAC key for link codes (random, **not** the channel secret). Webhook URL to register: `https://bestie-pos.vercel.app/api/line/webhook` |
+| `PAYMENT_GATEWAY` | Which payment provider is active (default `stripe`; leave unset for Stripe). A name that is not registered in `functions/src/gateway.ts` makes online payments answer "not configured". |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe payment gateway (PromptPay QR + card reader). The secret key must be an `sk_` / `rk_` key (a publishable `pk_` key is refused). **Stripe Dashboard → Developers → Webhooks → add endpoint `https://bestie-pos.vercel.app/api/stripe/webhook`** with events `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`; its signing secret is `STRIPE_WEBHOOK_SECRET`. Use test keys first. |
 | *(later)* `CRON_SECRET` | authenticates scheduled-function calls (constant-time compare) |
 | `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY` (alias `GOOGLE_AI_API_KEY` accepted) | AI assistant providers. Set as *Sensitive* in Vercel. **Never use a free-tier key with real customer data.** The admin screen shows only set / missing. |

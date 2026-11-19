@@ -7,9 +7,11 @@ begin
   perform demo.close_shift('reception.spa.demo@bestiedemo.example', 'Lotus Spa', 'Front desk', 0);
 end $$;
 select jsonb_pretty(jsonb_build_object(
-  'paid bills (receipts)', (select count(*) from public.receipts where org_id = demo.org()),
-  'sales total THB', (select round(sum(payable) / 100.0, 2) from public.receipts where org_id = demo.org()),
-  'by shop', (select jsonb_object_agg(name, n) from (select s.name, count(*) n from public.receipts r join public.stores s on s.id = r.store_id where r.org_id = demo.org() group by s.name) x),
+  'paid bills today', (select count(*) from public.receipts where org_id = demo.org() and (issued_at at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date),
+  'paid bills all days', (select count(*) from public.receipts where org_id = demo.org()),
+  'sales total THB (all days)', (select round(sum(payable) / 100.0, 2) from public.receipts where org_id = demo.org()),
+  'days with sales', (select count(distinct (issued_at at time zone 'Asia/Bangkok')::date) from public.receipts where org_id = demo.org()),
+  'by shop (all days)', (select jsonb_object_agg(name, n) from (select s.name, count(*) n from public.receipts r join public.stores s on s.id = r.store_id where r.org_id = demo.org() group by s.name) x),
   'by tender', (select jsonb_object_agg(tender, n) from (select tender, count(*) n from public.payments where org_id = demo.org() group by tender) x),
   'appointments', (select count(*) from public.appointments where org_id = demo.org()),
   'members', (select count(*) from public.customers where org_id = demo.org()),

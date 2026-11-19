@@ -1,7 +1,7 @@
 # Demo data (for showing Bestie POS to a business owner)
 
-Creates **one demo company with four shops**, an account for every role, a catalogue, members, bookings, stock and **37 paid
-bills** that the real database functions book **as each person** (so RLS and permission checks apply). Everything is marked
+Creates **one demo company with four shops**, an account for every role, a catalogue, members, bookings, stock, **9 days of
+history (163 bills, varied by weekday and hour)** and **37 paid bills today** that the real database functions book **as each person** (so RLS and permission checks apply). Everything is marked
 `[DEMO]` / `@bestiedemo.example`, and one command removes it all before go-live.
 
 ```bash
@@ -33,7 +33,9 @@ tips), two table-QR guest orders, guest feedback, 4 closed shifts (one 20 baht s
 - **PromptPay and card payments are not simulated**: they only exist when Stripe's signed webhook confirms them, and faking that
   would put pretend Stripe payments in the books. Demo bills are cash, split cash, Bestie Credit and Points.
 - **No pictures**: menu items, shops and people have no photo field yet.
-- All timestamps are "now" (one business day), nothing is back-dated.
+- The history bills are ordinary cash bills made the same way as today's, only dated in the past (walk-in sales, no members, so no
+  Credit / Points in the past). To allow dates older than the app's two-day offline window, the order table's "business date is
+  today" guard is switched off inside that one transaction; nothing else is relaxed.
 
 ## Safety
 The demo accounts share one password and live in the real project: keep the list private, do not give them real roles, and run

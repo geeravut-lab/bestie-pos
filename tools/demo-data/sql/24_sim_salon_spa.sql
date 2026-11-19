@@ -32,7 +32,7 @@ declare
   m text := 'manager.demo@bestiedemo.example'; o text := 'owner.demo@bestiedemo.example';
   a uuid; v_order uuid; v_tok text; v_res jsonb; v_pkg uuid; v_cp uuid; v_dep uuid;
 begin
-  if exists (select 1 from public.receipts where store_id = demo.store(sal)) then raise notice 'salon / spa already simulated'; return; end if;
+  if exists (select 1 from public.receipts where store_id = demo.store(sal) and (issued_at at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date) then raise notice 'salon / spa already simulated'; return; end if;
 
   -- ── Sunset Salon ──
   -- 1) a walk-in buys two products (found by barcode)

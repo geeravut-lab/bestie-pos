@@ -4,7 +4,7 @@ declare
   c text := 'cashier.cafe.demo@bestiedemo.example'; k text := 'kds.cafe.demo@bestiedemo.example';
   n text := 'Breeze Café'; t text := 'Café counter';
 begin
-  if exists (select 1 from public.receipts where store_id = demo.store(n)) then raise notice 'café already simulated'; return; end if;
+  if exists (select 1 from public.receipts where store_id = demo.store(n) and (issued_at at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date) then raise notice 'café already simulated'; return; end if;
   perform demo.sell(c, n, t, 'takeaway', null, '[{"n":"ลาเต้","q":1,"o":["นมโอ๊ต","หวานน้อย"]},{"n":"ครัวซองต์เนยสด","q":1}]', null, 0, c, t, '[{"t":"cash"}]', k);
   perform demo.sell(c, n, t, 'takeaway', null, '[{"n":"อเมริกาโน่","q":2}]', null, 0, c, t, '[{"t":"cash"}]', k);
   perform demo.sell(c, n, t, 'takeaway', null, '[{"n":"ชาเขียวมัทฉะ","q":1,"o":["นมวัว","หวานปกติ"]},{"n":"บราวนี่","q":1}]', null, 0, c, t, '[{"t":"cash"}]', k);

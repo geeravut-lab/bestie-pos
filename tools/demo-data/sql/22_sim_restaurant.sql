@@ -9,7 +9,7 @@ declare
   n text := 'Island Kitchen'; h text := 'Waiter handheld'; t text := 'Counter 1';
   no text; v_tok text; v_res jsonb; v_order uuid; v_ids text;
 begin
-  if exists (select 1 from public.receipts where store_id = demo.store(n)) then raise notice 'restaurant already simulated'; return; end if;
+  if exists (select 1 from public.receipts where store_id = demo.store(n) and (issued_at at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date) then raise notice 'restaurant already simulated'; return; end if;
   perform demo.sell(w, n, h, 'dine-in', 'T1', '[{"n":"ผัดไทยกุ้งสด","q":2,"o":["ไข่ดาว"]},{"n":"ชาเย็น","q":1}]', null, 0, c, t, '[{"t":"cash"}]', k);
   perform demo.sell(w, n, h, 'dine-in', 'T2', '[{"n":"ต้มยำกุ้ง","q":1,"o":["เผ็ดกลาง"]},{"n":"ข้าวกะเพราหมูสับ","q":2,"o":["เผ็ดมาก","ไข่ดาว"]},{"n":"น้ำเปล่า","q":3},{"n":"เบียร์ช้าง","q":2}]', null, 0, c, t, '[{"t":"cash"}]', k);
   -- three friends share the bill equally in cash

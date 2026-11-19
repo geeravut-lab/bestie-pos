@@ -19,6 +19,8 @@ import {
 import { AuthProvider, useAuth } from './context';
 import { NotificationBell, NotificationsPage } from './Notifications';
 import { useBrand } from './useBrand';
+import { useStoreTheme } from './useStoreTheme';
+import { useCardImages } from './useCardImages';
 import { appRoleFor, pickStore } from './myContext';
 import { effectiveActing, withActing } from './acting';
 import type { ActingIdentity } from './acting';
@@ -125,6 +127,8 @@ function Inner({
     [auth.client, membership, my.data],
   );
   const brand = useBrand(auth.client, auth.status === 'signedIn');
+  const cardImages = useCardImages(auth.client, auth.status === 'signedIn');
+  useStoreTheme(my.data ? pickStore(my.data, membership)?.theme : undefined);
   const public_ = app === 'guest'; // guest pages need no account
 
   const gate = useCallback(
@@ -178,6 +182,7 @@ function Inner({
     <AppRoot
       app={app}
       brand={brand}
+      cardImages={cardImages}
       live={live}
       gate={gate}
       renderPage={({ path, navigate }) => {

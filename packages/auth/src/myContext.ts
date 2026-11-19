@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { MODULE_IDS, PERMISSIONS, cleanModuleOverrides } from '@bestie/core';
+import { MODULE_IDS, PERMISSIONS, cleanModuleOverrides, parseTheme } from '@bestie/core';
 import type {
   BuiltInRoleKey,
   LegalSignOff,
@@ -7,6 +7,7 @@ import type {
   Permission,
   PlanTier,
   StoreModuleConfig,
+  StoreTheme,
 } from '@bestie/core';
 import type { AppRole } from '@bestie/ui';
 import type { BusinessProfile } from '@bestie/core';
@@ -27,6 +28,8 @@ export type Membership = {
 };
 
 export type StoreInfo = StoreModuleConfig & {
+  /** The owner's chosen colours (empty = the built-in palette). */
+  theme: StoreTheme;
   id: string;
   orgId: string;
   name: string;
@@ -99,6 +102,7 @@ export function mapStore(row: Row, legalSignOff: LegalSignOff): StoreInfo | null
     plan: (PLANS.includes(String(row.plan)) ? row.plan : 'basic') as PlanTier, // unknown plan → lowest, never highest
     moduleOverrides: cleanOverrides(row.module_overrides),
     legalSignOff,
+    theme: parseTheme(row.theme),
   };
 }
 
@@ -128,7 +132,9 @@ export async function loadMyContext(client: SupabaseClient): Promise<MyContext> 
       .eq('active', true),
     client
       .from('stores')
-      .select('id, org_id, legal_entity_id, name, profile, plan, module_overrides, deleted_at')
+      .select(
+        'id, org_id, legal_entity_id, name, profile, plan, module_overrides, theme, deleted_at',
+      )
       .is('deleted_at', null),
     client.rpc('is_platform_admin'),
   ]);

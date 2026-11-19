@@ -56,4 +56,13 @@ select t_err(null, 'service_role', $$update public.platform_settings set brand =
 select t_err(null, 'service_role', $$update public.platform_settings set brand = '{"favicon":{"mime":"image/png","version":"x"}}'$$, '23514', 'image version must be a number');
 select t_rows(null, 'service_role', $$update public.platform_settings set brand = '{}'$$, 1, 'restoring defaults = empty brand');
 
+-- ── home card pictures ──
+select t_rows('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$update public.platform_settings set card_images = '{"sell":{"mime":"image/png","version":1761234567890}}'$$, 1, 'the admin points a card at an uploaded picture');
+select t_rows('00000000-0000-0000-0000-0000000000b2', 'authenticated', $$update public.platform_settings set card_images = '{}'$$, 0, 'a shop owner cannot change the card pictures');
+select t_rows(null, 'anon', $$select 1 from public.platform_settings where card_images ? 'sell'$$, 1, 'the pictures are readable like the brand');
+select t_err(null, 'service_role', $$update public.platform_settings set card_images = '{"sell":{"mime":"image/svg+xml","version":1}}'$$, '23514', 'SVG is refused (it can carry script)');
+select t_err(null, 'service_role', $$update public.platform_settings set card_images = '{"s e l l":{"mime":"image/png","version":1}}'$$, '23514', 'a card id must be plain letters');
+select t_err(null, 'service_role', $$update public.platform_settings set card_images = '{"sell":{"mime":"image/png","version":"x"}}'$$, '23514', 'the version must be a number');
+select t_err(null, 'service_role', $$update public.platform_settings set card_images = '{"sell":{"mime":"image/png","version":1,"url":"https://evil"}}'$$, '23514', 'no extra fields (no URLs) can be smuggled in');
+select t_rows(null, 'service_role', $$update public.platform_settings set card_images = '{}'$$, 1, 'restoring the built-in pictures = empty');
 \echo ALL BRANDING TESTS PASSED

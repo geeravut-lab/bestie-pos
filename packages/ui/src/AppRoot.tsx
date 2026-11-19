@@ -30,6 +30,8 @@ export type AppRootProps = {
   headerExtra?: ReactNode;
   /** Admin-chosen product name / logo / tab icon (BRANDING-KNOWLEDGE). Absent = Bestie defaults. */
   brand?: Brand;
+  /** Admin-uploaded home-card pictures by card id (docs/UX-DESIGN.md §7). Missing = built-in illustration. */
+  cardImages?: Record<string, string>;
 };
 
 /** Roles each app can preview until sign-in + roles arrive (Phase 1 §12). First = default. */
@@ -68,7 +70,7 @@ const demoStore = (profile: PreviewProfile): StoreModuleConfig => ({
   legalSignOff: { cryptoTopup: false },
 });
 
-function Frame({ app, live, gate, renderPage, headerExtra }: AppRootProps) {
+function Frame({ app, live, gate, renderPage, headerExtra, cardImages }: AppRootProps) {
   const { t } = useI18n();
   const location = useLocation();
   const navigate = useNavigate();
@@ -151,7 +153,13 @@ function Frame({ app, live, gate, renderPage, headerExtra }: AppRootProps) {
       {page ? (
         page
       ) : location.pathname === '/' ? (
-        <RoleHome role={activeRole} ctx={ctx} onNavigate={go} pendingPath={pendingPath} />
+        <RoleHome
+          role={activeRole}
+          ctx={ctx}
+          onNavigate={go}
+          pendingPath={pendingPath}
+          imageUrls={cardImages}
+        />
       ) : (
         <PageSoon art={current?.id ?? 'home'} onNavigate={go} />
       )}

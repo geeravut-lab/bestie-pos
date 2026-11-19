@@ -144,4 +144,9 @@ select t_val('00000000-0000-0000-0000-0000000000d4', 'authenticated', 'pinned', 
 select t_rows(null, 'service_role', $$select 1 from t_out where k='pinned' and v='1'$$, 1, 'a cashier sees which people have a PIN (only Nok has one)');
 select t_err('00000000-0000-0000-0000-0000000000e5', 'authenticated', $$select * from public.staff_with_pin((select v::uuid from t_out where k='acme'))$$, '42501', 'another org cannot list PIN holders');
 select t_err(null, 'anon', $$select * from public.staff_with_pin((select v::uuid from t_out where k='acme'))$$, '42501', 'anon cannot list PIN holders');
+-- ── per-shop colours: shape only (known keys, #rrggbb) ──
+select t_rows(null, 'service_role', $$update public.stores set theme = '{"primary":"#00796f","sun":"#FFCB3D"}'::jsonb where id = (select v::uuid from t_out where k='store1')$$, 1, 'a valid theme is stored');
+select t_err(null, 'service_role', $$update public.stores set theme = '{"primary":"teal"}'::jsonb where id = (select v::uuid from t_out where k='store1')$$, '23514', 'a colour that is not #rrggbb is refused');
+select t_err(null, 'service_role', $$update public.stores set theme = '{"font":"#000000"}'::jsonb where id = (select v::uuid from t_out where k='store1')$$, '23514', 'an unknown key is refused');
+select t_err(null, 'service_role', $$update public.stores set theme = '[]'::jsonb where id = (select v::uuid from t_out where k='store1')$$, '23514', 'a theme is an object');
 \echo ALL BACK OFFICE TESTS PASSED

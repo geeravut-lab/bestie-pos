@@ -105,4 +105,25 @@ select t_rows('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select 
 select t_rows('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$select 1 from public.audit_settings$$, 0, 'cashier cannot read the audit settings');
 select t_rows('00000000-0000-0000-0000-0000000000c3', 'authenticated', $$select 1 from public.audit_event_types$$, 35, 'everyone signed in can read the event catalogue');
 
+-- ── retention: only the scheduled purge may delete, and only rows older than the retention ──
+select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select public.audit_purge()$$, '42501', 'a person cannot run the purge');
+select t_err(null, 'anon', $$select public.audit_purge()$$, '42501', 'anon cannot run the purge');
+select t_err(null, 'service_role', $$delete from public.audit_log$$, '42501', 'a plain delete is still refused after the purge function exists');
+select t_err(null, 'service_role', $$update public.audit_retention set years = 2$$, '23514', 'retention below 4 years is refused');
+-- age two rows past the retention by writing them with an old timestamp (as the migration owner, bypassing the guard once)
+do $$
+declare before_n bigint; n integer;
+begin
+  select count(*) into before_n from public.audit_log;
+  perform set_config('bestie.audit_purge', 'on', true);
+  insert into public.audit_log (org_id, action, entity, detail, source, created_at)
+  values ((select id from public.orgs limit 1), 'settings.change', 'x', '{}', 'db', now() - interval '6 years'),
+         ((select id from public.orgs limit 1), 'settings.change', 'x', '{}', 'db', now() - interval '4 years 6 months');
+  perform set_config('bestie.audit_purge', 'off', true);
+  n := public.audit_purge();
+  if n <> 1 then raise exception 'FAIL the purge removed % rows, expected 1 (only the 6-year-old one)', n; end if;
+  if (select count(*) from public.audit_log) <> before_n + 1 then raise exception 'FAIL recent rows must stay'; end if;
+  raise notice 'PASS the purge removes only rows older than the retention (5 years) and keeps everything newer';
+end $$;
+select t_err(null, 'service_role', $$delete from public.audit_log$$, '42501', 'and the flag does not leak: deleting is refused again');
 \echo ALL AUDIT TESTS PASSED

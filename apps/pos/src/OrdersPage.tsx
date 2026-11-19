@@ -1,3 +1,4 @@
+import { OpenDrawer } from './printing/OpenDrawer';
 import { formatTHB, itemCount, orderBill } from '@bestie/core';
 import type { OrderDoc } from '@bestie/core';
 import { fmt, useI18n } from '@bestie/i18n';
@@ -39,6 +40,11 @@ export function OrdersPage({ ctx, mode }: { ctx: PageContext; mode: 'sell' | 'li
   return (
     <Page title={mode === 'sell' ? t.sellTitle : t.ordersTitle}>
       {!binding ? <NeedsDevice ctx={ctx} /> : null}
+      {binding ? (
+        <div className="actions">
+          <OpenDrawer ctx={ctx} storeId={binding.storeId} deviceId={binding.deviceId} />
+        </div>
+      ) : null}
       {mode === 'sell' && binding && canCreate ? (
         <div className="actions">
           <AsyncButton

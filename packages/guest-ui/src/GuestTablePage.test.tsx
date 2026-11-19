@@ -99,6 +99,7 @@ const mount = () =>
   );
 
 beforeEach(() => {
+  localStorage.clear();
   vi.stubGlobal('crypto', {
     randomUUID: (() => {
       let n = 0;
@@ -168,6 +169,47 @@ describe('<GuestTablePage>', () => {
       lines: [{ item_id: 'i2', quantity: 1, option_ids: [], note: '' }],
     });
     expect(JSON.stringify(orders[0])).not.toMatch(/price|total|amount/i);
+  });
+
+  it('the basket survives closing the page (kept on this phone), and is emptied once the order is sent', async () => {
+    localStorage.clear();
+    const { orders } = stubFetch({});
+    const first = mount();
+    await userEvent.click(await screen.findByText('Water'));
+    await userEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: /Add to basket/ }),
+    );
+    expect(localStorage.getItem(`bestie-guest-cart:${TOKEN}`)).toContain('i2');
+    first.unmount(); // the guest closes the browser
+    mount(); // … and opens the same table page again
+    const cart = await screen.findByRole('region', { name: 'Your basket' });
+    expect(within(cart).getByText('Water')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: /Place order/ }));
+    expect(await screen.findByText('Order sent')).toBeTruthy();
+    expect(orders).toHaveLength(1);
+    expect(localStorage.getItem(`bestie-guest-cart:${TOKEN}`)).toBeNull(); // sent: nothing left to restore
+  });
+
+  it('a basket from another table is not mixed in, and a dish that is gone is dropped', async () => {
+    localStorage.clear();
+    localStorage.setItem(
+      `bestie-guest-cart:${'b'.repeat(32)}`,
+      JSON.stringify({
+        at: Date.now(),
+        lines: [{ key: 'k', itemId: 'i2', quantity: 1, optionIds: [], note: '' }],
+      }),
+    );
+    localStorage.setItem(
+      `bestie-guest-cart:${TOKEN}`,
+      JSON.stringify({
+        at: Date.now(),
+        lines: [{ key: 'k2', itemId: 'gone', quantity: 1, optionIds: [], note: '' }],
+      }),
+    );
+    stubFetch({});
+    mount();
+    await screen.findByText('Water');
+    expect(screen.queryByRole('button', { name: /Place order/ })).toBeNull();
   });
 
   it('a failed send keeps the basket and a retry reuses the same order id (no double order)', async () => {

@@ -5,7 +5,10 @@ import { useEffect, useRef } from 'react';
  * Back pops it (= close, stay on the page), and closing any other way (✕ / backdrop / Esc) pops it too so history
  * never accumulates. Installed PWAs on iPad/iPhone have no browser chrome, so this matters.
  */
-export function useBackClosableSheet(open: boolean, onClose: () => void): void {
+export function useBackClosableSheet(
+  open: boolean,
+  onClose: () => void,
+): { keepEntry: () => void } {
   const reserved = useRef(false);
   const closeRef = useRef(onClose);
   useEffect(() => {
@@ -31,8 +34,18 @@ export function useBackClosableSheet(open: boolean, onClose: () => void): void {
       window.removeEventListener('keydown', onKey);
       if (reserved.current) {
         reserved.current = false;
-        history.back(); // closed by ✕/backdrop/Esc/navigation: release the reserved entry
+        history.back(); // closed by ✕/backdrop/Esc: release the reserved entry
       }
     };
   }, [open]);
+
+  /**
+   * Call right before navigating away from the sheet: the reserved entry is NOT popped (popping it after the navigation would undo
+   * the navigation), the caller replaces it with the destination instead (`navigate(path, { replace: true })`).
+   */
+  return {
+    keepEntry: () => {
+      reserved.current = false;
+    },
+  };
 }

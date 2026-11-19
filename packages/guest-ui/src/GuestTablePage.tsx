@@ -10,6 +10,8 @@ import {
   guestName,
   guestSelectionProblem,
   hasDietConstraint,
+  packCart,
+  restoreCart,
   setCartQuantity,
   statusStep,
   unitPrice,
@@ -30,7 +32,7 @@ import {
 import { FoodFilter, dietName } from './FoodFilter';
 import type { GuestCharge, GuestFailure, GuestLoad, GuestTable, PlacedOrder } from './guestApi';
 
-const POLL_MS = 10_000;
+const POLL_MS = 4_000; // everybody at a table sees the same bill within a few seconds (a guest has no account, so no push channel)
 const PAY_POLL_MS = 3_000;
 const newId = (): string => globalThis.crypto.randomUUID();
 
@@ -100,7 +102,19 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
   const { t, lang } = useI18n();
   const locale = lang === 'th' ? 'th-TH' : 'en-GB';
   const [data, setData] = useState(initial);
-  const [cart, setCart] = useState<CartLine[]>([]);
+  const cartKey = `bestie-guest-cart:${token}`;
+  // the basket survives closing the browser: it is kept on THIS phone only (no account, nothing is sent until "Place order")
+  const [cart, setCart] = useState<CartLine[]>(() => {
+    try {
+      return restoreCart(
+        globalThis.localStorage?.getItem(cartKey) ?? null,
+        initial.menu,
+        Date.now(),
+      );
+    } catch {
+      return [];
+    }
+  });
   const [open, setOpen] = useState<GuestItem | null>(null);
   const [cat, setCat] = useState('');
   const [diet, setDiet] = useState<DietFilter>(EMPTY_FILTER);
@@ -115,6 +129,15 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
   const keySeq = useRef(0);
   const menu = data.menu;
 
+  useEffect(() => {
+    try {
+      if (cart.length === 0) globalThis.localStorage?.removeItem(cartKey);
+      else globalThis.localStorage?.setItem(cartKey, packCart(cart, Date.now()));
+    } catch {
+      /* private mode: the basket just is not remembered */
+    }
+  }, [cart, cartKey]);
+
   // keep the "already ordered" list fresh while the page is visible
   useEffect(() => {
     const tick = async () => {
@@ -124,7 +147,13 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
         setData((d) => ({ ...d, bill: r.data.bill, menu: r.data.menu, autoSend: r.data.autoSend }));
     };
     const id = setInterval(() => void tick(), POLL_MS);
-    return () => clearInterval(id);
+    // coming back to the page (after the phone slept, or another app) refreshes at once instead of waiting for the next beat
+    const onVisible = () => void tick();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [token]);
 
   // while a PromptPay QR is on screen, ask the server every few seconds whether the bank has confirmed it

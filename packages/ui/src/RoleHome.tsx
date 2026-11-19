@@ -94,11 +94,15 @@ export function RoleHome({
   );
 }
 
-/** Floating "scroll down" for people who do not realise there are more cards below (RESPONSIVE knowledge §3.4). */
+/**
+ * Floating "scroll down" for people who do not realise there are more cards below (RESPONSIVE knowledge §3.4), and — once the page has
+ * been scrolled — a matching "scroll up" so the top of the home page is one tap away.
+ */
 function ScrollHint() {
   const { t } = useI18n();
   const sentinel = useRef<HTMLDivElement>(null);
   const [atEnd, setAtEnd] = useState(true);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     const el = sentinel.current;
@@ -107,18 +111,37 @@ function ScrollHint() {
     io.observe(el);
     return () => io.disconnect();
   }, []);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 240);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   return (
     <>
       <div ref={sentinel} className="scroll-sentinel" />
-      {!atEnd ? (
-        <button
-          type="button"
-          className="scroll-hint"
-          onClick={() => window.scrollBy({ top: window.innerHeight * 0.7, behavior: 'smooth' })}
-        >
-          {t.scrollDown} <span aria-hidden="true">↓</span>
-        </button>
+      {!atEnd || scrolled ? (
+        <div className="scroll-hints">
+          {scrolled ? (
+            <button
+              type="button"
+              className="scroll-hint"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            >
+              {t.scrollUp} <span aria-hidden="true">↑</span>
+            </button>
+          ) : null}
+          {!atEnd ? (
+            <button
+              type="button"
+              className="scroll-hint"
+              onClick={() => window.scrollBy({ top: window.innerHeight * 0.7, behavior: 'smooth' })}
+            >
+              {t.scrollDown} <span aria-hidden="true">↓</span>
+            </button>
+          ) : null}
+        </div>
       ) : null}
     </>
   );

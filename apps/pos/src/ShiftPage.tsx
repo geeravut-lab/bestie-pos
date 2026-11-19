@@ -18,6 +18,7 @@ import type { PageContext } from '@bestie/auth';
 import { saveShift, useClosedShifts, useOpenShift, usePaidOrders } from '@bestie/offline';
 import { usePosData, usePosStore } from './posData';
 import { Loading, NeedsDevice, Page } from './PosBits';
+import { OpenDrawer } from './printing/OpenDrawer';
 
 /** Open the cash drawer session, see what it took, close it with the counted cash. Works offline; the server re-checks the expected cash. */
 export function ShiftPage({ ctx }: { ctx: PageContext }) {
@@ -60,6 +61,9 @@ export function ShiftPage({ ctx }: { ctx: PageContext }) {
   return (
     <Page title={t.shiftTitle}>
       <Notice kind="info">{t.shiftIntro}</Notice>
+      <div className="actions">
+        <OpenDrawer ctx={ctx} storeId={storeId} deviceId={binding.deviceId} />
+      </div>
       {shift === null ? (
         <OpenForm ctx={ctx} binding={binding} canRun={canRun} />
       ) : (

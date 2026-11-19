@@ -103,7 +103,7 @@ select t_rows('00000000-0000-0000-0000-0000000000b2', 'authenticated', $$select 
 select t_rows('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$select 1 from public.audit_log$$, 0, 'cashier has no audit.view');
 select t_rows('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select 1 from public.audit_settings$$, 1, 'owner reads the audit settings');
 select t_rows('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$select 1 from public.audit_settings$$, 0, 'cashier cannot read the audit settings');
-select t_rows('00000000-0000-0000-0000-0000000000c3', 'authenticated', $$select 1 from public.audit_event_types$$, 35, 'everyone signed in can read the event catalogue');
+select t_rows('00000000-0000-0000-0000-0000000000c3', 'authenticated', $$select 1 from public.audit_event_types$$, 36, 'everyone signed in can read the event catalogue');
 
 -- ── retention: only the scheduled purge may delete, and only rows older than the retention ──
 select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select public.audit_purge()$$, '42501', 'a person cannot run the purge');

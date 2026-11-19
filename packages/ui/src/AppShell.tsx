@@ -13,7 +13,8 @@ export type ShellProps = {
   ctx: NavContext;
   path: string;
   /** Called when an item is tapped. May return a promise / start a transition; use `pendingPath` to show progress. */
-  onNavigate: (path: string) => void;
+  /** `replace`: a page opened from the "More" sheet takes the place of the history entry the sheet reserved. */
+  onNavigate: (path: string, replace?: boolean) => void;
   /** Path being loaded right now → spinner on that item + progress bar (spinner rule). */
   pendingPath?: string | null;
   /** Right side of the top bar (language switch, bell, …). */
@@ -92,7 +93,7 @@ export function AppShell({
 }: ShellProps) {
   const { t } = useI18n();
   const [moreOpen, setMoreOpen] = useState(false);
-  useBackClosableSheet(moreOpen, () => setMoreOpen(false));
+  const sheet = useBackClosableSheet(moreOpen, () => setMoreOpen(false));
 
   const layout = ROLE_LAYOUT[role];
   const disabled = disabledNavIds(ctx);
@@ -111,8 +112,11 @@ export function AppShell({
         disabled={disabled.has(id)}
         pending={pendingId === id}
         onNavigate={(p) => {
-          setMoreOpen(false);
-          onNavigate(p);
+          if (moreOpen) {
+            sheet.keepEntry();
+            setMoreOpen(false);
+            onNavigate(p, true);
+          } else onNavigate(p);
         }}
         className={className}
       >
@@ -200,14 +204,14 @@ export function AppShell({
       </nav>
 
       {moreOpen ? (
-        <div className="sheet-root">
+        <div className="more-root">
           <button
             type="button"
-            className="sheet-backdrop"
+            className="more-backdrop"
             aria-label={t.navMoreClose}
             onClick={() => setMoreOpen(false)}
           />
-          <div className="sheet" role="dialog" aria-modal="true" aria-label={t.navMore}>
+          <div className="more-sheet" role="dialog" aria-modal="true" aria-label={t.navMore}>
             <div className="sheet-head">
               <h2>{t.navMore}</h2>
               <button

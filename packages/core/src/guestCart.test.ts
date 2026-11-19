@@ -8,6 +8,9 @@ import {
   parseGuestBill,
   parseGuestMenu,
   guestSelectionProblem,
+  packCart,
+  restoreCart,
+  CART_KEEP_MS,
   setCartQuantity,
   statusStep,
   unitPrice,
@@ -132,5 +135,35 @@ describe('statusStep', () => {
       'ready',
       'served',
     ]);
+  });
+});
+
+describe('the basket kept on the guest’s phone', () => {
+  const now = Date.parse('2026-11-19T06:00:00Z');
+  const line = {
+    key: 'k1',
+    itemId: 'i1',
+    quantity: 2,
+    optionIds: [] as string[],
+    note: 'no chilli',
+  };
+  it('round-trips a basket and drops what the menu no longer allows', () => {
+    const lines = menu.items[0] ? [line] : [];
+    expect(restoreCart(packCart(lines, now), menu, now + 1000)).toEqual(
+      lines.filter((l) => !guestSelectionProblem(groupsOf(menu, menu.items[0]!), l.optionIds)),
+    );
+    expect(restoreCart(packCart([{ ...line, itemId: 'gone' }], now), menu, now)).toEqual([]);
+    expect(restoreCart(packCart([{ ...line, optionIds: ['nope'] }], now), menu, now)).toEqual([]);
+    expect(restoreCart(packCart([{ ...line, quantity: 500 }], now), menu, now)).toEqual([]);
+    expect(restoreCart(packCart([{ ...line, quantity: 0 }], now), menu, now)).toEqual([]);
+  });
+  it('forgets a basket after 12 hours, and anything damaged', () => {
+    expect(restoreCart(packCart([line], now), menu, now + CART_KEEP_MS + 1)).toEqual([]);
+    expect(restoreCart('not json', menu, now)).toEqual([]);
+    expect(restoreCart(null, menu, now)).toEqual([]);
+    expect(restoreCart('{"at":"x","lines":[]}', menu, now)).toEqual([]);
+    expect(restoreCart(JSON.stringify({ at: now + 3_600_000, lines: [line] }), menu, now)).toEqual(
+      [],
+    ); // from the future
   });
 });

@@ -30,7 +30,7 @@ export function SyncIndicator({
   return (
     <span className="sync-pill" data-state={state} role="status" aria-live="polite">
       <span className="sync-dot" aria-hidden="true" />
-      <span>{label}</span>
+      <span className="sync-label">{label}</span>
       {onSyncNow && (state === 'queued' || state === 'attention') ? (
         <AsyncButton variant="secondary" className="sync-retry" onClick={onSyncNow}>
           {t.syncNow}

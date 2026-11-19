@@ -18,8 +18,12 @@ import { csvCell, toCsv } from './csv';
 
 describe('audit catalogue ↔ database seed', () => {
   const dir = join(import.meta.dirname, '../../../supabase/migrations');
-  const file = readdirSync(dir).find((f) => f.endsWith('_audit_trail.sql'))!;
-  const sql = readFileSync(join(dir, file), 'utf8');
+  // the first migration seeds the catalogue; later ones may add event types (the cash drawer)
+  const sql = readdirSync(dir)
+    .filter((f) => f.endsWith('_audit_trail.sql') || f.endsWith('_drawer_open.sql'))
+    .map((f) => readFileSync(join(dir, f), 'utf8'))
+    .join('\n')
+    .replace(/values \('drawer\.open', 'shift', true\)/, "('drawer.open', 'shift', true)");
   const seeded = [...sql.matchAll(/\('([a-z_.]+)',\s*'([a-z]+)',\s*(true|false)\)/g)].map((m) => ({
     id: m[1]!,
     group: m[2]!,

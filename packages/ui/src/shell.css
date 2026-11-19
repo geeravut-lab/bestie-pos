@@ -34,10 +34,83 @@
   background: var(--bp-surface);
   border-bottom: 1px solid var(--bp-line);
 }
+.topbar {
+  min-width: 0;
+}
+.topbar-brand {
+  min-width: 0;
+  flex: 0 1 auto;
+}
 .topbar-right {
   display: flex;
   align-items: center;
+  flex: 0 0 auto;
   gap: 0.5rem;
+}
+/* Phones (360 px and narrower still have to fit): the logo alone is the brand, the sync pill is a dot until something needs attention,
+   the language switch is compact. Nothing in the top bar may widen the page. */
+@media (max-width: 30rem) {
+  .topbar {
+    padding-inline: 0.6rem;
+    gap: 0.4rem;
+  }
+  .topbar-brand .brand-name {
+    display: none;
+  }
+  .topbar-right {
+    gap: 0.3rem;
+  }
+  .topbar .sync-pill {
+    max-width: 5.5rem;
+    min-width: 0;
+    padding-inline: 0.5rem;
+    gap: 0.35rem;
+  }
+  .topbar .sync-pill > span:not(.sync-dot) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .topbar .sync-pill[data-state='synced'] > .sync-label {
+    position: absolute; /* visually hidden, still read by screen readers */
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+/* 360 px and narrower: the sync pill is only its coloured dot (the colour and the screen-reader text carry the state) */
+@media (max-width: 24rem) {
+  .topbar .sync-pill > .sync-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .topbar .sync-pill .sync-retry {
+    display: none;
+  }
+  .topbar .sync-pill {
+    position: relative;
+    min-width: 1.75rem;
+    justify-content: center;
+  }
+}
+@media (max-width: 30rem) {
+  .topbar .lang-switch button {
+    min-width: 40px;
+    padding: 0 0.55rem;
+    font-size: 0.875rem;
+  }
+}
+.shell-body {
+  min-width: 0;
 }
 
 /* ── bottom bar (phone) ──────────────────────────────────────────────────── */
@@ -131,12 +204,12 @@
 }
 
 /* ── "More" sheet ────────────────────────────────────────────────────────── */
-.sheet-root {
+.more-root {
   position: fixed;
   inset: 0;
   z-index: 50;
 }
-.sheet-backdrop {
+.more-backdrop {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -144,8 +217,9 @@
   background: color-mix(in srgb, var(--bp-ink) 45%, transparent);
   cursor: pointer;
 }
-.sheet {
+.more-sheet {
   position: absolute;
+  z-index: 1; /* above its own backdrop: the generic .sheet-backdrop of the pay / modifier sheets must never cover this one */
   inset: auto 0 0 0;
   display: flex;
   flex-direction: column;
@@ -177,6 +251,7 @@
   cursor: pointer;
 }
 .sheet-list {
+  min-height: 0; /* lets the list scroll inside the flex column instead of running past the screen */
   display: grid;
   gap: 0.25rem;
   padding: 0.25rem 0.75rem 1rem;
@@ -331,6 +406,18 @@ a.nav-card[aria-busy='true'] {
 }
 .scroll-sentinel {
   height: 1px;
+}
+.scroll-hints {
+  position: fixed;
+  right: 1rem;
+  bottom: calc(var(--bp-nav-h) + env(safe-area-inset-bottom) + 12px);
+  z-index: 35;
+  display: grid;
+  justify-items: end;
+  gap: 0.5rem;
+}
+.scroll-hints .scroll-hint {
+  position: static;
 }
 .scroll-hint {
   position: fixed;
@@ -525,10 +612,13 @@ a.nav-card[aria-busy='true'] {
     padding: 1.5rem 2rem 2.5rem;
   }
   .bar,
-  .sheet-root {
+  .more-root {
     display: none;
   }
   .scroll-hint {
+    bottom: 1rem;
+  }
+  .scroll-hints {
     bottom: 1rem;
   }
   .card-grid {

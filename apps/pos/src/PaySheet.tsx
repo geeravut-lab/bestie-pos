@@ -28,6 +28,7 @@ export function PaySheet({
   onSplitPay,
   splitCredit = null,
   held = 0,
+  heldDeposit = false,
   onRelease,
   methods = { promptpay: true, gateway: true },
   onClose,
@@ -44,6 +45,8 @@ export function PaySheet({
   onSplitPay?: (legs: SplitLeg[], held: Satang) => Promise<ErrorKey | null>;
   /** PromptPay / card shares already held on this bill (the bill is locked; only the split screen can finish it). */
   held?: Satang;
+  /** All of `held` is a deposit taken before the visit (shown as such; nobody "gives up" a deposit here). */
+  heldDeposit?: boolean;
   /** A manager gives up on a bill that holds shares (they are marked for refund, the bill is unlocked). */
   onRelease?: () => Promise<ErrorKey | null>;
   /** The customer on the bill and their Credit here; null = Credit not usable. */
@@ -143,6 +146,7 @@ export function PaySheet({
                 methods={methods}
                 credit={splitCredit}
                 held={held}
+                heldDeposit={heldDeposit}
                 onPay={onSplitPay}
                 onClose={onClose}
               />

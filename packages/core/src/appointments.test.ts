@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   addDays,
+  canBill,
+  canSettleDeposit,
+  canTakeDeposit,
+  depositRoom,
+  depositTotals,
+  parseDeposits,
+  suggestDeposit,
   bangkokDayBounds,
   bangkokParts,
   canMove,
@@ -33,6 +40,7 @@ const ap = (
   status: 'booked',
   source: 'staff',
   note: null,
+  orderId: null,
   ...over,
 });
 
@@ -192,5 +200,76 @@ describe('reading rows', () => {
     ]);
     expect(r.map((x) => x.id)).toEqual(['r1', 'r2']);
     expect(r[0]!.active).toBe(false);
+  });
+});
+
+describe('billing and deposits', () => {
+  it('an appointment can be billed once the guest has arrived, or when it already has a bill', () => {
+    expect(canBill({ status: 'booked', orderId: null })).toBe(false);
+    expect(canBill({ status: 'confirmed', orderId: null })).toBe(false);
+    for (const s of ['arrived', 'in_service', 'done'] as const)
+      expect(canBill({ status: s, orderId: null })).toBe(true);
+    expect(canBill({ status: 'cancelled', orderId: null })).toBe(false);
+    expect(canBill({ status: 'booked', orderId: 'o1' })).toBe(true);
+  });
+  it('the usual deposit is 30 % in whole baht, never above the price, never under 1 baht', () => {
+    expect(suggestDeposit(100000)).toBe(30000);
+    expect(suggestDeposit(85000)).toBe(25500);
+    expect(suggestDeposit(150)).toBe(100);
+    expect(suggestDeposit(50, 3000)).toBe(50);
+    expect(suggestDeposit(100000, 5000)).toBe(50000);
+    expect(suggestDeposit(0)).toBe(0);
+  });
+  it('adds up what the shop holds, what it kept and what it gave back', () => {
+    const ds = [
+      { amount: 30000, status: 'held' as const },
+      { amount: 20000, status: 'on_bill' as const },
+      { amount: 10000, status: 'forfeited' as const },
+      { amount: 5000, status: 'refunded' as const },
+    ];
+    expect(depositTotals(ds)).toEqual({
+      held: 30000,
+      onBill: 20000,
+      open: 50000,
+      forfeited: 10000,
+      refunded: 5000,
+    });
+    expect(depositRoom(100000, ds)).toBe(50000);
+    expect(depositRoom(40000, ds)).toBe(0);
+  });
+  it('when a deposit is taken and when it is settled', () => {
+    expect(
+      canTakeDeposit('booked') && canTakeDeposit('confirmed') && canTakeDeposit('arrived'),
+    ).toBe(true);
+    expect(
+      canTakeDeposit('in_service') || canTakeDeposit('done') || canTakeDeposit('no_show'),
+    ).toBe(false);
+    expect(canSettleDeposit('cancelled') && canSettleDeposit('no_show')).toBe(true);
+    expect(canSettleDeposit('booked') || canSettleDeposit('done')).toBe(false);
+  });
+  it('reads deposits and drops broken rows', () => {
+    const r = parseDeposits([
+      {
+        id: 'd1',
+        appointment_id: 'a1',
+        amount: '30000',
+        method: 'cash',
+        status: 'held',
+        reference: 'slip 7',
+      },
+      { id: 'd2', appointment_id: 'a1', amount: 0, method: 'cash', status: 'held' },
+      { id: 'd3', appointment_id: 'a1', amount: 100, method: 'bitcoin', status: 'held' },
+      { nope: 1 },
+    ]);
+    expect(r).toEqual([
+      {
+        id: 'd1',
+        appointmentId: 'a1',
+        amount: 30000,
+        method: 'cash',
+        status: 'held',
+        reference: 'slip 7',
+      },
+    ]);
   });
 });

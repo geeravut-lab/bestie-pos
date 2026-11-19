@@ -242,8 +242,13 @@ export function checkSystem({ auth, vercelEnvNames, siteUrl = 'https://bestie-po
       );
     if (auth.mailer_autoconfirm)
       out.push(
-        info(g, 'autoconfirm', 'สมัครด้วยอีเมลแล้วใช้ได้ทันที (ไม่ต้องกดลิงก์ยืนยัน) — ตั้งใจหรือไม่ ควรตัดสินใจ'),
+        warn(
+          g,
+          'autoconfirm',
+          'สมัครด้วยอีเมลแล้วใช้ได้ทันทีโดยไม่ต้องกดลิงก์ยืนยัน — ควรเปิดการยืนยันอีเมลก่อนรับร้านจริง',
+        ),
       );
+    else out.push(ok(g, 'autoconfirm', 'เปิดการยืนยันอีเมลแล้ว (ต้องกดลิงก์ก่อนเข้าใช้)'));
   }
   if (!vercelEnvNames)
     out.push(

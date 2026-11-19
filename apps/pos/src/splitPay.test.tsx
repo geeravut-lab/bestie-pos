@@ -194,6 +194,18 @@ describe('<SplitPane>', () => {
     expect(heldArg).toBe(7000);
   });
 
+  it('money held as a DEPOSIT is described as a deposit (not as a locked QR / card payment) and still counts as paid', async () => {
+    const { onPay } = mount({ held: 7000, heldDeposit: true });
+    expect(screen.getByText(/Deposit already taken: ฿70/)).toBeTruthy();
+    expect(screen.queryByText(/Already paid by PromptPay/)).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Add a payer' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Take payment and close the bill' }));
+    await waitFor(() => expect(onPay).toHaveBeenCalledTimes(1));
+    const [legs, heldArg] = onPay.mock.calls[0] as unknown as [{ amount: number }[], number];
+    expect(legs.map((l) => l.amount)).toEqual([14000]); // 210.00 − 70.00 deposit
+    expect(heldArg).toBe(7000);
+  });
+
   it('says it needs a connection offline', () => {
     mount({ online: false });
     expect(screen.getByText('Splitting a payment needs a connection.')).toBeTruthy();

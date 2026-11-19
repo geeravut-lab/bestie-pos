@@ -50,6 +50,8 @@ export type Appointment = {
   status: AppointmentStatus;
   source: 'staff' | 'online';
   note: string | null;
+  /** The bill made from this appointment, once there is one. */
+  orderId: string | null;
 };
 
 /** What may follow each status (the database enforces the same table). */
@@ -243,7 +245,92 @@ export function parseAppointments(raw: unknown): Appointment[] {
       status: r.status as AppointmentStatus,
       source: r.source === 'online' ? 'online' : 'staff',
       note: str(r.note),
+      orderId: str(r.order_id),
     });
   }
   return out.sort((a, b) => ms(a.startsAt) - ms(b.startsAt));
+}
+
+// ── billing and deposits ──
+/** A visit can be billed once the guest has arrived (or when it already has a bill to go to). */
+export const canBill = (a: Pick<Appointment, 'status' | 'orderId'>): boolean =>
+  a.orderId !== null || a.status === 'arrived' || a.status === 'in_service' || a.status === 'done';
+
+export const DEPOSIT_METHODS = ['cash', 'promptpay', 'gateway'] as const;
+export type DepositMethod = (typeof DEPOSIT_METHODS)[number];
+export type DepositStatus = 'held' | 'on_bill' | 'forfeited' | 'refunded';
+export type Deposit = {
+  id: string;
+  appointmentId: string;
+  amount: Satang;
+  method: DepositMethod;
+  status: DepositStatus;
+  reference: string | null;
+};
+
+/** The usual deposit: a share of the price (default 30 %), rounded to a whole baht, never above the price. */
+export function suggestDeposit(price: Satang, bps = 3000): Satang {
+  if (price <= 0) return 0;
+  const raw = Math.round((price * bps) / 10_000 / 100) * 100;
+  return Math.min(price, Math.max(100, raw));
+}
+
+/** What the deposits of one appointment add up to. `open` is held or already on the bill (money the shop is holding for this visit). */
+export function depositTotals(ds: readonly Pick<Deposit, 'amount' | 'status'>[]): {
+  held: Satang;
+  onBill: Satang;
+  open: Satang;
+  forfeited: Satang;
+  refunded: Satang;
+} {
+  const sum = (s: DepositStatus) =>
+    ds.filter((d) => d.status === s).reduce((a, d) => a + d.amount, 0);
+  const held = sum('held');
+  const onBill = sum('on_bill');
+  return {
+    held,
+    onBill,
+    open: held + onBill,
+    forfeited: sum('forfeited'),
+    refunded: sum('refunded'),
+  };
+}
+
+/** How much more can be taken as a deposit (the database refuses more than the price in total). */
+export const depositRoom = (
+  price: Satang,
+  ds: readonly Pick<Deposit, 'amount' | 'status'>[],
+): Satang => Math.max(0, price - depositTotals(ds).open);
+
+/** A deposit can be taken before the service; it is settled (kept or refunded) when the visit was cancelled or missed. */
+export const canTakeDeposit = (s: AppointmentStatus): boolean =>
+  s === 'booked' || s === 'confirmed' || s === 'arrived';
+export const canSettleDeposit = (s: AppointmentStatus): boolean =>
+  s === 'cancelled' || s === 'no_show';
+
+const DEP_STATUSES: readonly DepositStatus[] = ['held', 'on_bill', 'forfeited', 'refunded'];
+export function parseDeposits(raw: unknown): Deposit[] {
+  if (!Array.isArray(raw)) return [];
+  const out: Deposit[] = [];
+  for (const r of raw) {
+    if (
+      !isRec(r) ||
+      typeof r.id !== 'string' ||
+      typeof r.appointment_id !== 'string' ||
+      !(DEPOSIT_METHODS as readonly unknown[]).includes(r.method) ||
+      !(DEP_STATUSES as readonly unknown[]).includes(r.status)
+    )
+      continue;
+    const amount = int(r.amount);
+    if (amount <= 0) continue;
+    out.push({
+      id: r.id,
+      appointmentId: r.appointment_id,
+      amount,
+      method: r.method as DepositMethod,
+      status: r.status as DepositStatus,
+      reference: str(r.reference),
+    });
+  }
+  return out;
 }

@@ -23,6 +23,7 @@ export function SplitPane({
   pay,
   methods = { promptpay: false, gateway: false },
   held = 0,
+  heldDeposit = false,
   credit,
   onPay,
   onClose,
@@ -36,6 +37,8 @@ export function SplitPane({
   methods?: { promptpay: boolean; gateway: boolean };
   /** PromptPay / card shares already held on this bill (paid, waiting for the bill to close). */
   held?: Satang;
+  /** The held money is a deposit taken before the visit. */
+  heldDeposit?: boolean;
   /** null = no customer on the bill or Credit is off in this shop. */
   credit: { name: string; balance: Satang } | null;
   onPay: (legs: SplitLeg[], held: Satang) => Promise<ErrorKey | null>;
@@ -134,7 +137,9 @@ export function SplitPane({
     <div className="split-pane">
       <p className="muted">{t.paySplitIntro}</p>
       {heldNow > 0 ? (
-        <Notice kind="info">{fmt(t.paySplitHeld, { amount: money(heldNow) })}</Notice>
+        <Notice kind="info">
+          {fmt(heldDeposit ? t.paySplitDeposit : t.paySplitHeld, { amount: money(heldNow) })}
+        </Notice>
       ) : null}
       <div className="filters">
         <div className="form-row">

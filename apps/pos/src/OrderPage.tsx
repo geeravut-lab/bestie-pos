@@ -100,6 +100,8 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
   const [paying, setPaying] = useState(false);
   // PromptPay / card shares already paid and held on this bill (the bill is locked until it closes or a manager releases them)
   const [heldTotal, setHeldTotal] = useState(0);
+  // ...and whether all of it is a DEPOSIT taken before the visit (that does not lock the bill, and "give up" is not for it)
+  const [heldDeposit, setHeldDeposit] = useState(false);
   useEffect(() => {
     if (!paying) return;
     let alive = true;
@@ -107,11 +109,14 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
       try {
         const r = await ctx.client
           .from('order_partial_payments')
-          .select('amount')
+          .select('amount, kind')
           .eq('order_id', orderId)
           .eq('status', 'held');
-        if (alive && !r.error && Array.isArray(r.data))
-          setHeldTotal(r.data.reduce((a, x) => a + Number((x as { amount: number }).amount), 0));
+        if (alive && !r.error && Array.isArray(r.data)) {
+          const rows = r.data as { amount: number; kind?: string }[];
+          setHeldTotal(rows.reduce((a, x) => a + Number(x.amount), 0));
+          setHeldDeposit(rows.length > 0 && rows.every((x) => x.kind === 'deposit'));
+        }
       } catch {
         /* offline: the pay sheet then opens as for a bill with nothing held, and the server refuses anything that does not add up */
       }
@@ -512,8 +517,9 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
             splitInfo.data ? { name: splitInfo.data.name, balance: splitInfo.data.balance } : null
           }
           held={heldTotal}
+          heldDeposit={heldDeposit}
           onRelease={
-            ctx.isOwner || ctx.permissions.includes('refund.create')
+            !heldDeposit && (ctx.isOwner || ctx.permissions.includes('refund.create'))
               ? async () => {
                   const { error: e } = await ctx.client.rpc('release_partial_payments', {
                     p_order: order.id,

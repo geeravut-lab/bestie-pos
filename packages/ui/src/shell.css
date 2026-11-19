@@ -2031,3 +2031,13 @@ a.nav-card[aria-busy='true'] {
 .cal-bar {
   align-items: flex-end;
 }
+.cal-deposits {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--bp-line);
+}
+.cal-deposits h3 {
+  margin: 0;
+  font-size: 1rem;
+}

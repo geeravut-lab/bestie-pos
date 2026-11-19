@@ -193,6 +193,42 @@ describe('<MenuPage> items', () => {
     });
   });
 
+  it('a salon / spa menu (appointments on) has a service length, saved as minutes; others do not see the field', async () => {
+    const db = fakeDb(tables());
+    mount(ctx(db.client, { isModuleOn: () => true }));
+    await ready();
+    await userEvent.click(within(itemRow('Pad Thai')).getByRole('button', { name: 'Edit' }));
+    const len = within(itemRow('Pad Thai')).getByLabelText(
+      /Length of the service/,
+    ) as HTMLInputElement;
+    await userEvent.type(len, '90');
+    await userEvent.click(within(itemRow('Pad Thai')).getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(db.writes).toHaveLength(1));
+    expect(db.writes[0]).toMatchObject({ table: 'menu_items', values: { duration_min: 90 } });
+  });
+
+  it('a service length below 5 minutes is refused before anything is saved', async () => {
+    const db = fakeDb(tables());
+    mount(ctx(db.client, { isModuleOn: () => true }));
+    await ready();
+    await userEvent.click(within(itemRow('Pad Thai')).getByRole('button', { name: 'Edit' }));
+    await userEvent.type(within(itemRow('Pad Thai')).getByLabelText(/Length of the service/), '3');
+    await userEvent.click(within(itemRow('Pad Thai')).getByRole('button', { name: 'Save' }));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(db.writes).toHaveLength(0);
+  });
+
+  it('a restaurant menu has no service-length field and never writes one', async () => {
+    const db = fakeDb(tables());
+    mount(ctx(db.client, { isModuleOn: (id) => id !== 'appointments' }));
+    await ready();
+    await userEvent.click(within(itemRow('Pad Thai')).getByRole('button', { name: 'Edit' }));
+    expect(within(itemRow('Pad Thai')).queryByLabelText(/Length of the service/)).toBeNull();
+    await userEvent.click(within(itemRow('Pad Thai')).getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(db.writes).toHaveLength(1));
+    expect(db.writes[0]!.values).not.toHaveProperty('duration_min');
+  });
+
   it('deletes an item softly after confirming', async () => {
     const db = fakeDb(tables());
     mount(ctx(db.client));

@@ -95,7 +95,7 @@ export const formatInviteCode = (v: string): string =>
     ?.join('-') ?? '';
 
 /** Profiles a new shop can pick in Phase 1 (the others arrive with their phase — docs/PHASE1_TASKS.md). */
-export const SELECTABLE_PROFILES = ['restaurant', 'cafe'] as const;
+export const SELECTABLE_PROFILES = ['restaurant', 'cafe', 'salon', 'spa'] as const;
 
 /** Unknown module ids and non-boolean values are dropped (a bad row must never break a screen). */
 export function cleanModuleOverrides(raw: unknown): Partial<Record<ModuleId, boolean>> {

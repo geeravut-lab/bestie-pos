@@ -173,3 +173,28 @@ describe('known_permissions() in the database mirrors PERMISSIONS', () => {
     expect(sqlList).toEqual([...PERMISSIONS].sort());
   });
 });
+
+/** Appointments and resources: the database decides whether a booking is allowed, so its copy of the registry entries is checked here. */
+describe('appointments and resources in the database mirror the registry', () => {
+  const dir = new URL('../../../supabase/migrations/', import.meta.url);
+  const file = readdirSync(dir).find((f) => f.endsWith('_appointments.sql')) ?? '';
+  const sql = readFileSync(new URL(file, dir), 'utf8');
+  const allowed = (id: 'appointments' | 'resources') =>
+    (Object.keys(PLAN_RANK) as (keyof typeof PLAN_RANK)[]).filter(
+      (p) => PLAN_RANK[p] >= PLAN_RANK[MODULE_BY_ID[id].plan],
+    );
+
+  it('appointments: same default profiles and plan tiers', () => {
+    const m = /-- registry:appointments profiles=([a-z,]+) plan=([a-z,]+)/.exec(sql);
+    expect(m).not.toBeNull();
+    expect(m![1]!.split(',').sort()).toEqual([...MODULE_BY_ID.appointments.defaultProfiles].sort());
+    expect(m![2]!.split(',').sort()).toEqual(allowed('appointments').sort());
+  });
+  it('resources: same default profiles, plan tiers and dependency', () => {
+    const m = /-- registry:resources profiles=([a-z,]+) plan=([a-z,]+) depends=([a-z.]+)/.exec(sql);
+    expect(m).not.toBeNull();
+    expect(m![1]!.split(',').sort()).toEqual([...MODULE_BY_ID.resources.defaultProfiles].sort());
+    expect(m![2]!.split(',').sort()).toEqual(allowed('resources').sort());
+    expect(MODULE_BY_ID.resources.dependsOn).toEqual([m![3]]);
+  });
+});

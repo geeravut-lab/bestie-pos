@@ -48,3 +48,4 @@ export * from './printJobs';
 export * from './shopInfo';
 export * from './stock';
 export * from './purchasing';
+export * from './appointments';

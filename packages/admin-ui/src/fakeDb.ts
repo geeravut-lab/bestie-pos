@@ -9,7 +9,7 @@ export function fakeDb(
   opts: {
     /** rows an update "touches" (0 = RLS refused it silently) */
     updatedRows?: number;
-    rpc?: Record<string, { data?: unknown; error?: { code: string } | null }>;
+    rpc?: Record<string, { data?: unknown; error?: { code: string; message?: string } | null }>;
     insertError?: { code: string } | null;
   } = {},
 ) {
@@ -28,7 +28,8 @@ export function fakeDb(
       return { data: tables[table] ?? [], error: null };
     };
     const chain: Record<string, unknown> = {};
-    for (const m of ['select', 'eq', 'is', 'gt', 'or', 'order', 'limit']) chain[m] = () => chain;
+    for (const m of ['select', 'eq', 'is', 'gt', 'gte', 'lt', 'or', 'order', 'limit'])
+      chain[m] = () => chain;
     chain.delete = () => {
       op = 'delete';
       writes.push({ table, op, values: null });

@@ -55,6 +55,12 @@ const PATHS: Record<ArtId | 'more' | 'close' | 'back' | 'bell', string[]> = {
     'M9 12h.01',
     'M14 10h4M14 14h3',
   ],
+  calendar: [
+    'M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z',
+    'M4 10h16',
+    'M8 3v4M16 3v4',
+    'M8 14h3M13 14h3M8 17.5h3',
+  ],
   book: [
     'M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z',
     'M4 10h16',

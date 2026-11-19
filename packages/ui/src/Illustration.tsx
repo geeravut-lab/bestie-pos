@@ -384,6 +384,19 @@ const SCENES: Record<ArtId, { tone: Tone; art: ReactNode }> = {
       </>
     ),
   },
+  calendar: {
+    tone: 'mint',
+    art: (
+      <>
+        <rect className="il-white il-edge" x="30" y="18" width="100" height="68" rx="9" />
+        <path className="il-brand il-edge" d="M30 27a9 9 0 0 1 9-9h82a9 9 0 0 1 9 9v10H30z" />
+        <path className="il-edge-line" d="M70 37v49M100 37v49M30 58h100" />
+        <rect className="il-sun il-edge" x="36" y="42" width="28" height="12" rx="3" />
+        <rect className="il-accent il-edge" x="76" y="62" width="18" height="18" rx="3" />
+        <rect className="il-line-fill" x="106" y="44" width="18" height="10" rx="3" />
+      </>
+    ),
+  },
   pay: {
     tone: 'mint',
     art: (

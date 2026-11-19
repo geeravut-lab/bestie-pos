@@ -23,6 +23,9 @@ const GOOD: StoreSnapshot = {
   items_without_station: 0,
   groups_short: 0,
   tables: 0,
+  providers: 2,
+  places: 1,
+  timed_services: 5,
   devices: 2,
   cashier_devices: 1,
   kds_devices: 1,
@@ -104,6 +107,25 @@ describe('checkStore', () => {
     });
     expect(find(r, 'reader')?.level).toBe('warn');
     expect(find(r, 'pins')?.level).toBe('warn');
+  });
+});
+
+describe('checkStore for salon / spa', () => {
+  const salon = { ...GOOD, profile: 'salon', providers: 0, timed_services: 0, places: 0 };
+  it('a salon with no stylist cannot take appointments (FAIL); no timed service is a WARN', () => {
+    const r = checkStore(salon);
+    expect(find(r, 'providers')?.level).toBe('fail');
+    expect(find(r, 'timed')?.level).toBe('warn');
+    expect(find(r, 'places')).toBeUndefined();
+  });
+  it('a spa also wants rooms or beds; a ready one has nothing to fix', () => {
+    expect(find(checkStore({ ...salon, profile: 'spa' }), 'places')?.level).toBe('warn');
+    const ok = checkStore({ ...GOOD, profile: 'spa' });
+    expect(summarize(ok).fail).toBe(0);
+    expect(summarize(ok).warn).toBe(0);
+  });
+  it('a cafe is not asked about stylists', () => {
+    expect(find(checkStore({ ...GOOD, providers: 0 }), 'providers')).toBeUndefined();
   });
 });
 

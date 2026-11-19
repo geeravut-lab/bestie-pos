@@ -50,6 +50,19 @@ describe('<PrintersPage>', () => {
     ]);
   });
 
+  it('a printer can be a kitchen / bar ticket printer: the stations are saved with it and shown as badges', async () => {
+    const c = client({ printers: [], default_printer: null });
+    mountEn(<PrintersPage ctx={pageCtx(c.client, { isOwner: true })} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Add a printer' }));
+    await userEvent.type(screen.getByLabelText('Printer name'), 'Hot');
+    await userEvent.selectOptions(screen.getByLabelText('How it connects'), 'network');
+    await userEvent.type(screen.getByLabelText(/Bridge address/), 'http://192.168.1.21:9101');
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Kitchen' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save printer' }));
+    await waitFor(() => expect(c.updates.length).toBe(1));
+    expect(c.updates[0]!.printers).toEqual([expect.objectContaining({ stations: ['kitchen'] })]);
+  });
+
   it('an invalid printer (network without an address) is refused before saving', async () => {
     const c = client({ printers: [], default_printer: null });
     mountEn(<PrintersPage ctx={pageCtx(c.client, { isOwner: true })} />);

@@ -16,6 +16,10 @@ export type PrinterKind = 'pdf' | 'browser' | CustomPrinterKind;
 export const PAPER_MM = [58, 80] as const;
 export type PaperMm = (typeof PAPER_MM)[number];
 
+/** Kitchen stations a printer can print order tickets for (the menu item's station is the routing rule, like on the KDS). */
+export const TICKET_STATIONS = ['kitchen', 'bar'] as const;
+export type TicketStation = (typeof TICKET_STATIONS)[number];
+
 export type Printer = {
   id: string;
   name: string;
@@ -31,6 +35,8 @@ export type Printer = {
   baud?: number;
   /** bluetooth: GATT service of the printer (blank = look for a writable one). */
   service?: string;
+  /** Kitchen / bar tickets printed here when staff send an order (absent or empty = a receipt printer only). */
+  stations?: readonly TicketStation[];
 };
 
 export const BUILT_IN_PRINTERS: readonly Printer[] = [
@@ -49,7 +55,7 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === 'object' && !Array.isArray(v);
 
 export type PrinterProblem =
-  'id' | 'name' | 'kind' | 'paper' | 'bridge' | 'baud' | 'service' | 'duplicate';
+  'id' | 'name' | 'kind' | 'paper' | 'bridge' | 'baud' | 'service' | 'stations' | 'duplicate';
 
 export function printerProblems(p: Printer): PrinterProblem[] {
   const out: PrinterProblem[] = [];
@@ -66,6 +72,11 @@ export function printerProblems(p: Printer): PrinterProblem[] {
   )
     out.push('baud');
   if (p.service !== undefined && p.service !== '' && !UUIDISH.test(p.service)) out.push('service');
+  if (
+    p.stations !== undefined &&
+    !p.stations.every((x) => (TICKET_STATIONS as readonly string[]).includes(x))
+  )
+    out.push('stations');
   return out;
 }
 
@@ -86,6 +97,11 @@ export function parsePrinters(raw: unknown): Printer[] {
       ...(typeof e.bridge_url === 'string' ? { bridgeUrl: e.bridge_url } : {}),
       ...(typeof e.baud === 'number' ? { baud: e.baud } : {}),
       ...(typeof e.service === 'string' && e.service !== '' ? { service: e.service } : {}),
+      ...(Array.isArray(e.stations) && e.stations.length > 0
+        ? {
+            stations: TICKET_STATIONS.filter((x) => (e.stations as unknown[]).includes(x)),
+          }
+        : {}),
     };
     if (printerProblems(p).length === 0 && !seen.has(p.id)) {
       seen.add(p.id);
@@ -107,6 +123,7 @@ export const printersToColumn = (list: readonly Printer[]): Record<string, unkno
     ...(p.bridgeUrl ? { bridge_url: p.bridgeUrl } : {}),
     ...(p.baud !== undefined ? { baud: p.baud } : {}),
     ...(p.service ? { service: p.service } : {}),
+    ...(p.stations && p.stations.length > 0 ? { stations: [...p.stations] } : {}),
   }));
 
 /** A new id from a name: letters / digits / dashes, unique among the given ids. */

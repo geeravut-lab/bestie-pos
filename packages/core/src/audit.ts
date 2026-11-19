@@ -54,6 +54,7 @@ export const AUDIT_EVENTS = [
   ev('shift.open', 'shift'),
   ev('shift.close', 'shift'),
   ev('shift.cash_variance', 'shift'),
+  ev('drawer.open', 'shift', true),
   ev('device.register', 'device'),
   ev('device.pos_id_change', 'device', true),
   ev('module.toggle', 'settings', true),

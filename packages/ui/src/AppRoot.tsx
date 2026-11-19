@@ -86,9 +86,9 @@ function Frame({ app, live, gate, renderPage, headerExtra, cardImages }: AppRoot
   const ctx = live?.ctx ?? previewCtx;
   const activeRole = live?.role ?? role;
   // Spinner + progress bar from the moment an item is tapped until the next screen is ready.
-  const go = (path: string) => {
+  const go = (path: string, replace = false) => {
     setTarget(path);
-    startTransition(() => navigate(path));
+    startTransition(() => navigate(path, replace ? { replace: true } : undefined));
   };
   const pendingPath = pending ? target : null;
 

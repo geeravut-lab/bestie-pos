@@ -28,8 +28,9 @@ const reply = (body: unknown, status = 200) => Response.json(body, { status, hea
 const TOKEN = /^[0-9a-f]{24,64}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// per phone (IP) — a guest looks at a menu a few times and orders a few times
-const allowRead = createRateLimiter(60, 60_000);
+// per IP. Every phone at a table re-reads the bill every few seconds, and a whole restaurant shares one Wi-Fi address, so the read limit is
+// generous (the order, call and pay limits below stay tight).
+const allowRead = createRateLimiter(600, 60_000);
 const allowOrder = createRateLimiter(15, 60_000);
 
 export type GuestDeps = { fetchImpl?: typeof fetch; stripe?: StripeClient };

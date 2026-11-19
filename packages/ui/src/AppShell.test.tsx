@@ -122,7 +122,7 @@ describe('<AppShell>', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'More' }));
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('link', { name: /Shift/ }));
-    expect(onNavigate).toHaveBeenCalledWith('/shift');
+    expect(onNavigate).toHaveBeenCalledWith('/shift', true); // replaces the entry the sheet reserved
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 });

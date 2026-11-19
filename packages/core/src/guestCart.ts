@@ -200,3 +200,51 @@ export const statusStep = (status: string): StatusStep =>
         : 'served';
 
 export const guestName = (n: LocalizedText, lang: 'th' | 'en'): string => localizedName(n, lang);
+
+// ── remembering the basket on the guest's own phone ─────────────────────────
+/** How long an unsent basket is kept on the phone (a meal, not a week). */
+export const CART_KEEP_MS = 12 * 3_600_000;
+
+export const packCart = (cart: readonly CartLine[], nowMs: number): string =>
+  JSON.stringify({ at: nowMs, lines: cart });
+
+/**
+ * The basket the guest left when they closed the page, checked against the menu as it is NOW: dishes that were removed or switched
+ * off, options that no longer belong to the dish, impossible quantities and anything older than 12 hours are dropped. Never throws.
+ */
+export function restoreCart(raw: string | null, menu: GuestMenu, nowMs: number): CartLine[] {
+  if (!raw) return [];
+  let v: unknown;
+  try {
+    v = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  const o = v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+  if (!o || typeof o.at !== 'number' || nowMs - o.at > CART_KEEP_MS || nowMs < o.at - 60_000)
+    return [];
+  const out: CartLine[] = [];
+  for (const l of Array.isArray(o.lines) ? o.lines : []) {
+    if (!l || typeof l !== 'object') continue;
+    const r = l as Record<string, unknown>;
+    const item = menu.items.find((i) => i.id === r.itemId);
+    const optionIds = Array.isArray(r.optionIds)
+      ? r.optionIds.filter((x): x is string => typeof x === 'string')
+      : [];
+    if (!item || typeof r.key !== 'string') continue;
+    const allowed = new Set(groupsOf(menu, item).flatMap((g) => g.options.map((p) => p.id)));
+    if (!optionIds.every((id) => allowed.has(id))) continue;
+    if (guestSelectionProblem(groupsOf(menu, item), optionIds)) continue;
+    const quantity = typeof r.quantity === 'number' ? Math.floor(r.quantity) : 0;
+    if (quantity < 1 || quantity > GUEST_MAX_QTY) continue;
+    out.push({
+      key: r.key,
+      itemId: item.id,
+      quantity,
+      optionIds: [...optionIds].sort(),
+      note: typeof r.note === 'string' ? r.note.slice(0, 200) : '',
+    });
+    if (out.length === GUEST_MAX_LINES) break;
+  }
+  return out;
+}

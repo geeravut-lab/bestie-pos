@@ -62,7 +62,7 @@ describe('GET /api/guest/menu', () => {
   it('is rate limited per phone', async () => {
     const f = fakeFetch({ guest_table: () => json(null) });
     let last = 0;
-    for (let i = 0; i < 70; i++)
+    for (let i = 0; i < 610; i++)
       last = (await guestMenuResponse(get(TOKEN, '9.9.9.9'), env, { fetchImpl: f })).status;
     expect(last).toBe(429);
   });

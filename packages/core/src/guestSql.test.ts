@@ -158,7 +158,14 @@ describe('ai.assistant in the database mirrors the registry', () => {
 /** The permission list the database accepts for custom roles is the same list the app offers. */
 describe('known_permissions() in the database mirrors PERMISSIONS', () => {
   const dir = new URL('../../../supabase/migrations/', import.meta.url);
-  const file = readdirSync(dir).find((f) => f.endsWith('_roles_editor.sql')) ?? '';
+  // the LAST migration that (re)defines the list wins, as in the database
+  const file =
+    readdirSync(dir)
+      .sort()
+      .filter((f) =>
+        readFileSync(new URL(f, dir), 'utf8').includes('function public.known_permissions()'),
+      )
+      .at(-1) ?? '';
   const sql = readFileSync(new URL(file, dir), 'utf8');
   it('lists exactly the same permissions', () => {
     const body = /select array\[([\s\S]*?)\]::text\[\]/.exec(sql)![1]!;

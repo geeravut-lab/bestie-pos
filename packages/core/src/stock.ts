@@ -16,6 +16,7 @@ const FACTOR: Record<InputUnit, number> = { g: 1, kg: 1000, ml: 1, l: 1000, pcs:
 export type StockItem = {
   id: string;
   name: LocalizedText;
+  barcode: string | null;
   unit: StockUnit;
   quantity: number;
   costPer1000: Satang;
@@ -86,19 +87,45 @@ export const formatPctX10 = (v: number): string => {
 export const isLow = (i: Pick<StockItem, 'quantity' | 'lowAt' | 'active'>): boolean =>
   i.active && i.lowAt > 0 && i.quantity <= i.lowAt;
 
-/** What a set of sold lines uses up — the same arithmetic the database does when a bill is paid. */
+/** What a chosen option uses (per ONE portion), and optionally which recipe ingredient it stands in for ("oat milk instead of milk"). */
+export type OptionUse = {
+  optionId: string;
+  itemId: string;
+  quantity: number;
+  insteadOf: string | null;
+};
+
+/**
+ * What a set of sold lines uses up — the same arithmetic the database does when a bill is paid: the dish's recipe (except an ingredient
+ * a chosen option stands in for) plus what every chosen option uses, per portion × quantity.
+ */
 export function consumption(
-  sold: readonly { menuItemId: string | null; quantity: number }[],
+  sold: readonly { menuItemId: string | null; quantity: number; optionIds?: readonly string[] }[],
   recipes: readonly RecipeLine[],
+  optionUse: readonly OptionUse[] = [],
 ): Map<string, number> {
   const out = new Map<string, number>();
+  const add = (id: string, q: number) => out.set(id, (out.get(id) ?? 0) + q);
   for (const s of sold) {
     if (!s.menuItemId) continue;
+    const chosen = optionUse.filter((u) => s.optionIds?.includes(u.optionId));
+    const replaced = new Set(chosen.map((u) => u.insteadOf).filter((x): x is string => !!x));
     for (const r of recipes)
-      if (r.menuItemId === s.menuItemId)
-        out.set(r.itemId, (out.get(r.itemId) ?? 0) + r.quantity * s.quantity);
+      if (r.menuItemId === s.menuItemId && !replaced.has(r.itemId))
+        add(r.itemId, r.quantity * s.quantity);
+    for (const u of chosen) add(u.itemId, u.quantity * s.quantity);
   }
   return out;
+}
+
+/** What the whole stock is worth at cost (goods that are not there — a negative count — are worth nothing). */
+export const stockValue = (items: readonly Pick<StockItem, 'quantity' | 'costPer1000'>[]): Satang =>
+  items.reduce((a, i) => a + lineCost(Math.max(0, i.quantity), i.costPer1000), 0);
+
+/** A scanned or typed barcode: letters, digits and dashes, 4–40 long (what the database accepts); anything else is null. */
+export function normalizeBarcode(text: string): string | null {
+  const t = text.trim();
+  return /^[0-9A-Za-z-]{4,40}$/.test(t) ? t : null;
 }
 
 const isRec = (v: unknown): v is Record<string, unknown> =>
@@ -120,6 +147,7 @@ export function parseStockItems(raw: unknown): StockItem[] {
         th: r.name.th,
         ...(typeof r.name.en === 'string' && r.name.en ? { en: r.name.en } : {}),
       },
+      barcode: typeof r.barcode === 'string' && r.barcode ? r.barcode : null,
       unit: r.unit as StockUnit,
       quantity: int(r.quantity),
       costPer1000: int(r.cost_per_1000),
@@ -140,6 +168,22 @@ export function parseRecipeLines(raw: unknown): RecipeLine[] {
       menuItemId: String(r.menu_item_id),
       itemId: String(r.item_id),
       quantity: int(r.quantity),
+    }))
+    .filter((r) => r.quantity > 0);
+}
+
+export function parseOptionUse(raw: unknown): OptionUse[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter(
+      (r): r is Record<string, unknown> =>
+        isRec(r) && typeof r.option_id === 'string' && typeof r.item_id === 'string',
+    )
+    .map((r) => ({
+      optionId: String(r.option_id),
+      itemId: String(r.item_id),
+      quantity: int(r.quantity),
+      insteadOf: typeof r.instead_of === 'string' ? r.instead_of : null,
     }))
     .filter((r) => r.quantity > 0);
 }

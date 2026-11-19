@@ -721,7 +721,13 @@ a.nav-card[aria-busy='true'] {
   gap: 1rem;
   width: 100%;
   max-width: 28rem;
+  min-width: 0; /* a long name or address must wrap, never stretch the page past a phone's width */
   padding: 1.5rem;
+  overflow-wrap: anywhere;
+}
+.account {
+  min-width: 0;
+  max-width: 100%;
 }
 .auth-card h1 {
   font-size: 1.5rem;

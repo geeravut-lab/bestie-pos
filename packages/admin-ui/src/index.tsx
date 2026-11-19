@@ -25,6 +25,8 @@ import { AiUsagePage } from './AiUsagePage';
 import { AppointmentsPage } from './AppointmentsPage';
 import { CommissionPage } from './CommissionPage';
 import { PackagesPage } from './PackagesPage';
+import { DaysOffPage } from './DaysOffPage';
+import { GroupBookingPage } from './GroupBookingPage';
 import { ResourcesPage } from './ResourcesPage';
 import { AskShopPage } from './AskShopPage';
 import { FeedbackPage } from './FeedbackPage';
@@ -60,6 +62,8 @@ export function adminPages(ctx: PageContext): ReactNode | null {
   if (ctx.path === '/packages') return <PackagesPage ctx={ctx} />;
   if (ctx.path === '/labels') return <LabelsPage ctx={ctx} />;
   if (ctx.path === '/resources') return <ResourcesPage ctx={ctx} />;
+  if (ctx.path === '/days-off') return <DaysOffPage ctx={ctx} />;
+  if (ctx.path === '/group-booking') return <GroupBookingPage ctx={ctx} />;
   if (ctx.path === '/ask') return <AskShopPage ctx={ctx} />;
   if (ctx.path === '/feedback') return <FeedbackPage ctx={ctx} />;
   if (ctx.path === '/settings/info') return <ShopInfoPage ctx={ctx} />;

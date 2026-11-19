@@ -158,6 +158,47 @@ export async function guestOrderResponse(
   }
 }
 
+const allowCall = createRateLimiter(8, 60_000);
+
+/** POST /api/guest/call { token, reason: 'help' | 'bill' } — the guest asks for staff. A closed reason, no free text. */
+export async function guestCallResponse(
+  request: Request,
+  env: Env = process.env,
+  deps: GuestDeps = {},
+): Promise<Response> {
+  if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
+  if (!allowCall(`call:${clientKey(request)}`)) return reply({ error: 'rate_limited' }, 429);
+  const raw = await request.text().catch(() => '');
+  const body = raw.length < 500 ? parseBody(raw) : null;
+  const b = body as { token?: unknown; reason?: unknown } | null;
+  if (
+    !b ||
+    typeof b.token !== 'string' ||
+    !TOKEN.test(b.token) ||
+    (b.reason !== 'help' && b.reason !== 'bill')
+  )
+    return reply({ error: 'invalid' }, 422);
+  const fetchImpl = deps.fetchImpl ?? fetch;
+  try {
+    const { supabaseUrl, serviceRoleKey } = readServerEnv(env);
+    const r = await rpc(fetchImpl, supabaseUrl, serviceRoleKey, 'guest_call_staff', {
+      p_token: b.token,
+      p_reason: b.reason,
+    });
+    if (r.ok) {
+      const status = (r.data as { status?: unknown } | null)?.status;
+      return reply({ status: status === 'already' ? 'already' : 'called' });
+    }
+    if (r.code === 'P0002') return reply({ error: 'not_found' }, 404);
+    if (r.code === '0A000') return reply({ error: 'ordering_off' }, 403);
+    if (r.code === '53400') return reply({ error: 'too_many' }, 429);
+    if (r.code === '22023') return reply({ error: 'invalid' }, 422);
+    return reply({ error: 'server_error' }, 502);
+  } catch {
+    return reply({ error: 'server_error' }, 502);
+  }
+}
+
 // ── pay at the table (PromptPay) ─────────────────────────────────────────────
 type PayCtx = {
   enabled: boolean;

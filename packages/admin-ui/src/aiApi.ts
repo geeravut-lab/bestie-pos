@@ -56,3 +56,26 @@ export async function draftFoodTags(
   const f = parseFood({ tags: b.tags, spice_level: b.spice });
   return { available: true, tags: [...f.tags], spice: f.spice };
 }
+
+/** Ask for a DRAFT English (or Thai) version of one menu name. Null = AI is not set up. The draft is never saved by itself. */
+export async function translateName(
+  client: SupabaseClient,
+  storeId: string,
+  text: string,
+  to: 'en' | 'th' = 'en',
+  fetchImpl: typeof fetch = fetch,
+): Promise<string | null> {
+  const { data } = await client.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new AppError('err_forbidden');
+  const res = await fetchImpl('/api/menu/ai-translate', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ store_id: storeId, text, to }),
+  });
+  if (res.status === 403) throw new AppError('err_forbidden');
+  if (res.status === 429) throw new AppError('err_rate_limited');
+  if (!res.ok) throw new AppError('err_unknown');
+  const b = (await res.json().catch(() => null)) as { available?: unknown; text?: unknown } | null;
+  return b?.available === true && typeof b.text === 'string' ? b.text : null;
+}

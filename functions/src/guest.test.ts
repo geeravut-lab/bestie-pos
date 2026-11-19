@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { guestMenuResponse, guestOrderResponse } from './guest-handler.js';
+import { guestCallResponse, guestMenuResponse, guestOrderResponse } from './guest-handler.js';
 
 const env = { SUPABASE_URL: 'https://x.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'svc' };
 const TOKEN = 'a'.repeat(32);
@@ -135,5 +135,86 @@ describe('POST /api/guest/order', () => {
   });
   it('rejects GET', async () => {
     expect((await guestOrderResponse(new Request('https://app.test/x'), env)).status).toBe(405);
+  });
+});
+
+describe('POST /api/guest/call', () => {
+  const call = (body: unknown, ip: string) =>
+    new Request('https://app.test/api/guest/call', {
+      method: 'POST',
+      headers: { 'x-forwarded-for': ip },
+      body: JSON.stringify(body),
+    });
+  it('asks the database for the staff with a closed reason and says "called"', async () => {
+    const f = vi.fn(async () => json({ status: 'called', id: 'x' })) as unknown as typeof fetch;
+    const r = await guestCallResponse(call({ token: TOKEN, reason: 'bill' }, '40.0.0.1'), env, {
+      fetchImpl: f,
+    });
+    expect(await r.json()).toEqual({ status: 'called' });
+    const [url, init] = (f as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toContain('/rpc/guest_call_staff');
+    expect(JSON.parse(String(init.body))).toEqual({ p_token: TOKEN, p_reason: 'bill' });
+  });
+  it('a second tap says "already" (no second call)', async () => {
+    const f = fakeFetch({ guest_call_staff: () => json({ status: 'already', id: 'x' }) });
+    expect(
+      await (
+        await guestCallResponse(call({ token: TOKEN, reason: 'help' }, '40.0.0.2'), env, {
+          fetchImpl: f,
+        })
+      ).json(),
+    ).toEqual({ status: 'already' });
+  });
+  it('refuses free text, a bad token and other methods before touching the database', async () => {
+    const f = fakeFetch({});
+    expect(
+      (
+        await guestCallResponse(
+          call({ token: TOKEN, reason: 'please bring a pony' }, '40.0.0.3'),
+          env,
+          { fetchImpl: f },
+        )
+      ).status,
+    ).toBe(422);
+    expect(
+      (
+        await guestCallResponse(call({ token: 'bad', reason: 'help' }, '40.0.0.4'), env, {
+          fetchImpl: f,
+        })
+      ).status,
+    ).toBe(422);
+    expect(
+      (
+        await guestCallResponse(new Request('https://app.test/api/guest/call'), env, {
+          fetchImpl: f,
+        })
+      ).status,
+    ).toBe(405);
+    expect(f).not.toHaveBeenCalled();
+  });
+  it('maps the database refusals: unknown table 404, QR off 403, too many 429', async () => {
+    const run = async (code: string, ip: string) => {
+      const f = vi.fn(async () => json({ code }, 400)) as unknown as typeof fetch;
+      return (
+        await guestCallResponse(call({ token: TOKEN, reason: 'help' }, ip), env, { fetchImpl: f })
+      ).status;
+    };
+    expect(await run('P0002', '40.0.1.1')).toBe(404);
+    expect(await run('0A000', '40.0.1.2')).toBe(403);
+    expect(await run('53400', '40.0.1.3')).toBe(429);
+  });
+  it('rate limits one phone', async () => {
+    const f = fakeFetch({ guest_call_staff: () => json({ status: 'called' }) });
+    let last = 200;
+    for (let i = 0; i < 10; i++)
+      last = (
+        await guestCallResponse(call({ token: TOKEN, reason: 'help' }, '40.0.2.1'), env, {
+          fetchImpl: f,
+        })
+      ).status;
+    expect(last).toBe(429);
   });
 });

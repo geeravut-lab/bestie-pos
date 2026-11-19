@@ -15,6 +15,7 @@ import type { ErrorKey } from '@bestie/i18n';
 import { AsyncButton } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
+import { translateName } from './aiApi';
 import { deleteRow, nextSort, saveRow } from './menuData';
 import type { Group, Menu, Opt } from './menuData';
 import { channelLabel } from './MenuItemsTab';
@@ -210,7 +211,14 @@ function GroupForm({
   return (
     <form className="auth-form" onSubmit={(e) => e.preventDefault()}>
       <div className="filters">
-        <NameFields idPrefix={`grp-${id}`} th={th} en={en} onTh={setTh} onEn={setEn} />
+        <NameFields
+          idPrefix={`grp-${id}`}
+          th={th}
+          en={en}
+          onTh={setTh}
+          onEn={setEn}
+          translate={(x) => translateName(ctx.client, storeId, x)}
+        />
         <div className="form-row">
           <label className="label" htmlFor={`grp-${id}-min`}>
             {t.groupMin}
@@ -402,7 +410,14 @@ function OptionForm({
   return (
     <form className="auth-form" onSubmit={(e) => e.preventDefault()}>
       <div className="filters">
-        <NameFields idPrefix={`opt-${id}`} th={th} en={en} onTh={setTh} onEn={setEn} />
+        <NameFields
+          idPrefix={`opt-${id}`}
+          th={th}
+          en={en}
+          onTh={setTh}
+          onEn={setEn}
+          translate={(x) => translateName(ctx.client, storeId, x)}
+        />
         <div className="form-row">
           <label className="label" htmlFor={`opt-${id}-delta`}>
             {t.optionDelta}

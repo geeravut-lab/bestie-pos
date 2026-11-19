@@ -187,7 +187,7 @@ select t_rows('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$select 
 select t_rows('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$update public.app_notifications set read_at = now()$$, (select count(*) from public.app_notifications where user_id = '00000000-0000-0000-0000-0000000000a1'), 'a person can mark their own notices read');
 select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$update public.app_notifications set title = 'hacked'$$, '42501', 'only read_at can be changed');
 select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select * from public.notification_queue$$, '42501', 'the LINE queue is server-only');
-select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select * from public.notification_settings$$, '42501', 'the cap settings are server-only');
+select t_rows('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select * from public.notification_settings$$, 0, 'the cap settings are invisible to everybody but the platform admin');
 select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select public.notify_user('{"user_id":"00000000-0000-0000-0000-0000000000a1","title":{"th":"x"}}'::jsonb)$$, '42501', 'the browser cannot write a notice');
 select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select public.notify_daily_summary(current_date)$$, '42501', 'the browser cannot run the summary');
 select t_rows('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select * from public.notification_prefs$$, 1, 'a person reads their own LINE preferences');
@@ -277,5 +277,15 @@ do $$ begin
 end $$;
 select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select * from public.notify_claim(5)$$, '42501', 'the browser cannot claim the queue');
 select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select public.notify_report(gen_random_uuid(), 'sent')$$, '42501', 'the browser cannot report a delivery');
+
+-- ── the platform admin's cap settings ──
+insert into public.platform_admins (user_id) values ('00000000-0000-0000-0000-0000000000a1');
+select t_rows('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select public.notify_usage()$$, 1, 'the platform admin reads the LINE usage');
+select t_err('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$select public.notify_usage()$$, '42501', 'nobody else can');
+select t_rows('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$update public.notification_settings set line_monthly_cap = 500, line_reserve = 50$$, 1, 'the platform admin changes the cap and the reserve');
+select t_rows('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$update public.notification_settings set line_monthly_cap = 1$$, 0, 'a cashier changes nothing');
+select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$update public.notification_settings set line_reserve = 900$$, '23514', 'a reserve above the cap is refused');
+select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$update public.notification_settings set id = false$$, '42501', 'no other column can be changed from the browser');
+select t_rows('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$update public.notification_settings set halted_until = null, halted_reason = null$$, 1, 'a halt can be lifted by hand');
 
 do $$ begin raise notice 'ALL NOTIFICATION TESTS PASSED'; end $$;

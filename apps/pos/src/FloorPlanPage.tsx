@@ -1,3 +1,4 @@
+import { GuestCalls } from './GuestCalls';
 import { useState } from 'react';
 import { formatTHB, liveLines, itemCount, orderBill } from '@bestie/core';
 import type { OrderDoc } from '@bestie/core';
@@ -39,6 +40,7 @@ export function FloorPlanPage({ ctx }: { ctx: PageContext }) {
   return (
     <Page title={t.tablesTitle}>
       {stale ? <Notice kind="info">{t.tableStale}</Notice> : null}
+      <GuestCalls ctx={ctx} storeId={storeId} />
       {!binding ? <NeedsDevice ctx={ctx} /> : null}
       {tables.length === 0 ? <Notice kind="info">{t.tablesEmpty}</Notice> : null}
       {[...zones.entries()].map(([zone, list]) => (

@@ -1,7 +1,7 @@
 import { parseGuestBill, parseGuestMenu } from '@bestie/core';
 import type { CartLine, GuestBill, GuestMenu } from '@bestie/core';
-import { orderPayload, parseFilter } from '@bestie/core';
-import type { DietFilter } from '@bestie/core';
+import { orderPayload, parseFilter, parseInfoCards } from '@bestie/core';
+import type { DietFilter, InfoCard } from '@bestie/core';
 
 export type GuestPayInfo = {
   enabled: boolean;
@@ -275,6 +275,60 @@ export async function callStaff(
     const b = obj(await res.json().catch(() => null));
     if (!res.ok) return 'failed';
     return b.status === 'already' ? 'already' : 'called';
+  } catch {
+    return 'failed';
+  }
+}
+
+/** The shop's own information cards (no AI involved). */
+export async function loadInfoCards(
+  token: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<InfoCard[]> {
+  try {
+    const res = await fetchImpl(`/api/guest/info?t=${encodeURIComponent(token)}`);
+    if (!res.ok) return [];
+    return parseInfoCards(obj(await res.json().catch(() => null)).info);
+  } catch {
+    return [];
+  }
+}
+
+/** Ask in words which cards answer a question. `null` = the assistant is off or unavailable (the page keeps the plain list). */
+export async function askInfo(
+  token: string,
+  text: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<InfoCard[] | null> {
+  try {
+    const res = await fetchImpl('/api/guest/info-ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ t: token, text }),
+    });
+    if (!res.ok) return null;
+    const b = obj(await res.json().catch(() => null));
+    return b.available === true ? parseInfoCards(b.cards) : null;
+  } catch {
+    return null;
+  }
+}
+
+export type FeedbackResult = 'sent' | 'too_many' | 'failed';
+
+export async function sendFeedback(
+  token: string,
+  f: { rating: number; topic: string; comment: string },
+  fetchImpl: typeof fetch = fetch,
+): Promise<FeedbackResult> {
+  try {
+    const res = await fetchImpl('/api/guest/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, ...f, comment: f.comment.trim() || undefined }),
+    });
+    if (res.ok) return 'sent';
+    return res.status === 429 ? 'too_many' : 'failed';
   } catch {
     return 'failed';
   }

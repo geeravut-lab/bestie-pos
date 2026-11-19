@@ -149,6 +149,7 @@ describe('checkSystem', () => {
     'LINE_CHANNEL_SECRET',
     'LINE_CHANNEL_ACCESS_TOKEN',
     'LINE_CODE_SECRET',
+    'LINE_BASIC_ID',
     'AIVORA_APP_SLUG',
     'VITE_AIVORA_APP_SLUG',
     'GOOGLE_AI_API_KEY',

@@ -4,6 +4,7 @@ import type { ErrorKey } from '@bestie/i18n';
 import { AsyncButton, Spinner } from '@bestie/ui';
 import { Notice, useLiveSync } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
+import { LineDiagnosis } from './LineDiagnosis';
 import { useRemote } from './useRemote';
 
 type Usage = {
@@ -83,6 +84,7 @@ export function LineSettingsPage({ ctx }: { ctx: PageContext }) {
     <div className="admin-page">
       <h1>{t.lineAdminTitle}</h1>
       <Notice kind="info">{t.lineAdminIntro}</Notice>
+      <LineDiagnosis ctx={ctx} />
       <section className="card admin-card" aria-labelledby="line-usage">
         <h2 id="line-usage">{t.lineAdminUsage}</h2>
         <p className="guest-total">

@@ -3,20 +3,35 @@ import {
   addDays,
   bangkokDayBounds,
   bangkokParts,
+  canBill,
   canMove,
+  canSettleDeposit,
+  canTakeDeposit,
+  DEPOSIT_METHODS,
+  depositRoom,
+  depositTotals,
   findConflict,
   formatTHB,
   layoutColumn,
   localizedName,
   nextStatuses,
   parseAppointments,
+  parseDeposits,
+  suggestDeposit,
   parsePriceInput,
+  priceInputValue,
   parseResources,
   timeLabel,
   toBangkokIso,
   isProviderKind,
 } from '@bestie/core';
-import type { Appointment, AppointmentStatus, Resource } from '@bestie/core';
+import type {
+  Appointment,
+  AppointmentStatus,
+  Deposit,
+  DepositMethod,
+  Resource,
+} from '@bestie/core';
 import { errorText, fmt, useI18n } from '@bestie/i18n';
 import type { ErrorKey } from '@bestie/i18n';
 import { AsyncButton, Spinner } from '@bestie/ui';
@@ -31,7 +46,14 @@ type Service = {
   price: number;
   duration: number | null;
 };
-type Loaded = { resources: Resource[]; appts: Appointment[]; services: Service[] };
+type Till = { id: string; name: string };
+type Loaded = {
+  resources: Resource[];
+  appts: Appointment[];
+  services: Service[];
+  deposits: Deposit[];
+  tills: Till[];
+};
 type View = 'provider' | 'place';
 type Draft = {
   serviceId: string; // '' = a service typed by hand
@@ -66,7 +88,19 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
     placeId: string;
   } | null>(null);
   const [error, setError] = useState<ErrorKey | null>(null);
-  const [problem, setProblem] = useState<'bad' | 'provider' | 'place' | 'off' | null>(null);
+  const [problem, setProblem] = useState<'bad' | 'provider' | 'place' | 'off' | 'deposit' | null>(
+    null,
+  );
+  const [dep, setDep] = useState<{
+    amount: string;
+    method: DepositMethod;
+    till: string;
+    ref: string;
+  } | null>(null);
+  const [settleTill, setSettleTill] = useState('');
+  const canTakeMoney = ctx.isOwner || ctx.permissions.includes('payment.take');
+  const canRefund = ctx.isOwner || ctx.permissions.includes('refund.create');
+  const depositsOn = ctx.isModuleOn ? ctx.isModuleOn('deposits') : true;
 
   const bounds = bangkokDayBounds(date);
   const data = useRemote<Loaded>(
@@ -82,7 +116,7 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
         ctx.client
           .from('appointments')
           .select(
-            'id, provider_id, place_id, service_name, price, guest_name, guest_phone, starts_at, ends_at, status, source, note',
+            'id, provider_id, place_id, service_name, price, guest_name, guest_phone, starts_at, ends_at, status, source, note, order_id',
           )
           .eq('store_id', storeId)
           .gte('starts_at', bounds.from)
@@ -96,9 +130,38 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
           .order('sort'),
       ]);
       if (res.error || ap.error || menu.error) throw new Error('load');
+      const appts = parseAppointments(ap.data);
+      // deposits and the tills they went into: only when there is something to show (and a person who may see money)
+      const [dep, dev] = await Promise.all([
+        appts.length > 0
+          ? ctx.client
+              .from('appointment_deposits')
+              .select('id, appointment_id, amount, method, status, reference')
+              .in(
+                'appointment_id',
+                appts.map((a) => a.id),
+              )
+              .order('created_at')
+          : Promise.resolve({ data: [], error: null }),
+        ctx.client
+          .from('devices')
+          .select('id, name')
+          .eq('store_id', storeId)
+          .eq('active', true)
+          .eq('role', 'cashier')
+          .order('name'),
+      ]);
       return {
+        deposits: dep.error ? [] : parseDeposits(dep.data),
+        tills: dev.error
+          ? []
+          : ((dev.data ?? []) as Record<string, unknown>[]).flatMap((x) =>
+              typeof x.id === 'string' && typeof x.name === 'string'
+                ? [{ id: x.id, name: x.name }]
+                : [],
+            ),
         resources: parseResources(res.data),
-        appts: parseAppointments(ap.data),
+        appts,
         services: ((menu.data ?? []) as Record<string, unknown>[]).flatMap((m) =>
           typeof m.id === 'string' && m.name && typeof m.name === 'object'
             ? [
@@ -237,6 +300,52 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
     if (err) return fail(err);
     reload();
   };
+  const openBill = async (a: Appointment) => {
+    setError(null);
+    setProblem(null);
+    const { data: id, error: err } = await ctx.client.rpc('appointment_to_order', {
+      p: { appointment_id: a.id, device_id: d?.tills[0]?.id ?? null },
+    });
+    if (err || typeof id !== 'string') return fail(err ?? {});
+    ctx.navigate(`/order/${id}`);
+  };
+  const takeDeposit = async (a: Appointment) => {
+    if (!dep) return;
+    setError(null);
+    setProblem(null);
+    const amount = parsePriceInput(dep.amount);
+    if (amount === null || amount < 1 || (dep.method === 'cash' && !dep.till))
+      return setProblem('deposit');
+    const { error: err } = await ctx.client.rpc('record_appointment_deposit', {
+      p: {
+        appointment_id: a.id,
+        amount,
+        method: dep.method,
+        device_id: dep.method === 'cash' ? dep.till : null,
+        reference: dep.ref.trim() || undefined,
+      },
+    });
+    if (err) {
+      if (err.code === '22023') return setProblem('deposit');
+      return fail(err);
+    }
+    setDep(null);
+    reload();
+  };
+  const settle = async (x: Deposit, action: 'forfeit' | 'refund') => {
+    setError(null);
+    setProblem(null);
+    if (action === 'refund' && x.method === 'cash' && !settleTill) return setProblem('deposit');
+    const { error: err } = await ctx.client.rpc('resolve_deposit', {
+      p: {
+        deposit_id: x.id,
+        action,
+        device_id: action === 'refund' && x.method === 'cash' ? settleTill : null,
+      },
+    });
+    if (err) return fail(err);
+    reload();
+  };
   const move = async (a: Appointment) => {
     if (!moving) return;
     const iso = toBangkokIso(date, moving.time);
@@ -263,6 +372,7 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
       <h1>{t.calTitle}</h1>
       {error ? <Notice kind="error">{errorText(error, t)}</Notice> : null}
       {problem === 'off' ? <Notice kind="info">{t.calModuleOff}</Notice> : null}
+      {problem === 'deposit' ? <Notice kind="error">{t.calDepositBad}</Notice> : null}
       {problem === 'provider' ? <Notice kind="error">{t.calBusyProvider}</Notice> : null}
       {problem === 'place' ? <Notice kind="error">{t.calBusyPlace}</Notice> : null}
 
@@ -455,6 +565,29 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
               <button type="button" className="btn btn-secondary" onClick={() => setSelected(null)}>
                 {t.calClose}
               </button>
+            </div>
+          ) : null}
+          {depositsOn && d ? (
+            <DepositsBlock
+              appt={sel}
+              deposits={d.deposits.filter((x) => x.appointmentId === sel.id)}
+              tills={d.tills}
+              canTake={canTakeMoney}
+              canRefund={canRefund}
+              dep={dep}
+              setDep={setDep}
+              settleTill={settleTill}
+              setSettleTill={setSettleTill}
+              onTake={() => takeDeposit(sel)}
+              onSettle={settle}
+              money={(n) => formatTHB(n, locale)}
+            />
+          ) : null}
+          {canBook && canBill(sel) ? (
+            <div className="actions">
+              <AsyncButton onClick={() => openBill(sel)}>
+                {sel.orderId ? t.calGoToBill : t.calOpenBill}
+              </AsyncButton>
             </div>
           ) : null}
           {moving ? (
@@ -691,5 +824,188 @@ function ResourceSelect({
         ))}
       </select>
     </div>
+  );
+}
+
+function DepositsBlock({
+  appt,
+  deposits,
+  tills,
+  canTake,
+  canRefund,
+  dep,
+  setDep,
+  settleTill,
+  setSettleTill,
+  onTake,
+  onSettle,
+  money,
+}: {
+  appt: Appointment;
+  deposits: Deposit[];
+  tills: Till[];
+  canTake: boolean;
+  canRefund: boolean;
+  dep: { amount: string; method: DepositMethod; till: string; ref: string } | null;
+  setDep: (v: { amount: string; method: DepositMethod; till: string; ref: string } | null) => void;
+  settleTill: string;
+  setSettleTill: (v: string) => void;
+  onTake: () => Promise<void>;
+  onSettle: (x: Deposit, action: 'forfeit' | 'refund') => Promise<void>;
+  money: (n: number) => string;
+}) {
+  const { t } = useI18n();
+  const room = depositRoom(appt.price, deposits);
+  const totals = depositTotals(deposits);
+  const showTake = canTake && canTakeDeposit(appt.status) && room > 0;
+  const hasHeldCash = deposits.some((x) => x.status === 'held' && x.method === 'cash');
+  if (deposits.length === 0 && !showTake) return null;
+  return (
+    <section className="cal-deposits" aria-label={t.calDeposits}>
+      <h3>{t.calDeposits}</h3>
+      {deposits.length > 0 ? (
+        <>
+          <ul className="muted">
+            {deposits.map((x) => (
+              <li key={x.id}>
+                {money(x.amount)} · {tx(t, `calDepMethod_${x.method}`)} ·{' '}
+                {tx(t, `calDepStatus_${x.status}`)}
+                {x.reference ? ` · ${x.reference}` : ''}
+                {x.status === 'held' && canSettleDeposit(appt.status) && canRefund ? (
+                  <span className="actions">
+                    <AsyncButton variant="secondary" onClick={() => onSettle(x, 'forfeit')}>
+                      {t.calDepKeep}
+                    </AsyncButton>
+                    <AsyncButton variant="secondary" onClick={() => onSettle(x, 'refund')}>
+                      {t.calDepRefund}
+                    </AsyncButton>
+                  </span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+          {canRefund && canSettleDeposit(appt.status) && hasHeldCash && tills.length > 0 ? (
+            <div className="form-row">
+              <label className="label" htmlFor="dep-settle-till">
+                {t.calDepRefundTill}
+              </label>
+              <select
+                id="dep-settle-till"
+                className="field"
+                value={settleTill}
+                onChange={(e) => setSettleTill(e.target.value)}
+              >
+                <option value="">{t.calNone}</option>
+                {tills.map((x) => (
+                  <option key={x.id} value={x.id}>
+                    {x.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+          <p className="muted tabular">
+            {fmt(t.calDepHolding, { amount: money(totals.open) })}
+            {totals.forfeited > 0
+              ? ` · ${fmt(t.calDepKept, { amount: money(totals.forfeited) })}`
+              : ''}
+          </p>
+        </>
+      ) : null}
+      {showTake && !dep ? (
+        <div className="actions">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() =>
+              setDep({
+                amount: priceInputValue(Math.min(room, suggestDeposit(appt.price))),
+                method: 'cash',
+                till: tills[0]?.id ?? '',
+                ref: '',
+              })
+            }
+          >
+            {t.calDepTake}
+          </button>
+        </div>
+      ) : null}
+      {dep ? (
+        <form className="auth-form" onSubmit={(e) => e.preventDefault()} aria-label={t.calDepTake}>
+          <div className="filters">
+            <div className="form-row">
+              <label className="label" htmlFor="dep-amount">
+                {t.calDepAmount}
+              </label>
+              <input
+                id="dep-amount"
+                className="field tabular"
+                inputMode="decimal"
+                value={dep.amount}
+                onChange={(e) => setDep({ ...dep, amount: e.target.value })}
+              />
+            </div>
+            <div className="form-row">
+              <label className="label" htmlFor="dep-method">
+                {t.calDepMethod}
+              </label>
+              <select
+                id="dep-method"
+                className="field"
+                value={dep.method}
+                onChange={(e) => setDep({ ...dep, method: e.target.value as DepositMethod })}
+              >
+                {DEPOSIT_METHODS.map((m) => (
+                  <option key={m} value={m}>
+                    {tx(t, `calDepMethod_${m}`)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          {dep.method === 'cash' ? (
+            <div className="form-row">
+              <label className="label" htmlFor="dep-till">
+                {t.calDepTill}
+              </label>
+              <select
+                id="dep-till"
+                className="field"
+                value={dep.till}
+                onChange={(e) => setDep({ ...dep, till: e.target.value })}
+              >
+                <option value="">{t.calNone}</option>
+                {tills.map((x) => (
+                  <option key={x.id} value={x.id}>
+                    {x.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+          <div className="form-row">
+            <label className="label" htmlFor="dep-ref">
+              {t.calDepRef}
+            </label>
+            <input
+              id="dep-ref"
+              className="field"
+              maxLength={100}
+              value={dep.ref}
+              onChange={(e) => setDep({ ...dep, ref: e.target.value })}
+            />
+          </div>
+          <p className="muted">{fmt(t.calDepRoom, { amount: money(room) })}</p>
+          <div className="actions">
+            <AsyncButton type="submit" onClick={onTake}>
+              {t.calDepSave}
+            </AsyncButton>
+            <button type="button" className="btn btn-secondary" onClick={() => setDep(null)}>
+              {t.menuCancel}
+            </button>
+          </div>
+        </form>
+      ) : null}
+    </section>
   );
 }

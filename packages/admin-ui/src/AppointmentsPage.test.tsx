@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PageContext } from '@bestie/auth';
 import { I18nProvider } from '@bestie/i18n';
 import { AppointmentsPage } from './AppointmentsPage';
@@ -44,7 +44,71 @@ const tables = () => ({
       source: 'online',
       note: null,
     },
+    {
+      id: 'a3',
+      provider_id: 'mai',
+      place_id: null,
+      service_name: { th: 'นวดเท้า', en: 'Foot massage' },
+      price: 60000,
+      guest_name: 'Cara',
+      guest_phone: null,
+      starts_at: '2030-01-15T15:00:00+07:00',
+      ends_at: '2030-01-15T16:00:00+07:00',
+      status: 'arrived',
+      source: 'staff',
+      note: null,
+      order_id: null,
+    },
+    {
+      id: 'a4',
+      provider_id: 'mai',
+      place_id: null,
+      service_name: { th: 'นวดไทย', en: 'Thai massage' },
+      price: 50000,
+      guest_name: 'Dan',
+      guest_phone: null,
+      starts_at: '2030-01-15T17:00:00+07:00',
+      ends_at: '2030-01-15T18:00:00+07:00',
+      status: 'no_show',
+      source: 'staff',
+      note: null,
+      order_id: null,
+    },
+    {
+      id: 'a5',
+      provider_id: 'mai',
+      place_id: null,
+      service_name: { th: 'สปา', en: 'Spa' },
+      price: 90000,
+      guest_name: 'Eli',
+      guest_phone: null,
+      starts_at: '2030-01-15T19:00:00+07:00',
+      ends_at: '2030-01-15T20:00:00+07:00',
+      status: 'done',
+      source: 'staff',
+      note: null,
+      order_id: 'o9',
+    },
   ],
+  appointment_deposits: [
+    {
+      id: 'dp1',
+      appointment_id: 'a4',
+      amount: 10000,
+      method: 'cash',
+      status: 'held',
+      reference: 'slip 7',
+    },
+    {
+      id: 'dp2',
+      appointment_id: 'a3',
+      amount: 20000,
+      method: 'promptpay',
+      status: 'held',
+      reference: null,
+    },
+  ],
+  devices: [{ id: 't1', name: 'Counter' }],
   menu_items: [
     {
       id: 'svc1',
@@ -217,6 +281,141 @@ describe('<AppointmentsPage>', () => {
     expect(screen.queryByRole('button', { name: /New booking/ })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Confirm' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Move' })).toBeNull();
+  });
+});
+
+describe('<AppointmentsPage> billing and deposits', () => {
+  const full = ['order.create', 'payment.take', 'refund.create'] as PageContext['permissions'];
+
+  it('opens the bill of an arrived guest on the till and goes to it', async () => {
+    const db = fakeDb(tables(), { rpc: { appointment_to_order: { data: 'order-77' } } });
+    const navigate = vi.fn();
+    mount(ctx(db.client, { permissions: full, navigate }));
+    await openDay();
+    await userEvent.click(await screen.findByText('15:00 Cara'));
+    await userEvent.click(screen.getByRole('button', { name: 'Open the bill' }));
+    await waitFor(() => expect(db.rpcs).toHaveLength(1));
+    expect(db.rpcs[0]).toEqual({
+      fn: 'appointment_to_order',
+      args: { p: { appointment_id: 'a3', device_id: 't1' } },
+    });
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/order/order-77'));
+  });
+
+  it('a guest who has not arrived cannot be billed yet; one that has a bill goes straight to it', async () => {
+    mount(ctx(fakeDb(tables()).client, { permissions: full }));
+    await openDay();
+    await userEvent.click(await screen.findByText('10:00 Anna'));
+    expect(screen.queryByRole('button', { name: 'Open the bill' })).toBeNull();
+    cleanup();
+    mount(ctx(fakeDb(tables()).client, { permissions: full }));
+    await openDay();
+    await userEvent.click(await screen.findByText('19:00 Eli'));
+    expect(screen.getByRole('button', { name: "Go to this visit's bill" })).toBeTruthy();
+  });
+
+  it('takes a deposit: 30 % suggested, cash into the counter till, sent in satang', async () => {
+    const db = fakeDb(tables());
+    mount(ctx(db.client, { permissions: full }));
+    await openDay();
+    await userEvent.click(await screen.findByText('10:00 Anna')); // price 800.00
+    await userEvent.click(screen.getByRole('button', { name: 'Take a deposit' }));
+    expect((screen.getByLabelText('Amount (baht)') as HTMLInputElement).value).toBe('240');
+    expect((screen.getByLabelText('Cash went into the till of') as HTMLSelectElement).value).toBe(
+      't1',
+    );
+    await userEvent.type(screen.getByLabelText('Reference / note (optional)'), 'slip 9');
+    await userEvent.click(screen.getByRole('button', { name: 'Save the deposit' }));
+    await waitFor(() => expect(db.rpcs).toHaveLength(1));
+    expect(db.rpcs[0]).toEqual({
+      fn: 'record_appointment_deposit',
+      args: {
+        p: {
+          appointment_id: 'a1',
+          amount: 24000,
+          method: 'cash',
+          device_id: 't1',
+          reference: 'slip 9',
+        },
+      },
+    });
+  });
+
+  it('a PromptPay deposit needs no till; a wrong amount is refused before anything is sent', async () => {
+    const db = fakeDb(tables());
+    mount(ctx(db.client, { permissions: full }));
+    await openDay();
+    await userEvent.click(await screen.findByText('10:00 Anna'));
+    await userEvent.click(screen.getByRole('button', { name: 'Take a deposit' }));
+    await userEvent.selectOptions(screen.getByLabelText('Paid by'), 'promptpay');
+    expect(screen.queryByLabelText('Cash went into the till of')).toBeNull();
+    const amount = screen.getByLabelText('Amount (baht)');
+    await userEvent.clear(amount);
+    await userEvent.type(amount, 'abc');
+    await userEvent.click(screen.getByRole('button', { name: 'Save the deposit' }));
+    expect(await screen.findByText(/Enter a valid amount/)).toBeTruthy();
+    expect(db.rpcs).toHaveLength(0);
+    await userEvent.clear(amount);
+    await userEvent.type(amount, '200');
+    await userEvent.click(screen.getByRole('button', { name: 'Save the deposit' }));
+    await waitFor(() => expect(db.rpcs).toHaveLength(1));
+    expect(db.rpcs[0]!.args).toMatchObject({
+      p: { amount: 20000, method: 'promptpay', device_id: null },
+    });
+  });
+
+  it('shows what is held and how much more can be taken', async () => {
+    mount(ctx(fakeDb(tables()).client, { permissions: full }));
+    await openDay();
+    await userEvent.click(await screen.findByText('15:00 Cara')); // price 600.00, 200.00 held
+    expect(screen.getByText(/Holding ฿200 in deposits/)).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Take a deposit' }));
+    expect(screen.getByText(/up to ฿400 more/)).toBeTruthy();
+  });
+
+  it('a no-show: the manager keeps the deposit or refunds it (cash refund needs the till)', async () => {
+    const db = fakeDb(tables());
+    mount(ctx(db.client, { permissions: full }));
+    await openDay();
+    await userEvent.click(await screen.findByText('17:00 Dan'));
+    await userEvent.click(screen.getByRole('button', { name: 'Refund the deposit' }));
+    expect(await screen.findByText(/pick the till that took the cash/)).toBeTruthy();
+    expect(db.rpcs).toHaveLength(0);
+    await userEvent.selectOptions(
+      screen.getByLabelText('If refunding cash, take it from the till of'),
+      't1',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Refund the deposit' }));
+    await waitFor(() => expect(db.rpcs).toHaveLength(1));
+    expect(db.rpcs[0]).toEqual({
+      fn: 'resolve_deposit',
+      args: { p: { deposit_id: 'dp1', action: 'refund', device_id: 't1' } },
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Keep it (no-show fee)' }));
+    await waitFor(() => expect(db.rpcs).toHaveLength(2));
+    expect(db.rpcs[1]).toEqual({
+      fn: 'resolve_deposit',
+      args: { p: { deposit_id: 'dp1', action: 'forfeit', device_id: null } },
+    });
+  });
+
+  it('without payment.take there is no deposit button; without refund.create no keep / refund', async () => {
+    mount(ctx(fakeDb(tables()).client, { permissions: ['order.create'] }));
+    await openDay();
+    await userEvent.click(await screen.findByText('10:00 Anna'));
+    expect(screen.queryByRole('button', { name: 'Take a deposit' })).toBeNull();
+    await userEvent.click(screen.getByText('17:00 Dan'));
+    expect(screen.queryByRole('button', { name: 'Refund the deposit' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Keep it (no-show fee)' })).toBeNull();
+  });
+
+  it('with the deposits module off nothing about deposits is shown', async () => {
+    mount(
+      ctx(fakeDb(tables()).client, { permissions: full, isModuleOn: (id) => id !== 'deposits' }),
+    );
+    await openDay();
+    await userEvent.click(await screen.findByText('10:00 Anna'));
+    expect(screen.queryByRole('button', { name: 'Take a deposit' })).toBeNull();
   });
 });
 

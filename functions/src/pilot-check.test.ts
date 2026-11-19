@@ -155,6 +155,16 @@ describe('checkSystem', () => {
     'GOOGLE_AI_API_KEY',
   ];
 
+  it('e-mail sign-up without confirmation is a WARN, with confirmation it is fine', () => {
+    expect(
+      find(
+        checkSystem({ auth: { ...auth, mailer_autoconfirm: true }, vercelEnvNames: names }),
+        'autoconfirm',
+      )?.level,
+    ).toBe('warn');
+    expect(find(checkSystem({ auth, vercelEnvNames: names }), 'autoconfirm')?.level).toBe('ok');
+  });
+
   it('a complete setup has no FAIL or WARN', () => {
     const s = summarize(checkSystem({ auth, vercelEnvNames: names }));
     expect(s.fail).toBe(0);

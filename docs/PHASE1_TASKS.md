@@ -66,6 +66,7 @@ Work top to bottom. One PR per task. Tick when merged.
 
 ## 8. Pilot readiness
 - [x] Demo data: `seed_demo_menu(store)` (empty restaurant → 4 categories, 13 dishes, option groups, 10 tables; empty cafe → 3 categories, 10 items, milk / sweetness / shot options) with a **Load demo menu** button on `/menu`; needs `menu.edit`, never touches a shop that has a menu, audited
+- [x] **Readiness script** `pnpm pilot:check` (`tools/pilot-check`, logic unit-tested in `functions/src/pilot-check.test.ts`): read-only check of one / every shop and of the platform (Supabase Auth settings incl. Google + redirect URLs, Vercel production variable names, SMTP) — see the quick-check section of docs/PILOT-CHECKLIST.md
 - [x] Onboarding checklist for pilot shops: docs/PILOT-CHECKLIST.md (hardware, accounts, billing, menu, staff and PINs, devices, POS ID, Stripe test, dry run, go-live)
 
 ## 9. UX shell, role home & branding  _(design: docs/UX-DESIGN.md)_
@@ -97,8 +98,8 @@ Work top to bottom. One PR per task. Tick when merged.
 ## 12. Authentication
 - [x] Supabase Auth: owner e-mail sign-up / sign-in, shop onboarding (`create_org`), profiles + roles tables (role never comes from SSO), live role home from the DB
 - [x] Staff PIN login with lockout (server: 5 wrong tries lock 15 min; tablet: same rule for the offline check)
-- [ ] Google login — **code ready** (button appears automatically when Supabase has Google enabled); owner action: create a Google OAuth client and enable the provider in Supabase
-- [ ] LINE login via Aivora SSO — **code ready and unit-tested** (`/sso/callback`, `/api/sso-exchange`, `aivora_links`, synthetic e-mail, direct bootstrap); needs `APP_SLUG` registered at the hub + a real ticket from the Launcher to test (cannot be simulated: single use, 60 s)
+- [x] Google login — owner created the OAuth client and enabled the provider (checked 2026-11-19: enabled, Site URL + redirect URLs right, SMTP set). Still to do by hand: one real login from a phone
+- [ ] LINE login via Aivora SSO — code ready and unit-tested; the owner registered the slug and `AIVORA_APP_SLUG` + `VITE_AIVORA_APP_SLUG` are set in Vercel production (checked 2026-11-19; the production build is newer than the variable). **Not tried with a real ticket from the Launcher** (single use, 60 s — cannot be simulated from the build sandbox, which also cannot reach the hub): the owner presses the LINE button once on a phone and tells us what happens
 - [x] Change password (re-auth, sign out other devices); audit + LINE notice of the change arrive with §11 / §14
 
 ## 13. AI assistant  _(AI-PROVIDER-MODEL, AI-PROMPTS-RULES; roles in KNOWLEDGE-MAPPING §B)_

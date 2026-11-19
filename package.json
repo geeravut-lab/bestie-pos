@@ -21,6 +21,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "brand:build": "node scripts/build-brand-assets.mjs",
+    "pilot:check": "node tools/pilot-check/pilot-check.mjs",
     "test:db": "bash supabase/tests/run-local.sh",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },

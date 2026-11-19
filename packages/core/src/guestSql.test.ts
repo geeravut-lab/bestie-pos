@@ -1,3 +1,4 @@
+import { PERMISSIONS } from './types';
 import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { MODULE_BY_ID, PLAN_RANK } from './modules/registry';
@@ -151,5 +152,17 @@ describe('ai.assistant in the database mirrors the registry', () => {
       (p) => PLAN_RANK[p] >= PLAN_RANK[m.plan],
     );
     expect(marker![2]!.split(',').sort()).toEqual(allowed.sort());
+  });
+});
+
+/** The permission list the database accepts for custom roles is the same list the app offers. */
+describe('known_permissions() in the database mirrors PERMISSIONS', () => {
+  const dir = new URL('../../../supabase/migrations/', import.meta.url);
+  const file = readdirSync(dir).find((f) => f.endsWith('_roles_editor.sql')) ?? '';
+  const sql = readFileSync(new URL(file, dir), 'utf8');
+  it('lists exactly the same permissions', () => {
+    const body = /select array\[([\s\S]*?)\]::text\[\]/.exec(sql)![1]!;
+    const sqlList = [...body.matchAll(/'([a-z_.]+)'/g)].map((m) => m[1]!).sort();
+    expect(sqlList).toEqual([...PERMISSIONS].sort());
   });
 });

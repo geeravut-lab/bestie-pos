@@ -122,12 +122,13 @@ describe('<SplitPane>', () => {
       await screen.findByRole('button', { name: 'Show QR for the guest to scan' }),
     );
     await waitFor(() => expect(start).toHaveBeenCalledTimes(1));
-    const [tender, legs] = start.mock.calls[0] as unknown as [
+    const [tender, step] = start.mock.calls[0] as unknown as [
       string,
-      { tender: string; amount: number }[],
+      { legs: { tender: string; amount: number }[]; step: number; held: number },
     ];
     expect(tender).toBe('promptpay');
-    expect(legs.map((l) => [l.tender, l.amount])).toEqual([
+    expect(step).toMatchObject({ step: 0, held: 0 });
+    expect(step.legs.map((l) => [l.tender, l.amount])).toEqual([
       ['credit', 5000],
       ['cash', 6000],
       ['promptpay', 10000],
@@ -135,14 +136,62 @@ describe('<SplitPane>', () => {
     expect(onPay).not.toHaveBeenCalled();
   });
 
-  it('two PromptPay / card shares are refused', async () => {
-    mount({ pay: online(), methods: { promptpay: true, gateway: false } });
+  it('several PromptPay / card shares are charged one after the other; each paid one is held and the next starts', async () => {
+    let n = 0;
+    const start = vi.fn(async (tender: 'promptpay' | 'gateway') => ({
+      charge: { attemptId: `a${(n += 1)}`, tender, amount: 7000, qrImageUrl: null },
+    }));
+    const status = vi.fn(async () => ({ status: 'succeeded' as const, error: null }));
+    const finish = vi.fn(async () => {});
+    mount({
+      pay: { ...online(), hasReader: true, start, status, finish },
+      methods: { promptpay: true, gateway: true },
+    });
     const add = screen.getByRole('button', { name: 'Add a payer' });
-    await userEvent.click(add);
-    await userEvent.click(add);
-    await userEvent.selectOptions(screen.getByLabelText('Payer 1 pays with'), 'promptpay');
-    await userEvent.selectOptions(screen.getByLabelText('Payer 2 pays with'), 'promptpay');
-    expect(screen.getByText('Only one person can pay by PromptPay / card on a bill.')).toBeTruthy();
+    for (let i = 0; i < 3; i++) await userEvent.click(add);
+    const set = async (k: number, tender: string, amount: string) => {
+      await userEvent.selectOptions(screen.getByLabelText(`Payer ${k} pays with`), tender);
+      const a = screen.getByLabelText(`Payer ${k} share (THB)`);
+      await userEvent.clear(a);
+      await userEvent.type(a, amount);
+    };
+    await set(1, 'promptpay', '70');
+    await set(2, 'gateway', '70');
+    await set(3, 'promptpay', '70');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Continue to the PromptPay / card payment' }),
+    );
+    expect(await screen.findByText('PromptPay / card payment 1 of 3')).toBeTruthy();
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Show QR for the guest to scan' }),
+    );
+    // payment 1 succeeds (held) → payment 2 of 3 appears with the held amount remembered
+    expect(
+      await screen.findByText('PromptPay / card payment 2 of 3', {}, { timeout: 4000 }),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Send the amount to the card reader' })).toBeTruthy();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Send the amount to the card reader' }),
+    );
+    await waitFor(() => expect(start).toHaveBeenCalledTimes(2));
+    const second = start.mock.calls[1] as unknown as [string, { step: number; held: number }];
+    expect(second[0]).toBe('gateway');
+    expect(second[1]).toMatchObject({ step: 0, held: 7000 });
+    expect(
+      (second[1] as unknown as { legs: { tender: string }[] }).legs.map((l) => l.tender),
+    ).toEqual(['gateway', 'promptpay']); // the paid one is out
+    expect(finish).not.toHaveBeenCalled(); // earlier shares never close the bill
+  });
+
+  it('a bill that already holds shares: the rest must add up to what is left, and the held amount is shown', async () => {
+    const { onPay } = mount({ held: 7000 });
+    expect(screen.getByText(/Already paid by PromptPay \/ card: ฿70/)).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Split equally' }));
+    expect((screen.getByLabelText('Payer 1 share (THB)') as HTMLInputElement).value).toBe('70');
+    await userEvent.click(screen.getByRole('button', { name: 'Take payment and close the bill' }));
+    await waitFor(() => expect(onPay).toHaveBeenCalledTimes(1));
+    const [, heldArg] = onPay.mock.calls[0] as unknown as [unknown, number];
+    expect(heldArg).toBe(7000);
   });
 
   it('says it needs a connection offline', () => {

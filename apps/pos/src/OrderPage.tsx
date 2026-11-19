@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   addLine,
   formatTHB,
@@ -98,6 +98,28 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
   const [cat, setCat] = useState('');
   const [picking, setPicking] = useState<{ item: Item; groups: OrderGroupInput[] } | null>(null);
   const [paying, setPaying] = useState(false);
+  // PromptPay / card shares already paid and held on this bill (the bill is locked until it closes or a manager releases them)
+  const [heldTotal, setHeldTotal] = useState(0);
+  useEffect(() => {
+    if (!paying) return;
+    let alive = true;
+    void (async () => {
+      try {
+        const r = await ctx.client
+          .from('order_partial_payments')
+          .select('amount')
+          .eq('order_id', orderId)
+          .eq('status', 'held');
+        if (alive && !r.error && Array.isArray(r.data))
+          setHeldTotal(r.data.reduce((a, x) => a + Number((x as { amount: number }).amount), 0));
+      } catch {
+        /* offline: the pay sheet then opens as for a bill with nothing held, and the server refuses anything that does not add up */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [paying, ctx.client, orderId]);
   const splitInfo = useSplitInfo(ctx, orderId, netUp, paying);
   const [splitting, setSplitting] = useState(false);
   const [mergeInto, setMergeInto] = useState('');
@@ -489,7 +511,22 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
           splitCredit={
             splitInfo.data ? { name: splitInfo.data.name, balance: splitInfo.data.balance } : null
           }
-          onSplitPay={async (legs) => {
+          held={heldTotal}
+          onRelease={
+            ctx.isOwner || ctx.permissions.includes('refund.create')
+              ? async () => {
+                  const { error: e } = await ctx.client.rpc('release_partial_payments', {
+                    p_order: order.id,
+                    p_note: null,
+                  });
+                  if (e) return e.code === '42501' ? 'err_forbidden' : 'err_pay_failed';
+                  setHeldTotal(0);
+                  setPaying(false);
+                  return null;
+                }
+              : undefined
+          }
+          onSplitPay={async (legs, heldNow) => {
             const err = await closeSplitPayment({
               client: ctx.client,
               orderId: order.id,
@@ -497,6 +534,7 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
               billConfig: billConfigFor(config, order.channel),
               rule: config.cashRounding,
               legs,
+              held: heldNow,
               creditBalance: splitInfo.data ? splitInfo.data.balance : null,
               staffId: ctx.staffId,
               lang: config.defaultLang,
@@ -727,7 +765,7 @@ function onlinePay(
   return {
     available,
     hasReader: binding.reader === true,
-    start: (tender, legs) =>
+    start: (tender, step) =>
       startOnlinePayment({
         client: ctx.client,
         orderId,
@@ -736,7 +774,10 @@ function onlinePay(
         billConfig,
         staffId: ctx.staffId,
         lang,
-        split: legs && split ? { legs, ...split } : undefined,
+        split:
+          step && split
+            ? { ...split, legs: step.legs, step: step.step, held: step.held }
+            : undefined,
       }),
     cancel: (attemptId) => cancelOnlinePayment(ctx.client, attemptId),
     status: (attemptId) => readAttempt(ctx.client, attemptId),

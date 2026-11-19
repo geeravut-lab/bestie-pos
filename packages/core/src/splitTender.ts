@@ -7,8 +7,9 @@ import type { RoundingRule } from './rounding';
  * Split tender: one bill paid by several people with a mix of cash and Bestie Credit.
  * The nominal legs add up to the bill total. Cash rounding (the shop's rule) applies to the CASH portion only, so the
  * rounding difference is carried by the last cash leg and the bill's `rounding` line; Credit is always exact.
- * ONE leg may be PromptPay or card: it is charged to the satang through the payment provider, and the cash / Credit legs wait
- * with it (`plan.digital` + `plan.payments`) until the provider's signed confirmation closes the bill.
+ * Any number of legs may be PromptPay or card: each is charged to the satang through the payment provider (`plan.digitals`, paid one
+ * after the other). The earlier ones are HELD on the bill when the provider confirms them; the LAST one carries the cash / Credit legs
+ * (`plan.payments`) and its confirmation closes the bill. `held` = what is already held on the bill from an earlier round.
  */
 export type SplitLeg = {
   tender: 'cash' | 'credit' | 'promptpay' | 'gateway';
@@ -25,7 +26,7 @@ export type SplitProblem =
   | 'credit_over_balance'
   | 'credit_needs_customer'
   | 'cash_short' // a payer handed over less than they owe
-  | 'one_digital_only'; // at most one PromptPay / card share per bill
+  | 'too_many_digital'; // at most 6 PromptPay / card shares per bill
 
 export type SplitPayment = {
   tender: 'cash' | 'credit';
@@ -43,12 +44,14 @@ export type SplitPlan = {
   creditDue: Satang;
   /** The cash / Credit legs, ready for the server (empty when there are problems). */
   payments: SplitPayment[];
-  /** The PromptPay / card share, when there is one (charged exactly, no rounding). */
-  digital: { tender: 'promptpay' | 'gateway'; amount: Satang } | null;
+  /** The PromptPay / card shares in the order they are charged (each exactly, no rounding). */
+  digitals: { tender: 'promptpay' | 'gateway'; amount: Satang }[];
 };
 
 export function planSplit(p: {
   total: Satang;
+  /** PromptPay / card shares already held on the bill (paid, waiting for the bill to close). */
+  held?: Satang;
   rule: RoundingRule;
   legs: readonly SplitLeg[];
   /** Credit available to this customer in this shop's company; null = no customer or Credit off. */
@@ -59,10 +62,11 @@ export function planSplit(p: {
   if (legs.length === 0) problems.push('empty');
   if (legs.some((l) => !Number.isSafeInteger(l.amount) || l.amount <= 0)) problems.push('zero_leg');
   const nominal = legs.reduce((a, l) => a + l.amount, 0);
-  if (legs.length > 0 && nominal !== p.total) problems.push('not_whole_bill');
+  const held = p.held ?? 0;
+  if (legs.length > 0 && nominal !== p.total - held) problems.push('not_whole_bill');
 
   const digitalLegs = legs.filter((l) => l.tender === 'promptpay' || l.tender === 'gateway');
-  if (digitalLegs.length > 1) problems.push('one_digital_only');
+  if (digitalLegs.length > 6) problems.push('too_many_digital');
 
   const creditDue = legs.filter((l) => l.tender === 'credit').reduce((a, l) => a + l.amount, 0);
   if (creditDue > 0) {
@@ -96,13 +100,13 @@ export function planSplit(p: {
     cashDue: rounded,
     creditDue,
     payments: problems.length === 0 ? payments : [],
-    digital:
-      problems.length === 0 && digitalLegs[0]
-        ? {
-            tender: digitalLegs[0].tender as 'promptpay' | 'gateway',
-            amount: digitalLegs[0].amount,
-          }
-        : null,
+    digitals:
+      problems.length === 0
+        ? digitalLegs.map((l) => ({
+            tender: l.tender as 'promptpay' | 'gateway',
+            amount: l.amount,
+          }))
+        : [],
   };
 }
 

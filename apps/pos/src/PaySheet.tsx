@@ -27,6 +27,8 @@ export function PaySheet({
   onPay,
   onSplitPay,
   splitCredit = null,
+  held = 0,
+  onRelease,
   methods = { promptpay: true, gateway: true },
   onClose,
 }: {
@@ -39,7 +41,11 @@ export function PaySheet({
   onOpenShift?: () => void;
   onPay: (tendered: Satang) => Promise<ErrorKey | null>;
   /** Several payers, cash and / or Credit, one receipt (online). */
-  onSplitPay?: (legs: SplitLeg[]) => Promise<ErrorKey | null>;
+  onSplitPay?: (legs: SplitLeg[], held: Satang) => Promise<ErrorKey | null>;
+  /** PromptPay / card shares already held on this bill (the bill is locked; only the split screen can finish it). */
+  held?: Satang;
+  /** A manager gives up on a bill that holds shares (they are marked for refund, the bill is unlocked). */
+  onRelease?: () => Promise<ErrorKey | null>;
   /** The customer on the bill and their Credit here; null = Credit not usable. */
   splitCredit?: { name: string; balance: Satang } | null;
   /** The owner's payment-method switches for this shop (cash is always on). */
@@ -48,7 +54,8 @@ export function PaySheet({
 }) {
   const { t, lang } = useI18n();
   const locale = lang === 'th' ? ('th-TH' as const) : ('en-GB' as const);
-  const [tab, setTab] = useState<Tab>('cash');
+  const [tab, setTab] = useState<Tab>(held > 0 ? 'split' : 'cash');
+  const [releaseError, setReleaseError] = useState<ErrorKey | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -56,12 +63,16 @@ export function PaySheet({
     return () => globalThis.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: 'cash', label: t.payTabCash },
-    ...(onSplitPay ? [{ id: 'split' as const, label: t.paySplitTab }] : []),
-    ...(methods.promptpay ? [{ id: 'promptpay' as const, label: t.payTabPromptPay }] : []),
-    ...(methods.gateway ? [{ id: 'gateway' as const, label: t.payTabCard }] : []),
-  ];
+  // with shares held on the bill only the split screen can finish it (the rest is split between cash, Credit and further QR / card)
+  const tabs: { id: Tab; label: string }[] =
+    held > 0
+      ? [{ id: 'split', label: t.paySplitTab }]
+      : [
+          { id: 'cash', label: t.payTabCash },
+          ...(onSplitPay ? [{ id: 'split' as const, label: t.paySplitTab }] : []),
+          ...(methods.promptpay ? [{ id: 'promptpay' as const, label: t.payTabPromptPay }] : []),
+          ...(methods.gateway ? [{ id: 'gateway' as const, label: t.payTabCard }] : []),
+        ];
 
   return (
     <div className="sheet-backdrop" onClick={onClose}>
@@ -99,6 +110,27 @@ export function PaySheet({
                 </button>
               ))}
             </div>
+            {held > 0 && onRelease ? (
+              <div className="actions">
+                <AsyncButton
+                  variant="secondary"
+                  onClick={async () => {
+                    setReleaseError(null);
+                    if (
+                      !globalThis.confirm(
+                        fmt(t.payHeldGiveUpConfirm, { amount: formatTHB(held, locale) }),
+                      )
+                    )
+                      return;
+                    const err = await onRelease();
+                    if (err) setReleaseError(err);
+                  }}
+                >
+                  {t.payHeldGiveUp}
+                </AsyncButton>
+              </div>
+            ) : null}
+            {releaseError ? <Notice kind="error">{errorText(releaseError, t)}</Notice> : null}
             {tab === 'cash' ? (
               <CashPane total={total} rule={rule} locale={locale} onPay={onPay} onClose={onClose} />
             ) : tab === 'split' && onSplitPay ? (
@@ -110,6 +142,7 @@ export function PaySheet({
                 pay={online}
                 methods={methods}
                 credit={splitCredit}
+                held={held}
                 onPay={onSplitPay}
                 onClose={onClose}
               />

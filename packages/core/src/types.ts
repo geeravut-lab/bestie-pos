@@ -83,6 +83,8 @@ export const PERMISSIONS = [
   'price.override',
   'refund.create',
   'payment.take',
+  /** Open the cash drawer without a sale (every use is a critical audit event). */
+  'drawer.open',
   'shift.open_close',
   'menu.edit',
   'staff.manage',

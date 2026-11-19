@@ -242,7 +242,7 @@ export function onlineSnapshot(p: {
    * A split bill: the cash / Credit legs that wait with this PromptPay / card share (each with a client id) and the cash
    * rounding that goes with them. The server charges the digital share only (amount due minus these legs).
    */
-  split?: { rounding: number; legs: Record<string, unknown>[] };
+  split?: { rounding: number; legs: Record<string, unknown>[]; partialAmount?: number };
 }): Record<string, unknown> {
   const rounding = p.split?.rounding ?? 0;
   return {
@@ -263,5 +263,6 @@ export function onlineSnapshot(p: {
     service_bps: p.billConfig.serviceChargeBps,
     price_mode: p.billConfig.priceMode,
     ...(p.split ? { legs: p.split.legs } : {}),
+    ...(p.split?.partialAmount ? { partial: true, partial_amount: p.split.partialAmount } : {}),
   };
 }

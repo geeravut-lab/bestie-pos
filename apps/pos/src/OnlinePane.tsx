@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { formatTHB } from '@bestie/core';
-import type { OnlineTender, Satang, SplitLeg } from '@bestie/core';
+import type { OnlineTender, Satang } from '@bestie/core';
 import { errorText, fmt, useI18n } from '@bestie/i18n';
 import type { ErrorKey } from '@bestie/i18n';
 import { AsyncButton, Spinner } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
-import type { Charge, OnlinePay } from './onlinePay';
+import type { Charge, OnlinePay, SplitStep } from './onlinePay';
 
 type Phase =
   | { kind: 'idle' }
@@ -19,15 +19,18 @@ export function OnlinePane({
   total,
   locale,
   online,
-  legs,
+  split,
+  onPaid,
   onClose,
 }: {
   tender: OnlineTender;
   total: Satang;
   locale: 'th-TH' | 'en-GB';
   online: OnlinePay;
-  /** A split bill: the cash / Credit shares that wait with this digital share. */
-  legs?: SplitLeg[];
+  /** A split bill: all its shares and which PromptPay / card share this pane charges. */
+  split?: SplitStep;
+  /** An EARLIER share of a split bill: when it is paid (held on the bill) go on to the next one instead of finishing. */
+  onPaid?: () => void;
   onClose: () => void;
 }) {
   const { t } = useI18n();
@@ -65,7 +68,8 @@ export function OnlinePane({
         const s = await online.status(attemptId);
         if (!alive || !s) return;
         if (s.status === 'succeeded') {
-          await online.finish();
+          if (onPaid) onPaid();
+          else await online.finish();
         } else if (s.status === 'needs_review') {
           setPhase({ kind: 'problem', message: t.payReview, review: true });
         } else if (s.status === 'failed' || s.status === 'canceled') {
@@ -84,11 +88,11 @@ export function OnlinePane({
       alive = false;
       clearInterval(i);
     };
-  }, [attemptId, online, t]);
+  }, [attemptId, online, onPaid, t]);
 
   const start = async () => {
     setError(null);
-    const r = legs ? await online.start(tender, legs) : await online.start(tender);
+    const r = split ? await online.start(tender, split) : await online.start(tender);
     if ('error' in r) return setError(r.error);
     setPhase({ kind: 'waiting', charge: r.charge, resumed: false });
   };

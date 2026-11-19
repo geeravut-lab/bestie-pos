@@ -92,10 +92,27 @@ select t_val('00000000-0000-0000-0000-0000000000a1', 'authenticated', 'dev', $$i
 select t_err(null, 'anon', $$select public.record_drawer_open((select v::uuid from t_out where k='dev'), array[now()])$$, '42501', 'anon cannot');
 select t_err('00000000-0000-0000-0000-0000000000e5', 'authenticated', $$select public.record_drawer_open((select v::uuid from t_out where k='dev'), array[now()])$$, '42501', 'another business cannot');
 select t_val('00000000-0000-0000-0000-0000000000d4', 'authenticated', 'n1', $$select public.record_drawer_open((select v::uuid from t_out where k='dev'), array[now(), now() - interval '10 minutes'])::text$$);
-select t_rows(null, 'service_role', $$select 1 from t_out where k='n1' and v = '2'$$, 1, 'a cashier (payment.take) records two openings');
+select t_rows(null, 'service_role', $$select 1 from t_out where k='n1' and v = '2'$$, 1, 'a cashier (drawer.open) records two openings');
 select t_rows(null, 'service_role', $$select 1 from public.audit_log where action = 'drawer.open'$$, 2, 'they are in the audit log');
 select t_val('00000000-0000-0000-0000-0000000000d4', 'authenticated', 'n2', $$select public.record_drawer_open((select v::uuid from t_out where k='dev'), array[now() + interval '1 hour', now() - interval '5 days'])::text$$);
 select t_rows(null, 'service_role', $$select 1 from t_out where k='n2' and v = '0'$$, 1, 'a timestamp in the future or older than 2 days is not accepted');
 select t_val('00000000-0000-0000-0000-0000000000a1', 'authenticated', 'n3', $$select public.record_drawer_open((select v::uuid from t_out where k='dev'), array[now()])::text$$);
 select t_rows(null, 'service_role', $$select 1 from t_out where k='n3' and v = '1'$$, 1, 'the owner can too');
+
+-- ── a role without drawer.open cannot; custom roles carry the permission only when given ──
+select t_val('00000000-0000-0000-0000-0000000000a1', 'authenticated', 'rid', $$insert into public.roles (org_id, name, permissions) values ((select org_id from public.stores where id = (select v::uuid from t_out where k='store')), 'Runner', array['order.create','payment.take']) returning id::text$$);
+select t_rows(null, 'service_role', $$select 1 from public.roles where built_in = 'cashier' and 'drawer.open' = any (permissions)$$, 1, 'the built-in cashier role has drawer.open');
+select t_rows(null, 'service_role', $$select 1 from public.roles where built_in = 'waiter' and 'drawer.open' = any (permissions)$$, 0, 'the waiter does not');
+update public.staff set role_id = (select v::uuid from t_out where k='rid') where user_id = '00000000-0000-0000-0000-0000000000d4';
+select t_err('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$select public.record_drawer_open((select v::uuid from t_out where k='dev'), array[now()])$$, '42501', 'payment.take alone is no longer enough');
+update public.roles set permissions = array_append(permissions, 'drawer.open') where id = (select v::uuid from t_out where k='rid');
+select t_val('00000000-0000-0000-0000-0000000000d4', 'authenticated', 'n4', $$select public.record_drawer_open((select v::uuid from t_out where k='dev'), array[now()])::text$$);
+select t_rows(null, 'service_role', $$select 1 from t_out where k='n4' and v = '1'$$, 1, 'once the custom role has drawer.open it works');
+
+-- ── the role guard ──
+select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$insert into public.roles (org_id, name, permissions) values ((select org_id from public.stores where id = (select v::uuid from t_out where k='store')), 'Bad', array['fly.to.moon'])$$, '22023', 'an unknown permission is refused');
+update public.staff set role_id = (select id from public.roles where built_in = 'manager' and org_id = (select org_id from public.stores where id = (select v::uuid from t_out where k='store'))) where user_id = '00000000-0000-0000-0000-0000000000d4';
+select t_err('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$insert into public.roles (org_id, name, permissions) values ((select org_id from public.stores where id = (select v::uuid from t_out where k='store')), 'Sneaky', array['credit.adjust'])$$, '42501', 'a manager cannot hand out a permission they do not hold (credit.adjust)');
+select t_rows('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$insert into public.roles (org_id, name, permissions) select org_id, 'Helper', array['order.create','drawer.open'] from public.stores where id = (select v::uuid from t_out where k='store') returning 1$$, 1, 'but may hand out ones they hold');
+select t_rows(null, 'service_role', $$select 1 from (select count(*) c from public.audit_log where action = 'staff.role_change') x where c >= 3$$, 1, 'custom-role changes are in the audit log');
 do $$ begin raise notice 'ALL DRAWER TESTS PASSED'; end $$;

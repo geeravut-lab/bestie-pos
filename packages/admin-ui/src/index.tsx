@@ -23,6 +23,7 @@ import type { PageContext } from '@bestie/auth';
 import { AiUsagePage } from './AiUsagePage';
 import { AskShopPage } from './AskShopPage';
 import { FeedbackPage } from './FeedbackPage';
+import { RolesPage } from './RolesPage';
 import { ShopInfoPage } from './ShopInfoPage';
 import { AuditPage } from './AuditPage';
 import { AiPromptsPage, AiSettingsPage } from './AiPages';
@@ -62,6 +63,7 @@ export function adminPages(ctx: PageContext): ReactNode | null {
   if (ctx.path === '/menu') return <MenuPage ctx={ctx} />;
   if (ctx.path === '/modules') return <ModulesPage ctx={ctx} />;
   if (ctx.path === '/staff') return <StaffPage ctx={ctx} />;
+  if (ctx.path === '/staff/roles') return <RolesPage ctx={ctx} />;
   if (ctx.path === '/crypto') return <CryptoPage ctx={ctx} />;
   if (ctx.path === '/customers') return <CustomersPage ctx={ctx} />;
   if (ctx.path === '/reports') return <ReportsPage ctx={ctx} />;

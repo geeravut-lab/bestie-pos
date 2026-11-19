@@ -39,7 +39,7 @@ export function drawerPrinter(
 }
 
 /**
- * "Open the cash drawer" without a sale, for people who may take payments. The command goes straight to the receipt printer's drawer
+ * "Open the cash drawer" without a sale, for people with the drawer.open permission. The command goes straight to the receipt printer's drawer
  * port (works offline). Every use is recorded as a critical audit event; times of openings made offline are kept on the tablet and
  * reported with the next one, so the record is complete without ever blocking the cashier.
  */
@@ -57,7 +57,7 @@ export function OpenDrawer({
   const { t } = useI18n();
   const pr = usePrinters(ctx, storeId);
   const [note, setNote] = useState<'opened' | 'none' | 'failed' | null>(null);
-  const allowed = ctx.isOwner || ctx.permissions.includes('payment.take');
+  const allowed = ctx.isOwner || ctx.permissions.includes('drawer.open');
   if (!allowed || !deviceId) return null;
 
   const open = async () => {

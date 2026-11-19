@@ -122,6 +122,15 @@ export function StaffPage({ ctx }: { ctx: PageContext }) {
               {t.commTitle}
             </button>
           ) : null}
+          {ctx.isModuleOn?.('packages') ? (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => ctx.navigate('/packages')}
+            >
+              {t.pkgTitle}
+            </button>
+          ) : null}
         </div>
       ) : null}
       <Members

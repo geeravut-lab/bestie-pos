@@ -223,4 +223,17 @@ describe('appointments and resources in the database mirror the registry', () =>
     );
     expect(m![2]!.split(',').sort()).toEqual(allowedPlans.sort());
   });
+  it('packages: same default profiles and plan tiers', () => {
+    const pkgSql = readFileSync(
+      new URL(readdirSync(dir).find((f) => f.endsWith('_packages.sql')) ?? '', dir),
+      'utf8',
+    );
+    const m = /-- registry:packages profiles=([a-z,]+) plan=([a-z,]+)/.exec(pkgSql);
+    expect(m).not.toBeNull();
+    expect(m![1]!.split(',').sort()).toEqual([...MODULE_BY_ID.packages.defaultProfiles].sort());
+    const allowedPlans = (Object.keys(PLAN_RANK) as (keyof typeof PLAN_RANK)[]).filter(
+      (p) => PLAN_RANK[p] >= PLAN_RANK[MODULE_BY_ID.packages.plan],
+    );
+    expect(m![2]!.split(',').sort()).toEqual(allowedPlans.sort());
+  });
 });

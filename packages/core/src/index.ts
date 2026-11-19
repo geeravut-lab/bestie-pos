@@ -50,3 +50,4 @@ export * from './stock';
 export * from './purchasing';
 export * from './appointments';
 export * from './commission';
+export * from './packages';

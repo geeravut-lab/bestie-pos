@@ -50,6 +50,7 @@ const tables = () => ({
       place_id: null,
       service_name: { th: 'นวดเท้า', en: 'Foot massage' },
       price: 60000,
+      customer_id: 'm1',
       guest_name: 'Cara',
       guest_phone: null,
       starts_at: '2030-01-15T15:00:00+07:00',
@@ -89,7 +90,53 @@ const tables = () => ({
       note: null,
       order_id: 'o9',
     },
+    {
+      id: 'a6',
+      provider_id: 'mai',
+      place_id: null,
+      service_name: { th: 'นวด', en: 'Massage' },
+      price: 100000,
+      customer_id: 'm1',
+      customer_package_id: 'c1',
+      guest_name: 'Fay',
+      guest_phone: null,
+      starts_at: '2030-01-15T21:00:00+07:00',
+      ends_at: '2030-01-15T22:00:00+07:00',
+      status: 'done',
+      source: 'staff',
+      note: null,
+      order_id: null,
+    },
+    {
+      id: 'a7',
+      provider_id: 'nok',
+      place_id: null,
+      service_name: { th: 'นวด', en: 'Massage' },
+      price: 100000,
+      customer_id: 'm1',
+      guest_name: 'Gus',
+      guest_phone: null,
+      starts_at: '2030-01-15T12:00:00+07:00',
+      ends_at: '2030-01-15T13:00:00+07:00',
+      status: 'booked',
+      source: 'staff',
+      note: null,
+      order_id: null,
+    },
   ],
+  customer_packages: [
+    {
+      id: 'c1',
+      customer_id: 'm1',
+      name: { th: 'นวด 10 ครั้ง', en: 'Massage x10' },
+      price: 800000,
+      visits_total: 10,
+      visits_left: 7,
+      valid_until: '2099-05-01',
+      status: 'active',
+    },
+  ],
+  package_uses: [{ id: 'u1', appointment_id: 'a6', created_at: '2030-01-15T22:00:00Z' }],
   appointment_deposits: [
     {
       id: 'dp1',
@@ -196,6 +243,7 @@ describe('<AppointmentsPage>', () => {
           service_id: 'svc1',
           duration_min: 90,
           starts_at: '2030-01-15T15:30:00+07:00',
+          customer_id: null,
           guest_name: 'Cara',
           guest_phone: null,
           note: undefined,
@@ -420,6 +468,93 @@ describe('<AppointmentsPage> billing and deposits', () => {
     await openDay();
     await userEvent.click(await screen.findByText('10:00 Anna'));
     expect(screen.queryByRole('button', { name: 'Take a deposit' })).toBeNull();
+  });
+});
+
+describe('<AppointmentsPage> packages and members', () => {
+  const full = ['order.create', 'payment.take', 'refund.create'] as PageContext['permissions'];
+
+  it('an arrived guest of a member with a package can use one visit: it goes through the database function', async () => {
+    const db = fakeDb(tables());
+    mount(ctx(db.client, { permissions: full }));
+    await openDay();
+    await userEvent.click(await screen.findByText('15:00 Cara'));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Use 1 visit of Massage x10 (7 left)' }),
+    );
+    await waitFor(() => expect(db.rpcs).toHaveLength(1));
+    expect(db.rpcs[0]).toEqual({
+      fn: 'use_package',
+      args: { p: { appointment_id: 'a3', customer_package_id: 'c1' } },
+    });
+  });
+
+  it('a guest who has not arrived yet sees the package but cannot use it', async () => {
+    mount(ctx(fakeDb(tables()).client, { permissions: full }));
+    await openDay();
+    await userEvent.click(await screen.findByText('12:00 Gus'));
+    expect(
+      (
+        screen.getByRole('button', {
+          name: 'Use 1 visit of Massage x10 (7 left)',
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+  });
+
+  it('a visit already covered by a package says so; a manager can take the visit back', async () => {
+    const db = fakeDb(tables());
+    mount(ctx(db.client, { permissions: full }));
+    await openDay();
+    await userEvent.click(await screen.findByText('21:00 Fay'));
+    expect(screen.getByText(/Paid with the package: Massage x10/)).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Take the visit back' }));
+    await waitFor(() => expect(db.rpcs).toHaveLength(1));
+    expect(db.rpcs[0]).toEqual({ fn: 'undo_package_use', args: { p_use: 'u1' } });
+  });
+
+  it('without refund.create there is no take-back; a guest without a member shows no package block', async () => {
+    mount(ctx(fakeDb(tables()).client, { permissions: ['order.create'] }));
+    await openDay();
+    await userEvent.click(await screen.findByText('21:00 Fay'));
+    expect(screen.queryByRole('button', { name: 'Take the visit back' })).toBeNull();
+    await userEvent.click(screen.getByText('10:00 Anna')); // no member
+    expect(screen.queryByText('Package')).toBeNull();
+  });
+
+  it('with the packages module off nothing about packages is shown', async () => {
+    mount(
+      ctx(fakeDb(tables()).client, { permissions: full, isModuleOn: (id) => id !== 'packages' }),
+    );
+    await openDay();
+    await userEvent.click(await screen.findByText('15:00 Cara'));
+    expect(screen.queryByRole('button', { name: /Use 1 visit/ })).toBeNull();
+  });
+
+  it('a member can be linked to a new booking; the booking then carries the member', async () => {
+    const db = fakeDb(tables(), {
+      rpc: {
+        find_customers: {
+          data: [
+            { id: 'm1', name: 'Anna Smith', phone: '6681', member_code: 'ABCD1234', points: 0 },
+          ],
+        },
+      },
+    });
+    mount(ctx(db.client, { permissions: full }));
+    await openDay();
+    await userEvent.click(await screen.findByRole('button', { name: 'New booking: Mai' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Link a member' }));
+    await userEvent.type(screen.getByLabelText('Find a member'), 'anna');
+    await userEvent.click(screen.getByRole('button', { name: 'Search' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Anna Smith/ }));
+    expect((screen.getByLabelText('Guest name') as HTMLInputElement).value).toBe('Anna Smith');
+    fireEvent.change(screen.getByLabelText('Start time'), { target: { value: '23:00' } });
+    await userEvent.click(screen.getByRole('button', { name: 'Save booking' }));
+    await waitFor(() => expect(db.rpcs.some((c) => c.fn === 'book_appointment')).toBe(true));
+    expect(db.rpcs.find((c) => c.fn === 'book_appointment')!.args).toMatchObject({
+      p: { customer_id: 'm1', guest_name: 'Anna Smith' },
+    });
   });
 });
 

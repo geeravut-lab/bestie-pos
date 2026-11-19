@@ -16,7 +16,9 @@ import {
   localizedName,
   nextStatuses,
   parseAppointments,
+  parseCustomerPackages,
   parseDeposits,
+  usablePackage,
   suggestDeposit,
   parsePriceInput,
   priceInputValue,
@@ -28,6 +30,8 @@ import {
 import type {
   Appointment,
   AppointmentStatus,
+  CustomerCard,
+  CustomerPackage,
   Deposit,
   DepositMethod,
   Resource,
@@ -37,7 +41,9 @@ import type { ErrorKey } from '@bestie/i18n';
 import { AsyncButton, Spinner } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
+import { CustomerPicker } from './CustomerPicker';
 import { tx } from './stockInput';
+import { bangkokToday } from './today';
 import { useRemote } from './useRemote';
 
 type Service = {
@@ -54,6 +60,8 @@ type Loaded = {
   deposits: Deposit[];
   tills: Till[];
   people: { id: string; name: string }[];
+  packages: CustomerPackage[];
+  uses: Record<string, string>; // appointment id → the package use that covers it
 };
 type View = 'provider' | 'place';
 type Draft = {
@@ -67,6 +75,7 @@ type Draft = {
   guest: string;
   phone: string;
   note: string;
+  member: { id: string; name: string } | null;
 };
 
 const ROW_PX = 36; // one 30-minute row
@@ -99,6 +108,7 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
     ref: string;
   } | null>(null);
   const [settleTill, setSettleTill] = useState('');
+  const [picking, setPicking] = useState(false);
   const [tip, setTip] = useState<{
     staff: string;
     amount: string;
@@ -110,6 +120,8 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
   const canTakeMoney = ctx.isOwner || ctx.permissions.includes('payment.take');
   const canRefund = ctx.isOwner || ctx.permissions.includes('refund.create');
   const depositsOn = ctx.isModuleOn ? ctx.isModuleOn('deposits') : true;
+  const packagesOn = ctx.isModuleOn ? ctx.isModuleOn('packages') : true;
+  const todayDate = bangkokToday();
 
   const bounds = bangkokDayBounds(date);
   const data = useRemote<Loaded>(
@@ -125,7 +137,7 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
         ctx.client
           .from('appointments')
           .select(
-            'id, provider_id, place_id, service_name, price, guest_name, guest_phone, starts_at, ends_at, status, source, note, order_id',
+            'id, provider_id, place_id, service_name, price, guest_name, guest_phone, starts_at, ends_at, status, source, note, order_id, customer_id, customer_package_id',
           )
           .eq('store_id', storeId)
           .gte('starts_at', bounds.from)
@@ -141,6 +153,30 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
       if (res.error || ap.error || menu.error) throw new Error('load');
       const appts = parseAppointments(ap.data);
       // deposits and the tills they went into: only when there is something to show (and a person who may see money)
+      const customerIds = [...new Set(appts.flatMap((a) => (a.customerId ? [a.customerId] : [])))];
+      const coveredIds = appts.filter((a) => a.customerPackageId).map((a) => a.id);
+      const [pk, us] = await Promise.all([
+        customerIds.length > 0
+          ? ctx.client
+              .from('customer_packages')
+              .select(
+                'id, customer_id, name, price, visits_total, visits_left, valid_until, status',
+              )
+              .in('customer_id', customerIds)
+              .eq('status', 'active')
+          : Promise.resolve({ data: [], error: null }),
+        coveredIds.length > 0
+          ? ctx.client
+              .from('package_uses')
+              .select('id, appointment_id, created_at')
+              .in('appointment_id', coveredIds)
+              .eq('kind', 'use')
+              .order('created_at')
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+      const uses: Record<string, string> = {};
+      for (const u of (us.error ? [] : (us.data ?? [])) as { id: string; appointment_id: string }[])
+        uses[u.appointment_id] = u.id; // ascending: the last one wins = the latest use
       const [dep, dev, ppl] = await Promise.all([
         appts.length > 0
           ? ctx.client
@@ -173,6 +209,8 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
               id: x.id,
               name: x.display_name,
             })),
+        packages: pk.error ? [] : parseCustomerPackages(pk.data),
+        uses,
         deposits: dep.error ? [] : parseDeposits(dep.data),
         tills: dev.error
           ? []
@@ -259,7 +297,9 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
       guest: '',
       phone: '',
       note: '',
+      member: null,
     });
+    setPicking(false);
   };
   const pickService = (id: string) => {
     const s = d?.services.find((x) => x.id === id);
@@ -304,6 +344,7 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
           : { service_name: { th: draft.serviceName.trim() }, price }),
         duration_min: duration,
         starts_at: startIso,
+        customer_id: draft.member?.id ?? null,
         guest_name: draft.guest.trim(),
         guest_phone: draft.phone.trim() || null,
         note: draft.note.trim() || undefined,
@@ -345,6 +386,24 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
     }
     setTip(null);
     setTipSaved(true);
+  };
+  const redeemPackage = async (a: Appointment, cp: CustomerPackage) => {
+    setError(null);
+    setProblem(null);
+    const { error: err } = await ctx.client.rpc('use_package', {
+      p: { appointment_id: a.id, customer_package_id: cp.id },
+    });
+    if (err) return fail(err);
+    reload();
+  };
+  const undoPackage = async (a: Appointment) => {
+    const useId = d?.uses[a.id];
+    if (!useId) return;
+    setError(null);
+    setProblem(null);
+    const { error: err } = await ctx.client.rpc('undo_package_use', { p_use: useId });
+    if (err) return fail(err);
+    reload();
   };
   const openBill = async (a: Appointment) => {
     setError(null);
@@ -631,6 +690,54 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
               money={(n) => formatTHB(n, locale)}
             />
           ) : null}
+          {packagesOn && d && sel.customerId ? (
+            <div className="cal-deposits">
+              <h3>{t.calPackages}</h3>
+              {sel.customerPackageId ? (
+                <p className="muted">
+                  {fmt(t.calCovered, {
+                    name: (() => {
+                      const cp = d.packages.find((x) => x.id === sel.customerPackageId);
+                      return cp ? localizedName(cp.name, lang) : '—';
+                    })(),
+                  })}{' '}
+                  {canRefund && d.uses[sel.id] ? (
+                    <AsyncButton variant="secondary" onClick={() => undoPackage(sel)}>
+                      {t.calUndoPackage}
+                    </AsyncButton>
+                  ) : null}
+                </p>
+              ) : (
+                (() => {
+                  const mine = d.packages.filter(
+                    (x) => x.customerId === sel.customerId && usablePackage(x, todayDate),
+                  );
+                  const can =
+                    canBook &&
+                    !sel.orderId &&
+                    ['arrived', 'in_service', 'done'].includes(sel.status);
+                  if (mine.length === 0) return <p className="muted">{t.calNoPackage}</p>;
+                  return (
+                    <div className="actions">
+                      {mine.map((x) => (
+                        <AsyncButton
+                          key={x.id}
+                          variant="secondary"
+                          disabled={!can}
+                          onClick={() => redeemPackage(sel, x)}
+                        >
+                          {fmt(t.calUsePackage, {
+                            name: localizedName(x.name, lang),
+                            left: x.visitsLeft,
+                          })}
+                        </AsyncButton>
+                      ))}
+                    </div>
+                  );
+                })()
+              )}
+            </div>
+          ) : null}
           {commissionOn &&
           d &&
           canTakeMoney &&
@@ -899,6 +1006,44 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
               value={draft.placeId}
               onChange={(v) => setDraft({ ...draft, placeId: v })}
             />
+          ) : null}
+          {packagesOn || depositsOn ? (
+            <div className="form-row">
+              <span className="label">{t.calMember}</span>
+              {draft.member ? (
+                <p>
+                  <strong>{draft.member.name}</strong>{' '}
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setDraft({ ...draft, member: null })}
+                  >
+                    {t.calUnlinkMember}
+                  </button>
+                </p>
+              ) : picking ? (
+                <CustomerPicker
+                  ctx={ctx}
+                  idPrefix="bk"
+                  onPick={(c: CustomerCard) => {
+                    setDraft({
+                      ...draft,
+                      member: { id: c.id, name: c.name },
+                      guest: draft.guest || c.name,
+                    });
+                    setPicking(false);
+                  }}
+                />
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setPicking(true)}
+                >
+                  {t.calLinkMember}
+                </button>
+              )}
+            </div>
           ) : null}
           <div className="filters">
             <div className="form-row">

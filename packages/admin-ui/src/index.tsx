@@ -23,6 +23,7 @@ import type { PageContext } from '@bestie/auth';
 import { AiUsagePage } from './AiUsagePage';
 import { AppointmentsPage } from './AppointmentsPage';
 import { CommissionPage } from './CommissionPage';
+import { PackagesPage } from './PackagesPage';
 import { ResourcesPage } from './ResourcesPage';
 import { AskShopPage } from './AskShopPage';
 import { FeedbackPage } from './FeedbackPage';
@@ -54,6 +55,7 @@ export function adminPages(ctx: PageContext): ReactNode | null {
   if (ctx.path === '/ai/usage') return <AiUsagePage ctx={ctx} />;
   if (ctx.path === '/calendar') return <AppointmentsPage ctx={ctx} />;
   if (ctx.path === '/commission') return <CommissionPage ctx={ctx} />;
+  if (ctx.path === '/packages') return <PackagesPage ctx={ctx} />;
   if (ctx.path === '/resources') return <ResourcesPage ctx={ctx} />;
   if (ctx.path === '/ask') return <AskShopPage ctx={ctx} />;
   if (ctx.path === '/feedback') return <FeedbackPage ctx={ctx} />;

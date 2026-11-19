@@ -41,6 +41,8 @@ const ap = (
   source: 'staff',
   note: null,
   orderId: null,
+  customerId: null,
+  customerPackageId: null,
   ...over,
 });
 

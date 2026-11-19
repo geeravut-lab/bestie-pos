@@ -104,6 +104,17 @@ export function StaffPage({ ctx }: { ctx: PageContext }) {
     <div className="admin-page">
       <h1>{t.staffTitle}</h1>
       <Notice kind="info">{t.staffIntro}</Notice>
+      {canManage ? (
+        <div className="actions">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => ctx.navigate('/staff/roles')}
+          >
+            {t.rolesManage}
+          </button>
+        </div>
+      ) : null}
       <Members
         ctx={ctx}
         data={data}

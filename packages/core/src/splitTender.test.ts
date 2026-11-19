@@ -101,22 +101,49 @@ describe('planSplit', () => {
       ],
     });
     expect(plan.problems).toEqual([]);
-    expect(plan.digital).toEqual({ tender: 'promptpay', amount: 9990 });
+    expect(plan.digitals).toEqual([{ tender: 'promptpay', amount: 9990 }]);
     // the cash leg carries the rounding; the digital share and Credit stay exact
     expect(plan.payments.map((x) => x.tender)).toEqual(['credit', 'cash']);
     const cash = plan.payments[1]!;
-    expect(plan.digital!.amount + 5000 + cash.amount).toBe(plan.payable);
+    expect(plan.digitals[0]!.amount + 5000 + cash.amount).toBe(plan.payable);
   });
-  it('a second digital share, or a digital share that does not cover the bill, is refused', () => {
+  it('several PromptPay / card shares are listed in order; shares already held count towards the bill', () => {
+    const plan = planSplit({
+      ...base,
+      legs: [
+        { tender: 'promptpay', amount: 7000 },
+        { tender: 'gateway', amount: 7000 },
+        { tender: 'promptpay', amount: 7000 },
+      ],
+    });
+    expect(plan.problems).toEqual([]);
+    expect(plan.digitals.map((d) => [d.tender, d.amount])).toEqual([
+      ['promptpay', 7000],
+      ['gateway', 7000],
+      ['promptpay', 7000],
+    ]);
+    // 70.00 already held: the rest (140.00) is what the legs must add up to
+    const rest = planSplit({
+      ...base,
+      held: 7000,
+      legs: [
+        { tender: 'cash', amount: 7000 },
+        { tender: 'gateway', amount: 7000 },
+      ],
+    });
+    expect(rest.problems).toEqual([]);
+    expect(rest.payable).toBe(21000);
+    expect(
+      planSplit({ ...base, held: 7000, legs: [{ tender: 'cash', amount: 21000 }] }).problems,
+    ).toEqual(['not_whole_bill']);
     expect(
       planSplit({
         ...base,
-        legs: [
-          { tender: 'promptpay', amount: 10000 },
-          { tender: 'gateway', amount: 11000 },
-        ],
+        legs: Array.from({ length: 7 }, () => ({ tender: 'promptpay' as const, amount: 3000 })),
       }).problems,
-    ).toContain('one_digital_only');
+    ).toContain('too_many_digital');
+  });
+  it('a digital share that does not cover the bill is refused', () => {
     const short = planSplit({
       ...base,
       legs: [
@@ -125,11 +152,11 @@ describe('planSplit', () => {
       ],
     });
     expect(short.problems).toEqual(['not_whole_bill']);
-    expect(short.digital).toBeNull();
+    expect(short.digitals).toEqual([]);
     expect(short.payments).toEqual([]);
   });
   it('a bill with no digital share has none', () => {
     const plan = planSplit({ ...base, legs: [{ tender: 'cash', amount: 21000 }] });
-    expect(plan.digital).toBeNull();
+    expect(plan.digitals).toEqual([]);
   });
 });

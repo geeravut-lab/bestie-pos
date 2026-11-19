@@ -24,6 +24,9 @@ export type Charge = {
   qrImageUrl: string | null;
 };
 
+/** A split bill: all the shares, which PromptPay / card share this is (0-based) and what is already held on the bill. */
+export type SplitStep = { legs: SplitLeg[]; step: number; held: Satang };
+
 /** What the screen needs to run an online payment (built in OrderPage; faked in tests). */
 export type OnlinePay = {
   /** Network up. */
@@ -33,7 +36,7 @@ export type OnlinePay = {
   /** `legs`: a split bill's cash / Credit shares that wait with this PromptPay / card share. */
   start: (
     tender: OnlineTender,
-    legs?: SplitLeg[],
+    split?: SplitStep,
   ) => Promise<{ charge: Charge } | { error: ErrorKey }>;
   cancel: (attemptId: string) => Promise<void>;
   status: (attemptId: string) => Promise<{ status: AttemptStatus; error: string | null } | null>;
@@ -69,7 +72,13 @@ export async function startOnlinePayment(p: {
   staffId?: string;
   lang: Lang;
   /** A split bill: all its shares (cash, Credit and this one PromptPay / card share). */
-  split?: { rule: RoundingRule; legs: SplitLeg[]; creditBalance: Satang | null };
+  split?: {
+    rule: RoundingRule;
+    legs: SplitLeg[];
+    creditBalance: Satang | null;
+    step?: number;
+    held?: Satang;
+  };
 }): Promise<{ charge: Charge } | { error: ErrorKey }> {
   if (globalThis.navigator?.onLine === false) return { error: 'err_pay_offline' };
   const first = await getOrder(p.orderId);
@@ -86,22 +95,29 @@ export async function startOnlinePayment(p: {
   const order = await getOrder(p.orderId);
   if (!order) return { error: 'err_order_failed' };
   const bill = orderBill(order, p.billConfig);
-  let splitPart: { rounding: number; legs: Record<string, unknown>[] } | undefined;
+  let splitPart:
+    { rounding: number; legs: Record<string, unknown>[]; partialAmount?: number } | undefined;
   let digitalAmount: number | null = null;
   if (p.split) {
     const plan = planSplit({
       total: bill.total,
+      held: p.split.held ?? 0,
       rule: p.split.rule,
       legs: p.split.legs,
       creditBalance: p.split.creditBalance,
     });
-    if (plan.problems.length > 0 || !plan.digital || plan.digital.tender !== p.tender)
-      return { error: 'err_pay_failed' };
-    digitalAmount = plan.digital.amount;
-    splitPart = {
-      rounding: plan.rounding,
-      legs: plan.payments.map((x) => ({ id: crypto.randomUUID(), ...x })),
-    };
+    const step = p.split.step ?? 0;
+    const d = plan.digitals[step];
+    if (plan.problems.length > 0 || !d || d.tender !== p.tender) return { error: 'err_pay_failed' };
+    digitalAmount = d.amount;
+    const last = step === plan.digitals.length - 1;
+    // an earlier share is only HELD on the bill; the last one carries the cash / Credit shares and closes it
+    splitPart = last
+      ? {
+          rounding: plan.rounding,
+          legs: plan.payments.map((x) => ({ id: crypto.randomUUID(), ...x })),
+        }
+      : { rounding: plan.rounding, legs: [], partialAmount: d.amount };
   }
   const snapshot = onlineSnapshot({
     order,
@@ -199,6 +215,8 @@ export async function closeSplitPayment(p: {
   rule: RoundingRule;
   legs: SplitLeg[];
   creditBalance: Satang | null;
+  /** PromptPay / card shares already held on the bill. */
+  held?: Satang;
   staffId?: string;
   lang: Lang;
 }): Promise<ErrorKey | null> {
@@ -219,11 +237,12 @@ export async function closeSplitPayment(p: {
   const bill = orderBill(order, p.billConfig);
   const plan = planSplit({
     total: bill.total,
+    held: p.held,
     rule: p.rule,
     legs: p.legs,
     creditBalance: p.creditBalance,
   });
-  if (plan.problems.length > 0 || plan.digital) return 'err_pay_failed'; // a PromptPay / card share goes through startOnlinePayment
+  if (plan.problems.length > 0 || plan.digitals.length > 0) return 'err_pay_failed'; // a PromptPay / card share goes through startOnlinePayment
   const { error } = await p.client.rpc('close_order_tenders', {
     p: {
       order_id: order.id,

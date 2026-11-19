@@ -330,6 +330,34 @@ describe('startOnlinePayment', () => {
     expect(snap.payable).toBe(snap.total + 25);
   });
 
+  it('several PromptPay shares: an earlier one is a HELD share (partial, no legs), the last one carries the cash and closes', async () => {
+    await seed(true); // 160.00
+    const legs = [
+      { tender: 'promptpay' as const, amount: 5000 },
+      { tender: 'cash' as const, amount: 5000, tendered: 5000 },
+      { tender: 'promptpay' as const, amount: 6000 },
+    ];
+    const ask = async (shares: typeof legs, held: number) => {
+      const f = stubFetch(200, { attempt_id: 'a1', amount: 0, qr_image_url: null });
+      await startOnlinePayment({
+        client: client(),
+        orderId: ID,
+        tender: 'promptpay',
+        binding,
+        billConfig: cfg,
+        lang: 'en',
+        split: { rule: 'none', creditBalance: null, legs: shares, step: 0, held },
+      });
+      return JSON.parse((f.mock.calls[0] as unknown as [string, RequestInit])[1].body as string)
+        .snapshot as Record<string, unknown>;
+    };
+    const first = await ask(legs, 0);
+    expect(first).toMatchObject({ partial: true, partial_amount: 5000, legs: [], payable: 16000 });
+    const last = await ask(legs.slice(1), 5000); // the first share is held now: the rest is the cash and the last QR
+    expect(last.partial).toBeUndefined();
+    expect((last.legs as { tender: string }[]).map((l) => l.tender)).toEqual(['cash']);
+  });
+
   it('a split that does not add up to the bill is not started', async () => {
     await seed(true);
     const f = stubFetch(200, { attempt_id: 'x' });

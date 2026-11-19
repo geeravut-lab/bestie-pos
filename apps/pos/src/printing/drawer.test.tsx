@@ -82,7 +82,14 @@ describe('<OpenDrawer>', () => {
   it('sends ONLY the drawer pulse to the printer and records it', async () => {
     const rpc = vi.fn(async () => ({ data: 1, error: null }));
     const { e, posted } = env(true);
-    mountEn(<OpenDrawer ctx={pageCtx(client(rpc))} storeId={STORE} deviceId="dev-1" env={e} />);
+    mountEn(
+      <OpenDrawer
+        ctx={pageCtx(client(rpc), { permissions: ['drawer.open'] })}
+        storeId={STORE}
+        deviceId="dev-1"
+        env={e}
+      />,
+    );
     await userEvent.click(await screen.findByRole('button', { name: 'Open the cash drawer' }));
     expect(await screen.findByText(/Open command sent/)).toBeTruthy();
     expect(Array.from(posted[0]!)).toEqual([0x1b, 0x40, 0x1b, 0x70, 0x00, 0x19, 0xfa]); // no receipt, just ESC p
@@ -99,13 +106,27 @@ describe('<OpenDrawer>', () => {
       throw new Error('offline');
     });
     const { e } = env(true);
-    mountEn(<OpenDrawer ctx={pageCtx(client(rpc))} storeId={STORE} deviceId="dev-1" env={e} />);
+    mountEn(
+      <OpenDrawer
+        ctx={pageCtx(client(rpc), { permissions: ['drawer.open'] })}
+        storeId={STORE}
+        deviceId="dev-1"
+        env={e}
+      />,
+    );
     await userEvent.click(await screen.findByRole('button', { name: 'Open the cash drawer' }));
     await screen.findByText(/Open command sent/);
     expect(JSON.parse(localStorage.getItem('bestie-drawer-pending')!)).toHaveLength(1);
     const ok = vi.fn(async () => ({ data: 2, error: null }));
     cleanup();
-    mountEn(<OpenDrawer ctx={pageCtx(client(ok))} storeId={STORE} deviceId="dev-1" env={e} />);
+    mountEn(
+      <OpenDrawer
+        ctx={pageCtx(client(ok), { permissions: ['drawer.open'] })}
+        storeId={STORE}
+        deviceId="dev-1"
+        env={e}
+      />,
+    );
     await userEvent.click(await screen.findByRole('button', { name: 'Open the cash drawer' }));
     await waitFor(() => expect(ok).toHaveBeenCalled());
     expect(
@@ -114,10 +135,15 @@ describe('<OpenDrawer>', () => {
     await waitFor(() => expect(localStorage.getItem('bestie-drawer-pending')).toBeNull());
   });
 
-  it('says so when the printer fails or no printer has a drawer, and is hidden without payment.take', async () => {
+  it('says so when the printer fails or no printer has a drawer, and is hidden without drawer.open', async () => {
     const rpc = vi.fn(async () => ({ data: 1, error: null }));
     mountEn(
-      <OpenDrawer ctx={pageCtx(client(rpc))} storeId={STORE} deviceId="dev-1" env={env(false).e} />,
+      <OpenDrawer
+        ctx={pageCtx(client(rpc), { permissions: ['drawer.open'] })}
+        storeId={STORE}
+        deviceId="dev-1"
+        env={env(false).e}
+      />,
     );
     await userEvent.click(await screen.findByRole('button', { name: 'Open the cash drawer' }));
     expect(await screen.findByText(/did not open/)).toBeTruthy();
@@ -125,7 +151,7 @@ describe('<OpenDrawer>', () => {
     cleanup();
     mountEn(
       <OpenDrawer
-        ctx={pageCtx(client(rpc), { permissions: ['order.create'] })}
+        ctx={pageCtx(client(rpc), { permissions: ['order.create', 'payment.take'] })}
         storeId={STORE}
         deviceId="dev-1"
       />,

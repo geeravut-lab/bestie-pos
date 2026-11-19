@@ -22,6 +22,7 @@ export function SplitPane({
   online,
   pay,
   methods = { promptpay: false, gateway: false },
+  held = 0,
   credit,
   onPay,
   onClose,
@@ -33,19 +34,24 @@ export function SplitPane({
   /** The online-payment helper: lets ONE share be PromptPay or card (the bill then closes when the provider confirms). */
   pay?: OnlinePay;
   methods?: { promptpay: boolean; gateway: boolean };
+  /** PromptPay / card shares already held on this bill (paid, waiting for the bill to close). */
+  held?: Satang;
   /** null = no customer on the bill or Credit is off in this shop. */
   credit: { name: string; balance: Satang } | null;
-  onPay: (legs: SplitLeg[]) => Promise<ErrorKey | null>;
+  onPay: (legs: SplitLeg[], held: Satang) => Promise<ErrorKey | null>;
   onClose: () => void;
 }) {
   const { t } = useI18n();
   const [people, setPeople] = useState(2);
   const [rows, setRows] = useState<Row[]>([]);
   const [error, setError] = useState<ErrorKey | null>(null);
-  const [digital, setDigital] = useState<{
-    tender: 'promptpay' | 'gateway';
-    amount: Satang;
+  const [heldNow, setHeldNow] = useState(held);
+  // the PromptPay / card shares being charged one after the other (the last one closes the bill)
+  const [run, setRun] = useState<{
+    /** the shares still to be paid (the PromptPay / card ones already held on the bill are taken out) */
     legs: SplitLeg[];
+    done: number;
+    total: number;
   } | null>(null);
   const money = (n: Satang) => formatTHB(n, locale);
 
@@ -57,12 +63,18 @@ export function SplitPane({
         ? (parsePriceInput(r.tendered) ?? 0)
         : undefined,
   }));
-  const plan = planSplit({ total, rule, legs, creditBalance: credit ? credit.balance : null });
+  const plan = planSplit({
+    total,
+    held: heldNow,
+    rule,
+    legs,
+    creditBalance: credit ? credit.balance : null,
+  });
   const shared = legs.reduce((a, l) => a + l.amount, 0);
-  const remaining = total - shared;
+  const remaining = total - heldNow - shared;
 
   const split = () => {
-    const shares = equalShares(total, people);
+    const shares = equalShares(total - heldNow, people);
     setRows(
       shares.map((s) => ({ tender: 'cash' as const, amount: priceInputValue(s), tendered: '' })),
     );
@@ -72,24 +84,58 @@ export function SplitPane({
     setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
 
   if (!online) return <Notice kind="info">{t.paySplitOnlineOnly}</Notice>;
-  if (digital && pay)
+  if (run && pay) {
+    const rest = planSplit({
+      total,
+      held: heldNow,
+      rule,
+      legs: run.legs,
+      creditBalance: credit ? credit.balance : null,
+    });
+    const d = rest.digitals[0];
+    if (!d) return <Notice kind="error">{errorText('err_pay_failed', t)}</Notice>;
+    const last = rest.digitals.length === 1;
     return (
       <>
         <Notice kind="info">{t.paySplitDigitalNote}</Notice>
+        {run.total > 1 ? (
+          <p className="muted">{fmt(t.paySplitStep, { n: run.done + 1, total: run.total })}</p>
+        ) : null}
         <OnlinePane
-          tender={digital.tender}
-          total={digital.amount}
+          key={run.done}
+          tender={d.tender}
+          total={d.amount}
           locale={locale}
           online={pay}
-          legs={digital.legs}
-          onClose={() => setDigital(null)}
+          split={{ legs: run.legs, step: 0, held: heldNow }}
+          onPaid={
+            last
+              ? undefined
+              : () => {
+                  // this share is now held on the bill: take it out of the shares still to pay
+                  const i = run.legs.findIndex(
+                    (l) => l.tender === 'promptpay' || l.tender === 'gateway',
+                  );
+                  setHeldNow((h) => h + d.amount);
+                  setRun({
+                    legs: run.legs.filter((_, j) => j !== i),
+                    done: run.done + 1,
+                    total: run.total,
+                  });
+                }
+          }
+          onClose={() => setRun(null)}
         />
       </>
     );
+  }
 
   return (
     <div className="split-pane">
       <p className="muted">{t.paySplitIntro}</p>
+      {heldNow > 0 ? (
+        <Notice kind="info">{fmt(t.paySplitHeld, { amount: money(heldNow) })}</Notice>
+      ) : null}
       <div className="filters">
         <div className="form-row">
           <label className="label" htmlFor="split-people">
@@ -221,15 +267,15 @@ export function SplitPane({
           disabled={plan.problems.length > 0}
           onClick={async () => {
             setError(null);
-            if (plan.digital) {
-              setDigital({ ...plan.digital, legs });
+            if (plan.digitals.length > 0) {
+              setRun({ legs, done: 0, total: plan.digitals.length });
               return;
             }
-            const err = await onPay(legs);
+            const err = await onPay(legs, heldNow);
             if (err) setError(err);
           }}
         >
-          {plan.digital ? t.paySplitDigitalStart : t.paySplitConfirm}
+          {plan.digitals.length > 0 ? t.paySplitDigitalStart : t.paySplitConfirm}
         </AsyncButton>
         <button type="button" className="btn btn-secondary" onClick={onClose}>
           {t.menuCancel}

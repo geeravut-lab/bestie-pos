@@ -112,7 +112,7 @@ Work top to bottom. One PR per task. Tick when merged.
 
 ## 15. AI for customers & Karaoke  _(design: docs/AI-CUSTOMER-ASSISTANT.md, docs/KARAOKE-AI.md — proposal, waiting for the owner)_
 - [ ] Owner confirms the open questions in AI-CUSTOMER-ASSISTANT §7 (who pays for guest AI, therapist sign-off for spa rules, languages, hair photos)
-- [ ] 5a: food tags on menu items (+ AI drafts, owner confirms), menu translation helper, guest menu advisor on `/t/<token>` (filter by SQL, AI ranks), "Ask my shop"
+- [x] 5a (built; **the AI parts need `ANTHROPIC_API_KEY` or `GOOGLE_API_KEY` in Vercel and the module `ai.guest` switched on per shop**): food tags on menu items (closed tag list, spice 0–3, *checked by the shop* flag, recommendation; the owner's item form has **Draft with AI from the dish name** — the draft is never marked checked), the guest page `/t/<token>` has filter buttons (no pork / seafood / egg / dairy / gluten / peanut, vegetarian / vegan / halal, not spicy) that work with **no AI at all** — an unchecked dish is never offered as an answer, it goes under "ask the staff" — and, with `ai.guest` on, a box where the guest types it in words (the model only returns a filter; it never sees the menu and never writes a sentence). Still open in 5a: menu translation helper, "Ask my shop", "call staff" button (needs the `guest_calls` table), usage/cost log.
 - [ ] 5b: concierge basics, feedback intake, hair-style advisor (after appointments), spa / yoga advisor (rules signed by a therapist and the lawyer first)
 - [ ] 5c: karaoke profile + room timer, voice song search, **Bestie Song Bridge** (YouTube Lounge / Cast / HID / IR), standalone "Bestie Karaoke" web app, tours / rentals / resort concierge
 

@@ -1,6 +1,8 @@
 import { localizedName, parseLocalizedText } from './menuAdmin';
 import type { LocalizedText } from './types';
 import type { Satang } from './money';
+import { parseFood } from './dietary';
+import type { ItemFood } from './dietary';
 
 /** What the guest page shows: the table's menu (prices already the dine-in prices, computed by the server). */
 export type GuestMenu = {
@@ -11,6 +13,8 @@ export type GuestMenu = {
     name: LocalizedText;
     price: Satang;
     groupIds: string[];
+    /** What the shop says about the dish (tags, spice, verified). Nothing guessed. */
+    food: ItemFood;
   }[];
   groups: {
     id: string;
@@ -44,6 +48,12 @@ export function parseGuestMenu(raw: unknown): GuestMenu {
       name: parseLocalizedText(i.name),
       price: int(i.price),
       groupIds: Array.isArray(i.group_ids) ? i.group_ids.filter((g) => typeof g === 'string') : [],
+      food: parseFood({
+        tags: i.tags,
+        spice_level: i.spice_level,
+        dietary_verified: i.verified,
+        highlight: i.highlight,
+      }),
     })),
     groups: arr(r.groups).map((g) => ({
       id: str(g.id),

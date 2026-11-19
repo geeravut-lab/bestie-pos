@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  EMPTY_FILTER,
   addToGuestCart,
+  applyFilter,
   cartCount,
   cartTotal,
   formatTHB,
   groupsOf,
   guestName,
   guestSelectionProblem,
+  hasDietConstraint,
   setCartQuantity,
   statusStep,
   unitPrice,
 } from '@bestie/core';
-import type { CartLine, GuestGroup, GuestItem } from '@bestie/core';
+import type { CartLine, DietFilter, GuestGroup, GuestItem } from '@bestie/core';
 import { fmt, useI18n } from '@bestie/i18n';
 import type { Dict } from '@bestie/i18n';
 import { AsyncButton, LangSwitch, Spinner } from '@bestie/ui';
@@ -22,6 +25,7 @@ import {
   placeGuestOrder,
   startGuestPayment,
 } from './guestApi';
+import { FoodFilter, dietName } from './FoodFilter';
 import type { GuestCharge, GuestFailure, GuestLoad, GuestTable, PlacedOrder } from './guestApi';
 
 const POLL_MS = 10_000;
@@ -97,6 +101,7 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
   const [cart, setCart] = useState<CartLine[]>([]);
   const [open, setOpen] = useState<GuestItem | null>(null);
   const [cat, setCat] = useState('');
+  const [diet, setDiet] = useState<DietFilter>(EMPTY_FILTER);
   const [error, setError] = useState<GuestFailure | null>(null);
   const [placed, setPlaced] = useState<PlacedOrder | null>(null);
   const [charge, setCharge] = useState<GuestCharge | null>(initial.pay.live);
@@ -146,10 +151,23 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
     };
   }, [token, chargeId]);
 
-  const items = useMemo(
+  const inCat = useMemo(
     () => menu.items.filter((i) => !cat || i.categoryId === cat),
     [menu.items, cat],
   );
+  // the food filter is plain code over what the shop said (packages/core/src/dietary.ts); no AI is involved here
+  const found = useMemo(
+    () =>
+      applyFilter(
+        inCat.map((i) => ({ id: i.id, name: i.name, price: i.price, food: i.food })),
+        diet,
+      ),
+    [inCat, diet],
+  );
+  const byId = useMemo(() => new Map(inCat.map((i) => [i.id, i])), [inCat]);
+  const items = found.ok.map((id) => byId.get(id)!);
+  const unconfirmed = found.unverified.map((id) => byId.get(id)!);
+  const dietActive = hasDietConstraint(diet);
   const money = (n: number) => formatTHB(n, locale);
   const changeCart = (next: CartLine[]) => {
     setCart(next);
@@ -220,17 +238,37 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
         </div>
       ) : null}
 
-      {items.length === 0 ? <p className="muted">{t.gsEmptyMenu}</p> : null}
+      <FoodFilter token={token} ai={data.ai} filter={diet} onChange={setDiet} />
+      {dietActive ? <p className="muted">{t.gsFilterWarning}</p> : null}
+
+      {menu.items.length === 0 ? <p className="muted">{t.gsEmptyMenu}</p> : null}
+      {menu.items.length > 0 && items.length === 0 && dietActive ? (
+        <p className="muted">{t.gsFilterNone}</p>
+      ) : null}
       <ul className="guest-items">
         {items.map((i) => (
           <li key={i.id}>
-            <button type="button" className="guest-item" onClick={() => setOpen(i)}>
-              <span className="guest-item-name">{guestName(i.name, lang)}</span>
-              <span className="tabular">{money(i.price)}</span>
-            </button>
+            <ItemButton item={i} lang={lang} money={money} onOpen={() => setOpen(i)} />
           </li>
         ))}
       </ul>
+      {unconfirmed.length > 0 ? (
+        <>
+          <p className="notice notice-warning" role="note">
+            {t.gsFilterUnverified}
+          </p>
+          <ul className="guest-items">
+            {unconfirmed.map((i) => (
+              <li key={i.id}>
+                <ItemButton item={i} lang={lang} money={money} onOpen={() => setOpen(i)} />
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+      {found.hidden > 0 && dietActive ? (
+        <p className="muted">{fmt(t.gsFilterHidden, { n: found.hidden })}</p>
+      ) : null}
 
       <section className="card guest-cart" aria-label={t.gsCart}>
         <h2>{t.gsCart}</h2>
@@ -526,5 +564,43 @@ function ItemSheet({
         </div>
       </div>
     </div>
+  );
+}
+
+/** One dish in the list: name, price, and what the shop says about it (recommended, spice, what it contains). */
+function ItemButton({
+  item,
+  lang,
+  money,
+  onOpen,
+}: {
+  item: GuestItem;
+  lang: 'th' | 'en';
+  money: (n: number) => string;
+  onOpen: () => void;
+}) {
+  const { t } = useI18n();
+  const contains = item.food.tags
+    .filter((x) => x.startsWith('contains_'))
+    .map((x) => dietName(t, x));
+  const labels = item.food.tags
+    .filter((x) => !x.startsWith('contains_'))
+    .map((x) => dietName(t, x));
+  const facts = [
+    ...labels,
+    ...(item.food.spice !== null && item.food.spice > 0
+      ? [fmt(t.gsSpiceLevel, { n: item.food.spice })]
+      : []),
+    ...(contains.length ? [fmt(t.gsContains, { list: contains.join(', ') })] : []),
+  ];
+  return (
+    <button type="button" className="guest-item" onClick={onOpen}>
+      <span className="guest-item-name">
+        {guestName(item.name, lang)}
+        {item.food.highlight ? <span className="badge">{t.gsRecommended}</span> : null}
+        {facts.length ? <span className="muted guest-item-facts">{facts.join(' · ')}</span> : null}
+      </span>
+      <span className="tabular">{money(item.price)}</span>
+    </button>
   );
 }

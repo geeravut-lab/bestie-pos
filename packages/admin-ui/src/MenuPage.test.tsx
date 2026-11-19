@@ -1,12 +1,15 @@
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@bestie/i18n';
 import type { PageContext } from '@bestie/auth';
 import { MenuPage } from './MenuPage';
 import { fakeDb } from './fakeDb';
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 const tables = () => ({
   stores: [{ id: 's1', name: 'Acme' }],
@@ -353,5 +356,104 @@ describe('<MenuPage> demo menu', () => {
     mount(ctx(fakeDb(emptyShop('salon')).client));
     await screen.findByRole('heading', { name: 'Menu & prices' });
     expect(screen.queryByRole('button', { name: 'Load demo menu' })).toBeNull();
+  });
+});
+
+describe('<MenuPage> food information', () => {
+  const edit = async (db: ReturnType<typeof fakeDb>, client: unknown = db.client) => {
+    mount(ctx(client));
+    await ready();
+    await userEvent.click(within(itemRow('Pad Thai')).getByRole('button', { name: 'Edit' }));
+    return within(itemRow('Pad Thai'));
+  };
+
+  it('marks dishes whose food information the shop has not confirmed', async () => {
+    mount(ctx(fakeDb(tables()).client));
+    await ready();
+    expect(itemRow('Pad Thai').textContent).toContain('Food info not confirmed');
+  });
+
+  it('saves tags, spice, "checked" and the recommendation with the dish', async () => {
+    const db = fakeDb(tables());
+    const row = await edit(db);
+    await userEvent.click(row.getByRole('button', { name: 'peanuts' }));
+    await userEvent.click(row.getByRole('button', { name: 'shellfish' }));
+    await userEvent.selectOptions(row.getByLabelText('Spice level'), '1');
+    await userEvent.click(row.getByLabelText(/The shop has checked this/));
+    await userEvent.click(row.getByLabelText("Shop's recommendation"));
+    await userEvent.click(row.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(db.writes).toHaveLength(1));
+    expect(db.writes[0]).toMatchObject({
+      table: 'menu_items',
+      op: 'update',
+      values: {
+        tags: ['contains_peanut', 'contains_shellfish'],
+        spice_level: 1,
+        dietary_verified: true,
+        highlight: true,
+      },
+    });
+  });
+
+  it('a self-contradicting set of tags cannot be marked as checked', async () => {
+    const db = fakeDb(tables());
+    const row = await edit(db);
+    await userEvent.click(row.getByRole('button', { name: 'Vegetarian' }));
+    await userEvent.click(row.getByRole('button', { name: 'pork' }));
+    expect(row.getByText(/contradict/)).toBeTruthy();
+    expect((row.getByLabelText(/The shop has checked this/) as HTMLInputElement).disabled).toBe(
+      true,
+    );
+  });
+
+  it('the AI draft fills the tags but never ticks "checked"', async () => {
+    const db = fakeDb(tables());
+    const client = {
+      ...(db.client as object),
+      auth: { getSession: async () => ({ data: { session: { access_token: 'jwt' } } }) },
+    };
+    const f = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            available: true,
+            tags: ['contains_egg', 'contains_shellfish'],
+            spice: 2,
+          }),
+          {
+            status: 200,
+          },
+        ),
+    );
+    vi.stubGlobal('fetch', f);
+    const row = await edit(db, client);
+    await userEvent.click(row.getByRole('button', { name: 'Draft with AI from the dish name' }));
+    expect(await row.findByText(/Drafted by AI/)).toBeTruthy();
+    expect(row.getByRole('button', { name: 'egg' }).getAttribute('aria-pressed')).toBe('true');
+    expect((row.getByLabelText('Spice level') as HTMLSelectElement).value).toBe('2');
+    expect((row.getByLabelText(/The shop has checked this/) as HTMLInputElement).checked).toBe(
+      false,
+    );
+    const call = f.mock.calls[0] as unknown as [string, RequestInit];
+    expect(call[0]).toBe('/api/menu/ai-tags');
+    expect(JSON.parse(String(call[1].body))).toEqual({
+      store_id: 's1',
+      name: { th: 'ผัดไทย', en: 'Pad Thai' },
+    });
+  });
+
+  it('says plainly when no AI is set up', async () => {
+    const db = fakeDb(tables());
+    const client = {
+      ...(db.client as object),
+      auth: { getSession: async () => ({ data: { session: { access_token: 'jwt' } } }) },
+    };
+    vi.stubGlobal(
+      'fetch',
+      async () => new Response(JSON.stringify({ available: false }), { status: 200 }),
+    );
+    const row = await edit(db, client);
+    await userEvent.click(row.getByRole('button', { name: 'Draft with AI from the dish name' }));
+    expect(await row.findByText(/AI is not set up yet/)).toBeTruthy();
   });
 });

@@ -54,6 +54,9 @@ export type Appointment = {
   note: string | null;
   /** The bill made from this appointment, once there is one. */
   orderId: string | null;
+  /** The member (when known) and the package visit that covers this appointment. */
+  customerId: string | null;
+  customerPackageId: string | null;
 };
 
 /** What may follow each status (the database enforces the same table). */
@@ -249,6 +252,8 @@ export function parseAppointments(raw: unknown): Appointment[] {
       source: r.source === 'online' ? 'online' : 'staff',
       note: str(r.note),
       orderId: str(r.order_id),
+      customerId: str(r.customer_id),
+      customerPackageId: str(r.customer_package_id),
     });
   }
   return out.sort((a, b) => ms(a.startsAt) - ms(b.startsAt));

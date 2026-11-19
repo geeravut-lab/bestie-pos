@@ -27,6 +27,7 @@ const MENU = {
         name: { th: 'ผัดไทย', en: 'Pad Thai' },
         price: 18000,
         group_ids: ['g1'],
+        image_v: 2,
       },
       {
         id: 'i2',
@@ -126,6 +127,15 @@ describe('<GuestTablePage>', () => {
     expect(screen.getByText('Table T1')).toBeTruthy();
     expect(screen.getByText('Pad Thai')).toBeTruthy();
     expect(screen.getByText('฿180')).toBeTruthy();
+  });
+
+  it('shows a dish picture by its versioned address, and none for a dish without one', async () => {
+    stubFetch({});
+    mount();
+    const padThai = (await screen.findByText('Pad Thai')).closest('button')!;
+    expect(padThai.querySelector('img')?.getAttribute('src')).toBe('/api/menu-image?i=i1&v=2');
+    await userEvent.click(screen.getByRole('button', { name: 'Drinks' }));
+    expect(screen.getByText('Water').closest('button')!.querySelector('img')).toBeNull();
   });
 
   it('filters by category', async () => {

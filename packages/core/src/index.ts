@@ -51,5 +51,6 @@ export * from './purchasing';
 export * from './appointments';
 export * from './onlineBooking';
 export * from './barcode';
+export * from './menuImages';
 export * from './commission';
 export * from './packages';

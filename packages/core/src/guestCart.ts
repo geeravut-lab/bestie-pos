@@ -13,6 +13,8 @@ export type GuestMenu = {
     name: LocalizedText;
     price: Satang;
     groupIds: string[];
+    /** Version of the dish's picture (null = no picture); with the item id it makes the picture's address. */
+    imageV: number | null;
     /** What the shop says about the dish (tags, spice, verified). Nothing guessed. */
     food: ItemFood;
   }[];
@@ -48,6 +50,7 @@ export function parseGuestMenu(raw: unknown): GuestMenu {
       name: parseLocalizedText(i.name),
       price: int(i.price),
       groupIds: Array.isArray(i.group_ids) ? i.group_ids.filter((g) => typeof g === 'string') : [],
+      imageV: typeof i.image_v === 'number' && i.image_v > 0 ? i.image_v : null,
       food: parseFood({
         tags: i.tags,
         spice_level: i.spice_level,

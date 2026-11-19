@@ -7,6 +7,7 @@ import {
   setSeat,
   liveLines,
   localizedName,
+  menuImageUrl,
   moveToTable,
   orderBill,
   removeNewLine,
@@ -366,6 +367,14 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
                 disabled={!canEdit || !i.available}
                 onClick={() => void addItem(i)}
               >
+                {menuImageUrl(i.id, i.image_v) ? (
+                  <img
+                    className="item-pic"
+                    src={menuImageUrl(i.id, i.image_v)!}
+                    alt=""
+                    loading="lazy"
+                  />
+                ) : null}
                 <strong>{localizedName(i.name, lang)}</strong>
                 <span className="tabular">
                   {formatTHB(i.prices[order.channel] ?? i.prices.base, locale)}

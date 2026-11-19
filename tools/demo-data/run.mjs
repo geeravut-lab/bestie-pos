@@ -58,6 +58,26 @@ async function exec(sql, name) {
   return text.length > 400 ? `${text.slice(0, 400)}…` : text;
 }
 
+// the demo menu pictures (tools/demo-data/images, drawn by make-images.mjs), saved as the owner would upload them
+async function seedImages() {
+  const manifest = JSON.parse(readFileSync(join(here, 'images', 'manifest.json'), 'utf8'));
+  const owner = 'owner.demo@bestiedemo.example';
+  for (let i = 0; i < manifest.length; i += 8) {
+    const sql = manifest
+      .slice(i, i + 8)
+      .map((m) => {
+        const b64 = readFileSync(join(here, 'images', m.file)).toString('base64');
+        const lit = (x) => `'${x.replaceAll("'", "''")}'`;
+        return `do $$ begin if (select image_v from public.menu_items where id = demo.item(${lit(m.store)}, ${lit(m.item)})) is null then
+  perform demo.val(${lit(owner)}, format($q$select public.save_menu_image(%L, 'image/jpeg', %L)::text$q$, demo.item(${lit(m.store)}, ${lit(m.item)}), ${lit(b64)}));
+end if; end $$;`;
+      })
+      .join('\n');
+    await exec(sql, `images ${i}`);
+  }
+  console.log(`▶ setup/images … ok (${manifest.length} pictures)`);
+}
+
 async function main() {
   for (const step of steps) {
     if (!STEP_FILES[step]) throw new Error(`unknown step ${step}`);
@@ -77,6 +97,7 @@ async function main() {
       const out = await exec(sql, f);
       console.log(`ok (${((Date.now() - t0) / 1000).toFixed(1)}s)${out ? `\n${out}` : ''}`);
     }
+    if (step === 'setup') await seedImages();
   }
 }
 // the helpers (demo.*) can act as any demo user: they must not outlive the run, whatever happened

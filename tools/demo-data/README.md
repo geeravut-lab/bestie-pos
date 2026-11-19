@@ -32,7 +32,7 @@ tips), two table-QR guest orders, guest feedback, 4 closed shifts (one 20 baht s
 ## What it does NOT do (honestly)
 - **PromptPay and card payments are not simulated**: they only exist when Stripe's signed webhook confirms them, and faking that
   would put pretend Stripe payments in the books. Demo bills are cash, split cash, Bestie Credit and Points.
-- **No pictures**: menu items, shops and people have no photo field yet.
+- **Pictures are placeholders**: 40 colour tiles with an emoji (`make-images.mjs`), not photos of the dishes. Shops and people have no picture field.
 - The history bills are ordinary cash bills made the same way as today's, only dated in the past (walk-in sales, no members, so no
   Credit / Points in the past). To allow dates older than the app's two-day offline window, the order table's "business date is
   today" guard is switched off inside that one transaction; nothing else is relaxed.

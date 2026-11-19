@@ -10,6 +10,7 @@ import {
   guestName,
   guestSelectionProblem,
   hasDietConstraint,
+  menuImageUrl,
   packCart,
   restoreCart,
   setCartQuantity,
@@ -630,6 +631,14 @@ function ItemButton({
   ];
   return (
     <button type="button" className="guest-item" onClick={onOpen}>
+      {menuImageUrl(item.id, item.imageV) ? (
+        <img
+          className="guest-item-pic"
+          src={menuImageUrl(item.id, item.imageV)!}
+          alt=""
+          loading="lazy"
+        />
+      ) : null}
       <span className="guest-item-name">
         {guestName(item.name, lang)}
         {item.food.highlight ? <span className="badge">{t.gsRecommended}</span> : null}

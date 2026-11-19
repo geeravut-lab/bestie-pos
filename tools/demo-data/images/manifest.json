@@ -1,0 +1,202 @@
+[
+  {
+    "store": "Island Kitchen",
+    "item": "ปอเปี๊ยะทอด",
+    "file": "01.jpg"
+  },
+  {
+    "store": "Island Kitchen",
+    "item": "ผัดไทยกุ้งสด",
+    "file": "02.jpg"
+  },
+  {
+    "store": "Island Kitchen",
+    "item": "น้ำเปล่า",
+    "file": "03.jpg"
+  },
+  {
+    "store": "Island Kitchen",
+    "item": "ข้าวเหนียวมะม่วง",
+    "file": "04.jpg"
+  },
+  {
+    "store": "Island Kitchen",
+    "item": "เบียร์ช้าง",
+    "file": "05.jpg"
+  },
+  {
+    "store": "Island Kitchen",
+    "item": "แกงเขียวหวานไก่",
+    "file": "06.jpg"
+  },
+  {
+    "store": "Island Kitchen",
+    "item": "ส้มตำไทย",
+    "file": "07.jpg"
+  },
+  {
+    "store": "Island Kitchen",
+    "item": "ไอศกรีมกะทิ",
+    "file": "08.jpg"
+  },
+  {
+    "store": "Island Kitchen",
+    "item": "น้ำมะพร้าว",
+    "file": "09.jpg"
+  },
+  {
+    "store": "Island Kitchen",
+    "item": "ข้าวกะเพราหมูสับ",
+    "file": "10.jpg"
+  },
+  {
+    "store": "Island Kitchen",
+    "item": "ต้มยำกุ้ง",
+    "file": "11.jpg"
+  },
+  {
+    "store": "Island Kitchen",
+    "item": "ปลาทอดราดซอสมะขาม",
+    "file": "12.jpg"
+  },
+  {
+    "store": "Island Kitchen",
+    "item": "ชาเย็น",
+    "file": "13.jpg"
+  },
+  {
+    "store": "Island Kitchen",
+    "item": "น้ำดื่ม 600 มล.",
+    "file": "14.jpg"
+  },
+  {
+    "store": "Breeze Café",
+    "item": "เอสเปรสโซ",
+    "file": "15.jpg"
+  },
+  {
+    "store": "Breeze Café",
+    "item": "ชาเขียวมัทฉะ",
+    "file": "16.jpg"
+  },
+  {
+    "store": "Breeze Café",
+    "item": "ครัวซองต์เนยสด",
+    "file": "17.jpg"
+  },
+  {
+    "store": "Breeze Café",
+    "item": "ชาไทยเย็น",
+    "file": "18.jpg"
+  },
+  {
+    "store": "Breeze Café",
+    "item": "อเมริกาโน่",
+    "file": "19.jpg"
+  },
+  {
+    "store": "Breeze Café",
+    "item": "บราวนี่",
+    "file": "20.jpg"
+  },
+  {
+    "store": "Breeze Café",
+    "item": "น้ำส้มคั้น",
+    "file": "21.jpg"
+  },
+  {
+    "store": "Breeze Café",
+    "item": "ลาเต้",
+    "file": "22.jpg"
+  },
+  {
+    "store": "Breeze Café",
+    "item": "แซนด์วิชแฮมชีส",
+    "file": "23.jpg"
+  },
+  {
+    "store": "Breeze Café",
+    "item": "คาปูชิโน่",
+    "file": "24.jpg"
+  },
+  {
+    "store": "Breeze Café",
+    "item": "เมล็ดกาแฟคั่ว 250 ก.",
+    "file": "25.jpg"
+  },
+  {
+    "store": "Sunset Salon",
+    "item": "ตัดผมชาย",
+    "file": "26.jpg"
+  },
+  {
+    "store": "Sunset Salon",
+    "item": "ตัดผมหญิง",
+    "file": "27.jpg"
+  },
+  {
+    "store": "Sunset Salon",
+    "item": "สระ ไดร์ จัดทรง",
+    "file": "28.jpg"
+  },
+  {
+    "store": "Sunset Salon",
+    "item": "ทำสีผมทั้งศีรษะ",
+    "file": "29.jpg"
+  },
+  {
+    "store": "Sunset Salon",
+    "item": "ทรีตเมนต์บำรุงผม",
+    "file": "30.jpg"
+  },
+  {
+    "store": "Sunset Salon",
+    "item": "แชมพูสมุนไพร 250 มล.",
+    "file": "31.jpg"
+  },
+  {
+    "store": "Sunset Salon",
+    "item": "เซรั่มบำรุงผม 50 มล.",
+    "file": "32.jpg"
+  },
+  {
+    "store": "Lotus Spa",
+    "item": "นวดไทย 60 นาที",
+    "file": "33.jpg"
+  },
+  {
+    "store": "Lotus Spa",
+    "item": "นวดไทย 90 นาที",
+    "file": "34.jpg"
+  },
+  {
+    "store": "Lotus Spa",
+    "item": "นวดน้ำมัน 60 นาที",
+    "file": "35.jpg"
+  },
+  {
+    "store": "Lotus Spa",
+    "item": "นวดเท้า 45 นาที",
+    "file": "36.jpg"
+  },
+  {
+    "store": "Lotus Spa",
+    "item": "อโรมาเธอราปี 90 นาที",
+    "file": "37.jpg"
+  },
+  {
+    "store": "Lotus Spa",
+    "item": "ประคบสมุนไพร 90 นาที",
+    "file": "38.jpg"
+  },
+  {
+    "store": "Lotus Spa",
+    "item": "น้ำมันนวดอโรมา 100 มล.",
+    "file": "39.jpg"
+  },
+  {
+    "store": "Lotus Spa",
+    "item": "ลูกประคบสมุนไพร",
+    "file": "40.jpg"
+  }
+]

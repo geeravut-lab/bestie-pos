@@ -21,6 +21,8 @@ export type Item = {
   /** What a scanner reads / the shop's own stock code (retail); null = none. */
   barcode?: string | null;
   sku?: string | null;
+  /** Version of the item's picture (null = none); part of the picture's address. */
+  image_v?: number | null;
   modifier_group_ids: string[];
   available: boolean;
   food: ItemFood;
@@ -67,7 +69,7 @@ export async function loadMenu(client: SupabaseClient, storeId: string): Promise
     q('menu_categories', 'id, name, sort, active, created_at'),
     q(
       'menu_items',
-      'id, category_id, name, prices, station, duration_min, barcode, sku, modifier_group_ids, available, tags, spice_level, dietary_verified, highlight, sort, created_at',
+      'id, category_id, name, prices, station, duration_min, barcode, sku, image_v, modifier_group_ids, available, tags, spice_level, dietary_verified, highlight, sort, created_at',
     ),
     q('modifier_groups', 'id, name, min_select, max_select, sort, created_at'),
     q(
@@ -98,6 +100,7 @@ export async function loadMenu(client: SupabaseClient, storeId: string): Promise
           duration_min: typeof r.duration_min === 'number' ? r.duration_min : null,
           barcode: typeof r.barcode === 'string' ? r.barcode : null,
           sku: typeof r.sku === 'string' ? r.sku : null,
+          image_v: typeof r.image_v === 'number' ? r.image_v : null,
           modifier_group_ids: Array.isArray(r.modifier_group_ids)
             ? r.modifier_group_ids.filter((x): x is string => typeof x === 'string')
             : [],

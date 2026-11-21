@@ -84,13 +84,11 @@ export function CreditPanel({ ctx, card }: { ctx: PageContext; card: CustomerCar
         .map((x) => x.name);
       const bound = getDeviceBinding()?.deviceId;
       const dev = bound
-        ? await ctx.client.from('devices').select('stripe_reader_id').eq('id', bound).maybeSingle()
+        ? await ctx.client.from('devices').select('reader_id').eq('id', bound).maybeSingle()
         : null;
       return {
         storeId: row.id,
-        hasReader:
-          typeof (dev?.data as { stripe_reader_id?: unknown } | null)?.stripe_reader_id ===
-          'string',
+        hasReader: typeof (dev?.data as { reader_id?: unknown } | null)?.reader_id === 'string',
         balance: Number(bal.data ?? 0),
         history: (hist.data ?? []) as Row[],
         company,

@@ -30,7 +30,7 @@ select coalesce(jsonb_agg(x order by x.name), '[]'::jsonb) as stores from (
          (select count(*) from public.devices d where d.store_id = s.id and d.active and d.role = 'cashier') as cashier_devices,
          (select count(*) from public.devices d where d.store_id = s.id and d.active and d.role = 'kds') as kds_devices,
          (select count(*) from public.devices d where d.store_id = s.id and d.active and d.role <> 'kds' and d.revenue_pos_id is null) as devices_without_pos_id,
-         (select count(*) from public.devices d where d.store_id = s.id and d.active and d.stripe_reader_id is not null) as devices_with_reader,
+         (select count(*) from public.devices d where d.store_id = s.id and d.active and d.reader_id is not null) as devices_with_reader,
          (select count(*) from public.staff f where f.org_id = s.org_id and f.active and (f.store_id is null or f.store_id = s.id)) as staff,
          (select count(*) from public.staff f join public.roles r on r.id = f.role_id
             where f.org_id = s.org_id and f.active and r.built_in = 'owner') as owners,

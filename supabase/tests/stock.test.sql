@@ -114,7 +114,7 @@ update public.stores set module_overrides = '{"tender.credit": true}' where id =
 select t_rows('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$select public.topup_credit(t_topup('50000000-0000-4000-8000-000000000001', 100000))$$, 1, 'Anna has 1,000.00 Credit');
 select t_rows('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$select public.set_order_customer('10000000-0000-4000-8000-000000000001', (select v::uuid from t_out where k='cid'))$$, 1, 'Anna is on bill 1 (210.00)');
 update public.stores set module_overrides = '{"tender.credit": true, "tender.gateway": true}' where id = (select v::uuid from t_out where k='store');
-update public.devices set stripe_reader_id = 'tmr_ABC123xyz' where id = (select v::uuid from t_out where k='dev');
+update public.devices set reader_id = 'tmr_ABC123xyz' where id = (select v::uuid from t_out where k='dev');
 
 -- bill 1 = 210.00. Split: 50.00 Credit + 60.00 cash (handed 100.00) + 100.00 PromptPay.
 create or replace function t_att(p_tender text, p_legs jsonb, p_order text default '10000000-0000-4000-8000-000000000001', p_total bigint default 21000, p_round int default 0) returns jsonb language sql as $$

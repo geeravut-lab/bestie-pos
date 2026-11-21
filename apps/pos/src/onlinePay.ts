@@ -272,3 +272,61 @@ export async function closeSplitPayment(p: {
   await pullOrderNow(p.client as never, p.orderId);
   return null;
 }
+
+/**
+ * Charge the WHOLE bill to a guest's room (`charge_order_to_room`, module `folio`): the server closes the bill with one payment of the tender `room`, numbers
+ * the receipt and puts the amount on the stay. Online only; exact amount (no cash rounding); everything unsent goes to the kitchen first.
+ */
+export async function chargeOrderToRoom(p: {
+  client: Client;
+  orderId: string;
+  binding: DeviceBinding;
+  billConfig: BillConfig;
+  folioId: string;
+  staffId?: string;
+  lang: Lang;
+}): Promise<ErrorKey | null> {
+  if (globalThis.navigator?.onLine === false) return 'err_pay_offline';
+  const first = await getOrder(p.orderId);
+  if (!first) return 'err_order_failed';
+  if (payBlockers(first).some((b) => b !== 'unsent'))
+    return first.status === 'paid' ? 'err_order_closed' : 'err_pay_failed';
+  if (hasUnsent(first)) {
+    const err = await changeOrder(p.orderId, (o) => sendNew(o, Date.now()).order);
+    if (err) return err;
+  }
+  await flush(p.client as never);
+  if ((await outboxCounts()).pending > 0) return 'err_pay_sync';
+  const order = await getOrder(p.orderId);
+  if (!order) return 'err_order_failed';
+  const bill = orderBill(order, p.billConfig);
+  const { error } = await p.client.rpc('charge_order_to_room', {
+    p: {
+      order_id: order.id,
+      folio_id: p.folioId,
+      payment_id: crypto.randomUUID(),
+      device_id: p.binding.deviceId,
+      staff_id: p.staffId ?? null,
+      issued_at: new Date().toISOString(),
+      lang: p.lang,
+      subtotal: bill.subtotal,
+      points_discount: bill.pointsDiscount,
+      service_charge: bill.serviceCharge,
+      vat: bill.vat,
+      net_before_vat: bill.netBeforeVat,
+      total: bill.total,
+      rounding: 0,
+      payable: bill.total,
+      vat_bps: p.billConfig.vatBps,
+      service_bps: p.billConfig.serviceChargeBps,
+      price_mode: p.billConfig.priceMode,
+    },
+  });
+  if (error) {
+    if (error.code === '42501') return 'err_forbidden';
+    if (error.code === '55000') return 'err_pay_sync';
+    return 'err_pay_failed';
+  }
+  await pullOrderNow(p.client as never, p.orderId);
+  return null;
+}

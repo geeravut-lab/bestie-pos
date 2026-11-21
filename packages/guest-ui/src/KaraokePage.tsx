@@ -101,7 +101,10 @@ export function KaraokePage({ token }: { token: string }) {
     );
   const room = load.room;
   const canAdd = room.songsEnabled && room.running;
-  const elapsed = room.running ? room.elapsedSeconds + Math.max(0, (now - fetchedAt) / 1000) : 0;
+  const elapsed = room.running
+    ? room.elapsedSeconds + (room.paused ? 0 : Math.max(0, (now - fetchedAt) / 1000))
+    : 0;
+  const left = room.includedMinutes !== null ? room.includedMinutes * 60 - elapsed : null;
 
   const add = async (source: string) => {
     setNote(null);
@@ -169,9 +172,18 @@ export function KaraokePage({ token }: { token: string }) {
       <section className="card" aria-label={t.krTime}>
         <p className="muted">{room.shop}</p>
         {room.running ? (
-          <p>
-            {t.krTime}: <strong className="mono">{formatClock(elapsed)}</strong>
-          </p>
+          <>
+            <p>
+              {t.krTime}: <strong className="mono">{formatClock(elapsed)}</strong>
+              {room.paused ? ` · ${t.krPaused}` : ''}
+            </p>
+            {left !== null ? (
+              <p>
+                {left >= 0 ? t.krTimeLeft : t.krOverPackage}:{' '}
+                <strong className="mono">{formatClock(Math.abs(left))}</strong>
+              </p>
+            ) : null}
+          </>
         ) : (
           <p role="status">{t.krNotRunning}</p>
         )}

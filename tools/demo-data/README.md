@@ -33,6 +33,9 @@ tips), two table-QR guest orders, guest feedback, 4 closed shifts (one 20 baht s
 ## The island network (`network` step)
 `node tools/demo-data/run.mjs remote network` (needs migration 63 and the demo set up; safe to run again) adds a **second business**, "[DEMO] Palm Beach Co" (one café, `owner.beach.demo`, `cashier.beach.demo`), joins both businesses to the network `koh-phangan`, gives three shops a marketplace listing and three tourists a **Tourist Pass** (fake phones `0999000101`–`103`), and makes bills so that Points are **earned at Breeze Café and spent at Palm Beach** (Anna 12, Liu 6) and **earned at Palm Beach and spent at Lotus Spa** (Dan 20). The clearing statement on `/network` then has a line in each direction (18 points = THB 18.00 and 20 points = THB 20.00) and each business sees only its own lines. The sales are in four files because every file is its own transaction: the Points then have different times and the first-in-first-out order is real. Without `DEMO_PASSWORD` the two new accounts get a random password nobody knows. `cleanup --yes` removes both businesses, the passes and the accounts.
 
+## Karaoke and resort (`phase4` step)
+`node tools/demo-data/run.mjs remote phase4` (needs migrations 70, 73 and 74; safe to run again) adds **Sing Along** (karaoke: three rooms, two time packages, VIP 1 running with a package and three songs queued, a reservation for tomorrow 20:00) and **Palm Resort** (resort on the Resort plan: rooms 101–104, Anna in 101 with a Breeze Café bill and a Lotus Spa bill charged to her room, Liu in 102). It uses the existing demo accounts (the owner acts). `cleanup --yes` removes them with everything else.
+
 ## What it does NOT do (honestly)
 - **PromptPay and card payments are not simulated**: they only exist when Stripe's signed webhook confirms them, and faking that
   would put pretend Stripe payments in the books. Demo bills are cash, split cash, Bestie Credit and Points.

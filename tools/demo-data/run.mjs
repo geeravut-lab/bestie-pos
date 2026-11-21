@@ -20,7 +20,9 @@ const [target, ...rest] = process.argv.slice(2);
 const steps = rest.filter((a) => !a.startsWith('--'));
 const yes = rest.includes('--yes');
 if (!['local', 'remote'].includes(target) || steps.length === 0) {
-  console.error('usage: run.mjs <local|remote> <setup|simulate|retail|network|cleanup>… [--yes]');
+  console.error(
+    'usage: run.mjs <local|remote> <setup|simulate|retail|network|phase4|cleanup>… [--yes]',
+  );
   process.exit(2);
 }
 const ref = process.env.SUPABASE_PROJECT_REF || 'pqomylchauwecpgqxoad';
@@ -38,6 +40,8 @@ const STEP_FILES = {
   retail: () => ['00_helpers.sql', '20_sim_helpers.sql', ...files('3')],
   // the island network: a second business, Tourist Passes, Points earned at one business and spent at the other (needs migration 63; safe to run again)
   network: () => ['00_helpers.sql', '20_sim_helpers.sql', ...files('4')],
+  // a karaoke shop (needs migrations 70 + 73) and a resort with room charges (needs migration 74); safe to run again
+  phase4: () => ['00_helpers.sql', '20_sim_helpers.sql', ...files('5')],
   cleanup: () => ['00_helpers.sql', ...files('9')],
 };
 

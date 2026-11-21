@@ -15,7 +15,7 @@ import type { OnlinePay } from './onlinePay';
 import { OnlinePane } from './OnlinePane';
 import { SplitPane } from './SplitPane';
 
-type Tab = 'cash' | 'split' | OnlineTender;
+type Tab = 'cash' | 'split' | 'room' | OnlineTender;
 
 /** Choose how the guest pays: cash (works offline), PromptPay QR or the card reader (both need the network). */
 export function PaySheet({
@@ -30,6 +30,8 @@ export function PaySheet({
   held = 0,
   heldDeposit = false,
   onRelease,
+  roomStays,
+  onRoomCharge,
   methods = { promptpay: true, gateway: true },
   onClose,
 }: {
@@ -51,6 +53,9 @@ export function PaySheet({
   onRelease?: () => Promise<ErrorKey | null>;
   /** The customer on the bill and their Credit here; null = Credit not usable. */
   splitCredit?: { name: string; balance: Satang } | null;
+  /** Guests in the house the bill may be charged to (module `folio`); empty / absent = no Room tab. */
+  roomStays?: { id: string; label: string }[];
+  onRoomCharge?: (folioId: string) => Promise<ErrorKey | null>;
   /** The owner's payment-method switches for this shop (cash is always on). */
   methods?: { promptpay: boolean; gateway: boolean };
   onClose: () => void;
@@ -75,6 +80,9 @@ export function PaySheet({
           ...(onSplitPay ? [{ id: 'split' as const, label: t.paySplitTab }] : []),
           ...(methods.promptpay ? [{ id: 'promptpay' as const, label: t.payTabPromptPay }] : []),
           ...(methods.gateway ? [{ id: 'gateway' as const, label: t.payTabCard }] : []),
+          ...(roomStays && roomStays.length > 0 && onRoomCharge
+            ? [{ id: 'room' as const, label: t.payTabRoom }]
+            : []),
         ];
 
   return (
@@ -150,7 +158,9 @@ export function PaySheet({
                 onPay={onSplitPay}
                 onClose={onClose}
               />
-            ) : tab === 'split' ? null : (
+            ) : tab === 'room' && roomStays && onRoomCharge ? (
+              <RoomPane stays={roomStays} total={total} locale={locale} onCharge={onRoomCharge} />
+            ) : tab === 'split' || tab === 'room' ? null : (
               <OnlinePane
                 key={tab}
                 tender={tab}
@@ -260,6 +270,60 @@ function CashPane({
         <button type="button" className="btn btn-secondary" onClick={onClose}>
           {t.menuCancel}
         </button>
+      </div>
+    </>
+  );
+}
+
+/** Charge the whole bill to the room of a guest who is staying (module `folio`). */
+function RoomPane({
+  stays,
+  total,
+  locale,
+  onCharge,
+}: {
+  stays: { id: string; label: string }[];
+  total: Satang;
+  locale: 'th-TH' | 'en-GB';
+  onCharge: (folioId: string) => Promise<ErrorKey | null>;
+}) {
+  const { t } = useI18n();
+  const [folio, setFolio] = useState(stays[0]?.id ?? '');
+  const [error, setError] = useState<ErrorKey | null>(null);
+  const go = async () => {
+    setError(null);
+    const err = await onCharge(folio);
+    if (err) setError(err);
+  };
+  return (
+    <>
+      <p className="muted">{t.payRoomNote}</p>
+      <dl className="preview-list tabular">
+        <div>
+          <dt>{t.previewTotal}</dt>
+          <dd>{formatTHB(total, locale)}</dd>
+        </div>
+      </dl>
+      <div className="form-row">
+        <label className="label" htmlFor="pay-room">
+          {t.payRoomPick}
+        </label>
+        <select
+          id="pay-room"
+          className="field"
+          value={folio}
+          onChange={(e) => setFolio(e.target.value)}
+        >
+          {stays.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      {error ? <Notice kind="error">{errorText(error, t)}</Notice> : null}
+      <div className="actions">
+        <AsyncButton onClick={go}>{t.payRoomCharge}</AsyncButton>
       </div>
     </>
   );

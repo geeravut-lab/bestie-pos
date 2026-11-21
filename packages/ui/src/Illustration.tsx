@@ -397,6 +397,19 @@ const SCENES: Record<ArtId, { tone: Tone; art: ReactNode }> = {
       </>
     ),
   },
+  folio: {
+    tone: 'sun',
+    art: (
+      <>
+        <rect className="il-white il-edge" x="30" y="30" width="100" height="56" rx="8" />
+        <path className="il-brand il-edge" d="M24 34l56-24 56 24z" />
+        <rect className="il-sun il-edge" x="44" y="46" width="22" height="40" rx="3" />
+        <circle className="il-ink-fill" cx="61" cy="68" r="2" />
+        <rect className="il-accent il-edge" x="82" y="46" width="34" height="20" rx="3" />
+        <path className="il-edge-line" d="M86 74h26M86 80h18" />
+      </>
+    ),
+  },
   translate: {
     tone: 'mint',
     art: (

@@ -14,6 +14,7 @@ import {
   parseSongHits,
   parseYoutubeId,
 } from './karaoke';
+import type { StaffSong } from './karaoke';
 
 const TOKEN = 'a'.repeat(32);
 
@@ -146,5 +147,127 @@ describe('what the pages read', () => {
     ]);
     expect(r.map((x) => x.id)).toEqual(['1', '2']);
     expect(r[0]?.stepMinutes).toBe(30);
+  });
+});
+
+describe('the in-room player', () => {
+  const song = (id: string, status: 'queued' | 'playing' | 'done'): StaffSong => ({
+    id,
+    roomId: 'r',
+    videoId: 'dQw4w9WgXcQ',
+    title: id,
+    status,
+    source: 'guest',
+  });
+  it('plays what the database says is playing, else starts the first waiting song, else idles', async () => {
+    const { pickPlayerStep } = await import('./karaoke');
+    expect(pickPlayerStep([song('a', 'queued'), song('b', 'playing')])).toMatchObject({
+      kind: 'play',
+      song: { id: 'b' },
+    });
+    expect(pickPlayerStep([song('a', 'queued'), song('b', 'queued')])).toMatchObject({
+      kind: 'start',
+      song: { id: 'a' },
+    });
+    expect(pickPlayerStep([song('a', 'done')])).toEqual({ kind: 'idle' });
+    expect(pickPlayerStep([])).toEqual({ kind: 'idle' });
+  });
+  it('reads the room id from the player address', async () => {
+    const { karaokePlayerRoomFromPath } = await import('./karaoke');
+    const id = '11111111-2222-3333-4444-555555555555';
+    expect(karaokePlayerRoomFromPath(`/karaoke/player/${id}`)).toBe(id);
+    expect(karaokePlayerRoomFromPath('/karaoke/player/nope')).toBeNull();
+    expect(karaokePlayerRoomFromPath(`/karaoke/${id}`)).toBeNull();
+  });
+});
+
+describe('packages, pause and reservations', () => {
+  it('bills the package plus the overage, like the database', async () => {
+    const m = await import('./karaoke');
+    expect(m.karaokeOverageMinutes(3600, 60, 15)).toBe(0);
+    expect(m.karaokeOverageMinutes(3601, 60, 15)).toBe(15);
+    expect(m.karaokeOverageMinutes(4501, 60, 15)).toBe(30);
+    expect(
+      m.karaokeSettle(100 * 60, {
+        ratePerHour: 30000,
+        minMinutes: 60,
+        stepMinutes: 15,
+        includedMinutes: 90,
+        packageTotal: 37000,
+      }),
+    ).toEqual({ billedMinutes: 105, amount: 44500 });
+    expect(
+      m.karaokeSettle(20 * 60, {
+        ratePerHour: 30000,
+        minMinutes: 60,
+        stepMinutes: 15,
+        includedMinutes: 60,
+        packageTotal: 25000,
+      }),
+    ).toEqual({ billedMinutes: 60, amount: 25000 });
+    expect(
+      m.karaokeSettle(70 * 60, { ratePerHour: 30000, minMinutes: 60, stepMinutes: 15 }),
+    ).toEqual({ billedMinutes: 75, amount: 37500 });
+  });
+  it('counts the clock without the paused time', async () => {
+    const m = await import('./karaoke');
+    const base = {
+      id: 's',
+      roomId: 'r',
+      startedAt: '2026-01-01T10:00:00Z',
+      endedAt: null,
+      guests: null,
+      ratePerHour: 1,
+      minMinutes: 0,
+      stepMinutes: 15,
+      billedMinutes: null,
+      amount: null,
+      orderId: null,
+      pausedAt: null,
+      pausedSeconds: 600,
+      includedMinutes: 0,
+      packageTotal: 0,
+      packageName: null,
+      bookingId: null,
+    };
+    const now = Date.parse('2026-01-01T11:00:00Z');
+    expect(m.sessionElapsedSeconds(base, now)).toBe(3000);
+    expect(m.sessionElapsedSeconds({ ...base, pausedAt: '2026-01-01T10:30:00Z' }, now)).toBe(1200);
+    expect(m.sessionElapsedSeconds({ ...base, endedAt: '2026-01-01T10:20:00Z' }, now)).toBe(600);
+  });
+  it('finds a clash between reservations of one room and ignores cancelled ones', async () => {
+    const m = await import('./karaoke');
+    const b = (id: string, room: string, s: string, e: string, status: string) => ({
+      id,
+      room_id: room,
+      guest_name: 'x',
+      starts_at: s,
+      ends_at: e,
+      status,
+    });
+    const list = m.parseKaraokeBookings([
+      b('1', 'r', '2026-01-01T10:00:00Z', '2026-01-01T11:00:00Z', 'booked'),
+      b('2', 'r', '2026-01-01T12:00:00Z', '2026-01-01T13:00:00Z', 'cancelled'),
+      b('3', 'q', '2026-01-01T10:00:00Z', '2026-01-01T11:00:00Z', 'booked'),
+    ]);
+    const t = (s: string) => Date.parse(s);
+    expect(
+      m.bookingClash(list, 'r', t('2026-01-01T10:30:00Z'), t('2026-01-01T11:30:00Z'))?.id,
+    ).toBe('1');
+    expect(
+      m.bookingClash(list, 'r', t('2026-01-01T11:00:00Z'), t('2026-01-01T12:00:00Z')),
+    ).toBeNull();
+    expect(
+      m.bookingClash(list, 'r', t('2026-01-01T12:30:00Z'), t('2026-01-01T12:45:00Z')),
+    ).toBeNull();
+  });
+  it('reads packages in order and drops broken rows', async () => {
+    const m = await import('./karaoke');
+    const r = m.parseKaraokePackages([
+      { id: 'b', name: '2h', minutes: 120, price: 1, sort: 2 },
+      { id: 'a', name: '1h', minutes: 60, price: 1, sort: 1 },
+      { id: 'c', name: 'bad', minutes: 0 },
+    ]);
+    expect(r.map((x) => x.id)).toEqual(['a', 'b']);
   });
 });

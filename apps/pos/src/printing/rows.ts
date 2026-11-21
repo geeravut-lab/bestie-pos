@@ -87,6 +87,8 @@ export function buildReceiptRows(order: OrderDoc, receipt: ReceiptDoc, lang: Lan
       left: p.tender === 'promptpay' ? d.receiptPromptPay : d.receiptCard,
       right: money(p.amount),
     });
+  for (const p of receipt.payments.filter((x) => x.tender === 'room'))
+    rows.push({ kind: 'row', left: d.receiptRoom, right: money(p.amount) });
   if (cash.length > 0) {
     rows.push({ kind: 'row', left: d.receiptCash, right: money(cashPaid) });
     rows.push({ kind: 'row', left: d.receiptChange, right: money(change) });

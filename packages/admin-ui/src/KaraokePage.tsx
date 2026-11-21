@@ -4,6 +4,8 @@ import {
   formatTHB,
   karaokeLink,
   karaokeSettle,
+  parseKaraokePackages,
+  sessionElapsedSeconds,
   KARAOKE_STEPS,
   parseKaraokeRooms,
   parseKaraokeSessions,
@@ -11,7 +13,7 @@ import {
   parsePriceInput,
   priceInputValue,
 } from '@bestie/core';
-import type { KaraokeRoom, KaraokeSession, StaffSong } from '@bestie/core';
+import type { KaraokePackage, KaraokeRoom, KaraokeSession, StaffSong } from '@bestie/core';
 import { fmt, useI18n } from '@bestie/i18n';
 import { AsyncButton, QrSvg, Spinner } from '@bestie/ui';
 import { Notice, useLiveSync } from '@bestie/auth';
@@ -24,6 +26,7 @@ type Loaded = {
   sessions: KaraokeSession[];
   songs: StaffSong[];
   tills: { id: string }[];
+  packages: KaraokePackage[];
 };
 type Draft = {
   id: string | null;
@@ -47,13 +50,21 @@ export function KaraokePage({ ctx }: { ctx: PageContext }) {
   const [now, setNow] = useState(() => Date.now());
   const [draft, setDraft] = useState<Draft | null>(null);
   const [guests, setGuests] = useState<Record<string, string>>({});
+  const [pick, setPick] = useState<Record<string, string>>({});
+  const [pkgDraft, setPkgDraft] = useState<{
+    id: string | null;
+    name: string;
+    minutes: string;
+    price: string;
+    active: boolean;
+  } | null>(null);
   const [msg, setMsg] = useState<{ kind: 'error' | 'info'; text: string } | null>(null);
   const [links, setLinks] = useState<Record<string, string>>({});
   const [printRoom, setPrintRoom] = useState<string | null>(null);
 
   const data = useRemote<Loaded>(async () => {
     if (!storeId) throw new Error('shop');
-    const [rooms, sessions, songs, devs] = await Promise.all([
+    const [rooms, sessions, songs, devs, pkgs] = await Promise.all([
       ctx.client
         .from('karaoke_rooms')
         .select('id, name, rate_per_hour, min_minutes, step_minutes, active, sort')
@@ -63,7 +74,7 @@ export function KaraokePage({ ctx }: { ctx: PageContext }) {
       ctx.client
         .from('karaoke_sessions')
         .select(
-          'id, room_id, started_at, ended_at, guests, rate_per_hour, min_minutes, step_minutes, billed_minutes, amount, order_id',
+          'id, room_id, started_at, ended_at, guests, rate_per_hour, min_minutes, step_minutes, billed_minutes, amount, order_id, paused_at, paused_seconds, included_minutes, package_total, package_name, booking_id',
         )
         .eq('store_id', storeId)
         .order('started_at', { ascending: false })
@@ -81,6 +92,11 @@ export function KaraokePage({ ctx }: { ctx: PageContext }) {
         .eq('active', true)
         .eq('role', 'cashier')
         .order('name'),
+      ctx.client
+        .from('karaoke_packages')
+        .select('id, name, minutes, price, active, sort')
+        .eq('store_id', storeId)
+        .order('sort'),
     ]);
     if (rooms.error) throw new Error('load');
     return {
@@ -88,6 +104,7 @@ export function KaraokePage({ ctx }: { ctx: PageContext }) {
       sessions: sessions.error ? [] : parseKaraokeSessions(sessions.data),
       songs: songs.error ? [] : parseStaffSongs(songs.data),
       tills: devs.error ? [] : ((devs.data ?? []) as { id: string }[]),
+      packages: pkgs.error ? [] : parseKaraokePackages(pkgs.data),
     };
   }, storeId ?? '');
   const { reload } = data;
@@ -137,7 +154,47 @@ export function KaraokePage({ ctx }: { ctx: PageContext }) {
     await call('karaoke_start', {
       p_room: room.id,
       p_guests: Number.isFinite(n) && n >= 1 && n <= 200 ? n : null,
+      p_package: pick[`start-${room.id}`] || null,
     });
+  };
+  const pause = (s: KaraokeSession) => async () => {
+    await call(s.pausedAt ? 'karaoke_resume' : 'karaoke_pause', { p_session: s.id });
+  };
+  const extend = (s: KaraokeSession) => async () => {
+    const id = pick[`extend-${s.id}`] || d?.packages.find((x) => x.active)?.id;
+    if (id) await call('karaoke_extend', { p_session: s.id, p_package: id });
+  };
+  const savePackage = async () => {
+    if (!pkgDraft) return;
+    const price = parsePriceInput(pkgDraft.price || '');
+    const minutes = Number.parseInt(pkgDraft.minutes, 10);
+    if (!pkgDraft.name.trim() || price === null || !(minutes >= 15 && minutes <= 600)) {
+      setMsg({ kind: 'error', text: t.karPackageInvalid });
+      return;
+    }
+    setMsg(null);
+    const r = await ctx.client.rpc('save_karaoke_package', {
+      p: {
+        store_id: storeId,
+        id: pkgDraft.id,
+        name: pkgDraft.name.trim(),
+        minutes,
+        price,
+        active: pkgDraft.active,
+      },
+    });
+    if (r.error) {
+      setMsg({
+        kind: 'error',
+        text:
+          r.error.code === '23505' || r.error.code === '23514'
+            ? t.karPackageInvalid
+            : t.err_save_failed,
+      });
+      return;
+    }
+    setPkgDraft(null);
+    reload();
   };
   const stop = (s: KaraokeSession) => async () => {
     await call('karaoke_stop', { p_session: s.id });
@@ -222,14 +279,18 @@ export function KaraokePage({ ctx }: { ctx: PageContext }) {
           const live = mine.find((s) => !s.endedAt);
           const last = mine.find((s) => s.endedAt);
           const songs = (d?.songs ?? []).filter((g) => g.roomId === room.id);
-          const elapsed = live ? Math.max(0, (now - new Date(live.startedAt).getTime()) / 1000) : 0;
+          const elapsed = live ? sessionElapsedSeconds(live, now) : 0;
           const est = live
             ? karaokeSettle(elapsed, {
                 ratePerHour: live.ratePerHour,
                 minMinutes: live.minMinutes,
                 stepMinutes: live.stepMinutes,
+                includedMinutes: live.includedMinutes,
+                packageTotal: live.packageTotal,
               })
             : null;
+          const left =
+            live && live.includedMinutes > 0 ? live.includedMinutes * 60 - elapsed : null;
           return (
             <li key={room.id} className="member-row">
               <div className="member-head">
@@ -246,7 +307,19 @@ export function KaraokePage({ ctx }: { ctx: PageContext }) {
                   <p>
                     {t.karElapsed}: <strong className="mono">{formatClock(elapsed)}</strong>
                     {live.guests ? ` · ${live.guests}` : ''}
+                    {live.pausedAt ? <span className="badge badge-warn">{t.karPaused}</span> : null}
                   </p>
+                  {left !== null ? (
+                    <p>
+                      {live.packageName ? `${live.packageName} · ` : ''}
+                      {fmt(t.karIncluded, { n: live.includedMinutes })} ·{' '}
+                      <strong>
+                        {left >= 0
+                          ? fmt(t.karTimeLeft, { time: formatClock(left) })
+                          : fmt(t.karOver, { time: formatClock(-left) })}
+                      </strong>
+                    </p>
+                  ) : null}
                   <p>
                     {t.karEstimate}: <strong>{money(est.amount)}</strong> (
                     {fmt(t.karBilledLine, { n: est.billedMinutes })})
@@ -254,7 +327,36 @@ export function KaraokePage({ ctx }: { ctx: PageContext }) {
                   <p className="muted">{t.karMoneyNote}</p>
                   {canRun ? (
                     <div className="actions">
+                      <AsyncButton variant="secondary" onClick={pause(live)}>
+                        {live.pausedAt ? t.karResume : t.karPause}
+                      </AsyncButton>
                       <AsyncButton onClick={stop(live)}>{t.karStop}</AsyncButton>
+                    </div>
+                  ) : null}
+                  {canRun && (d?.packages.some((x) => x.active) ?? false) ? (
+                    <div className="form-row">
+                      <label className="label" htmlFor={`kar-x-${live.id}`}>
+                        {t.karExtendPick}
+                      </label>
+                      <select
+                        id={`kar-x-${live.id}`}
+                        className="field"
+                        value={pick[`extend-${live.id}`] ?? ''}
+                        onChange={(e) =>
+                          setPick({ ...pick, [`extend-${live.id}`]: e.target.value })
+                        }
+                      >
+                        {(d?.packages ?? [])
+                          .filter((x) => x.active)
+                          .map((x) => (
+                            <option key={x.id} value={x.id}>
+                              {x.name} · {x.minutes} · {money(x.price)}
+                            </option>
+                          ))}
+                      </select>
+                      <AsyncButton variant="secondary" onClick={extend(live)}>
+                        {t.karExtend}
+                      </AsyncButton>
                     </div>
                   ) : null}
                 </>
@@ -275,6 +377,30 @@ export function KaraokePage({ ctx }: { ctx: PageContext }) {
                           setGuests({ ...guests, [room.id]: e.target.value.replace(/\D/g, '') })
                         }
                       />
+                      {(d?.packages.some((x) => x.active) ?? false) ? (
+                        <>
+                          <label className="label" htmlFor={`kar-p-${room.id}`}>
+                            {t.karPackage}
+                          </label>
+                          <select
+                            id={`kar-p-${room.id}`}
+                            className="field"
+                            value={pick[`start-${room.id}`] ?? ''}
+                            onChange={(e) =>
+                              setPick({ ...pick, [`start-${room.id}`]: e.target.value })
+                            }
+                          >
+                            <option value="">{t.karNoPackage}</option>
+                            {(d?.packages ?? [])
+                              .filter((x) => x.active)
+                              .map((x) => (
+                                <option key={x.id} value={x.id}>
+                                  {x.name} · {x.minutes} · {money(x.price)}
+                                </option>
+                              ))}
+                          </select>
+                        </>
+                      ) : null}
                       <AsyncButton onClick={start(room)}>{t.karStart}</AsyncButton>
                     </div>
                   ) : null}
@@ -297,6 +423,16 @@ export function KaraokePage({ ctx }: { ctx: PageContext }) {
               {songsOn ? (
                 <>
                   <h3>{t.karQueue}</h3>
+                  {canRun ? (
+                    <div className="actions">
+                      <AsyncButton
+                        variant="secondary"
+                        onClick={async () => ctx.navigate(`/karaoke/player/${room.id}`)}
+                      >
+                        {t.karOpenPlayer}
+                      </AsyncButton>
+                    </div>
+                  ) : null}
                   {songs.length === 0 ? <p className="muted">{t.karNoSongs}</p> : null}
                   <ul className="member-list">
                     {songs.map((g) => (
@@ -388,6 +524,121 @@ export function KaraokePage({ ctx }: { ctx: PageContext }) {
         })}
       </ul>
       {!songsOn ? <p className="muted">{t.karSongsOff}</p> : null}
+      {canRun ? (
+        <div className="actions">
+          <AsyncButton variant="secondary" onClick={async () => ctx.navigate('/karaoke/bookings')}>
+            {t.karBookings}
+          </AsyncButton>
+        </div>
+      ) : null}
+      <section className="card admin-card" aria-label={t.karPackagesTitle}>
+        <h2>{t.karPackagesTitle}</h2>
+        <p className="muted">{t.karPackagesIntro}</p>
+        <ul className="member-list">
+          {(d?.packages ?? []).map((x) => (
+            <li key={x.id} className="member-row">
+              <div className="member-head">
+                <strong>{x.name}</strong>
+                <span>
+                  {x.minutes} · {money(x.price)}
+                </span>
+                {!x.active ? <span className="muted">{t.karInactive}</span> : null}
+              </div>
+              {canEdit ? (
+                <div className="actions">
+                  <AsyncButton
+                    variant="secondary"
+                    onClick={async () =>
+                      setPkgDraft({
+                        id: x.id,
+                        name: x.name,
+                        minutes: String(x.minutes),
+                        price: priceInputValue(x.price),
+                        active: x.active,
+                      })
+                    }
+                  >
+                    {t.karEditRoom}
+                  </AsyncButton>
+                </div>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+        {pkgDraft ? (
+          <form
+            className="auth-form"
+            onSubmit={(e) => e.preventDefault()}
+            aria-label={t.karAddPackage}
+          >
+            <div className="form-row">
+              <label className="label" htmlFor="kar-pk-name">
+                {t.karPackageName}
+              </label>
+              <input
+                id="kar-pk-name"
+                className="field"
+                maxLength={60}
+                value={pkgDraft.name}
+                onChange={(e) => setPkgDraft({ ...pkgDraft, name: e.target.value })}
+              />
+            </div>
+            <div className="form-row">
+              <label className="label" htmlFor="kar-pk-min">
+                {t.karPackageMinutes}
+              </label>
+              <input
+                id="kar-pk-min"
+                className="field"
+                inputMode="numeric"
+                value={pkgDraft.minutes}
+                onChange={(e) =>
+                  setPkgDraft({ ...pkgDraft, minutes: e.target.value.replace(/\D/g, '') })
+                }
+              />
+            </div>
+            <div className="form-row">
+              <label className="label" htmlFor="kar-pk-price">
+                {t.karPackagePrice}
+              </label>
+              <input
+                id="kar-pk-price"
+                className="field"
+                inputMode="decimal"
+                value={pkgDraft.price}
+                onChange={(e) => setPkgDraft({ ...pkgDraft, price: e.target.value })}
+              />
+            </div>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={pkgDraft.active}
+                onChange={(e) => setPkgDraft({ ...pkgDraft, active: e.target.checked })}
+              />{' '}
+              {t.karActive}
+            </label>
+            <div className="actions">
+              <AsyncButton type="submit" onClick={savePackage}>
+                {t.karPackageSave}
+              </AsyncButton>
+              <button type="button" className="btn btn-secondary" onClick={() => setPkgDraft(null)}>
+                {t.menuCancel}
+              </button>
+            </div>
+          </form>
+        ) : canEdit ? (
+          <div className="actions">
+            <AsyncButton
+              variant="secondary"
+              onClick={async () =>
+                setPkgDraft({ id: null, name: '', minutes: '60', price: '', active: true })
+              }
+            >
+              {t.karAddPackage}
+            </AsyncButton>
+          </div>
+        ) : null}
+      </section>
       {draft ? (
         <form
           className="card admin-card auth-form"

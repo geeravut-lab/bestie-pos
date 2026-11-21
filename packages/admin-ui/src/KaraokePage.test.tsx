@@ -61,6 +61,7 @@ describe('<KaraokePage>', () => {
     expect(db.rpcs.find((r) => r.fn === 'karaoke_start')!.args).toEqual({
       p_room: 'r1',
       p_guests: 4,
+      p_package: null,
     });
   });
 

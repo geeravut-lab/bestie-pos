@@ -17,9 +17,9 @@ describe('pointing the chain readers at a test network', () => {
     expect(await read('tron', { TRONGRID_API_KEY: 'k' })).toContain(
       'https://api.trongrid.io/v1/accounts/',
     );
-    expect(await read('ethereum', { ETHERSCAN_API_KEY: 'k' })).toContain(
-      'https://api.etherscan.io/api?module=account',
-    );
+    const eth = await read('ethereum', { ETHERSCAN_API_KEY: 'k' });
+    expect(eth).toContain('https://api.etherscan.io/v2/api?module=account');
+    expect(eth).toContain('&chainid=1&');
   });
   it('uses Shasta / Sepolia when the base address variables are set', async () => {
     expect(
@@ -34,6 +34,13 @@ describe('pointing the chain readers at a test network', () => {
         ETHERSCAN_BASE_URL: 'https://api-sepolia.etherscan.io/api',
       }),
     ).toContain('https://api-sepolia.etherscan.io/api?module=account');
+    // Etherscan V2: one address, the chain named by chainid (Sepolia = 11155111)
+    const v2 = await read('ethereum', { ETHERSCAN_API_KEY: 'k', ETHERSCAN_CHAIN_ID: '11155111' });
+    expect(v2).toContain('https://api.etherscan.io/v2/api?module=account');
+    expect(v2).toContain('&chainid=11155111&');
+    expect(await read('ethereum', { ETHERSCAN_API_KEY: 'k', ETHERSCAN_CHAIN_ID: 'abc' })).toContain(
+      '&chainid=1&',
+    );
   });
   it('ignores a base address that is not https', async () => {
     expect(

@@ -36,6 +36,9 @@ tips), two table-QR guest orders, guest feedback, 4 closed shifts (one 20 baht s
 ## Karaoke and resort (`phase4` step)
 `node tools/demo-data/run.mjs remote phase4` (needs migrations 70, 73 and 74; safe to run again) adds **Sing Along** (karaoke: three rooms, two time packages, VIP 1 running with a package and three songs queued, a reservation for tomorrow 20:00) and **Palm Resort** (resort on the Resort plan: rooms 101–104, Anna in 101 with a Breeze Café bill and a Lotus Spa bill charged to her room, Liu in 102). It uses the existing demo accounts (the owner acts). `cleanup --yes` removes them with everything else.
 
+## The newest modules (`extras` step)
+`node tools/demo-data/run.mjs remote extras` (needs migrations 75–81 and the `phase4` step; safe to run again) switches the newer modules on where they fit and makes data to click through: **Island Kitchen** — a delivery platform *LINE MAN* (30 % commission) with one incoming order `DL001` made through the same intake function the server uses, the seller address and a **full tax invoice** `TI-000001` for the latest VAT bill; **Breeze Café** — a self-order kiosk and an online-order page (links and QR at `/kiosk`) and a bill split between room 103 (THB 100) and cash; **Palm Resort** — a nightly rate of THB 1,500 on every room, a guest (Mia Chen, room 103) who checked in two days ago with two nights posted, and an information page; **Sing Along** — online booking of rooms with a 30 % deposit and one guest booking. It uses the existing demo accounts; `cleanup --yes` removes it all. The platform token and the cancel code of the guest booking are not shown anywhere (make a new token at `/delivery`).
+
 ## What it does NOT do (honestly)
 - **PromptPay and card payments are not simulated**: they only exist when Stripe's signed webhook confirms them, and faking that
   would put pretend Stripe payments in the books. Demo bills are cash, split cash, Bestie Credit and Points.

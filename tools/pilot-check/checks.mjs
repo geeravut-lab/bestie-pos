@@ -16,6 +16,13 @@ select coalesce(jsonb_agg(x order by x.name), '[]'::jsonb) as stores from (
          le.name as legal_name, le.tax_id,
          (o.legal_sign_off ->> 'cryptoTopup') = 'true' as crypto_signed_off,
          coalesce((to_jsonb(o) ->> 'credit_terms_required')::boolean, false) as credit_terms_required,
+         (coalesce(btrim(le.address), '') <> '' or coalesce(btrim(s.address), '') <> '') as has_seller_address,
+         (select count(*) from public.delivery_platforms d where d.store_id = s.id and d.active) as delivery_platforms,
+         (select count(*) from public.delivery_platforms d where d.store_id = s.id and d.active and d.token_hash is null) as delivery_without_token,
+         (select count(*) from public.dining_tables t where t.store_id = s.id and t.deleted_at is null and t.active and t.kind in ('kiosk', 'web')) as order_pages,
+         (select count(*) from public.folio_rooms r where r.store_id = s.id and r.active) as folio_rooms,
+         (select count(*) from public.folio_rooms r where r.store_id = s.id and r.active and r.night_rate is null) as folio_rooms_without_rate,
+         coalesce(btrim(s.karaoke_booking_settings ->> 'pay_note'), '') <> '' as karaoke_pay_note,
          (select count(*) from public.menu_categories c where c.store_id = s.id and c.deleted_at is null) as categories,
          (select count(*) from public.menu_items i where i.store_id = s.id and i.deleted_at is null) as items,
          (select count(*) from public.menu_items i where i.store_id = s.id and i.deleted_at is null and i.station is null) as items_without_station,
@@ -117,6 +124,85 @@ export function checkStore(snap) {
     if (snap.profile === 'spa' && n(snap.places) === 0)
       out.push(warn('menu', 'places', 'สปายังไม่มีห้อง/เตียงที่ /resources (เปิดโมดูล "ห้อง/เตียง" ก่อน)'));
   }
+
+  // ── newer modules (owner orders 7.2, 6.2, 4, 3, 2 and 1 of 21 Nov 2026) ──
+  if (snap.vat_registered && /^[0-9]{13}$/.test(snap.tax_id ?? '')) {
+    if (snap.has_seller_address === true)
+      out.push(ok('tax', 'seller_address', 'มีที่อยู่ผู้ขายแล้ว — ออกใบกำกับภาษีเต็มรูปได้'));
+    else
+      out.push(
+        warn(
+          'tax',
+          'seller_address',
+          'ยังไม่ได้ใส่ที่อยู่บริษัท/สาขาที่ ตั้งค่า → บัญชี — ออกใบกำกับภาษีเต็มรูปให้ลูกค้าที่ขอไม่ได้ (นักบัญชียังต้องตรวจรูปแบบเอกสาร)',
+        ),
+      );
+  }
+  if (mod.delivery === true) {
+    if (n(snap.delivery_platforms) === 0)
+      out.push(
+        warn(
+          'modules',
+          'delivery',
+          'เปิดโมดูลดีลิเวอรีแล้ว แต่ยังไม่มีแพลตฟอร์มที่ /delivery (ตั้งชื่อ ค่าคอมมิชชัน และสร้างโทเคน)',
+        ),
+      );
+    else if (n(snap.delivery_without_token) > 0)
+      out.push(
+        warn(
+          'modules',
+          'delivery',
+          `${snap.delivery_without_token} แพลตฟอร์มยังไม่มีโทเคนรับออเดอร์ — ออเดอร์จากแพลตฟอร์มเข้าระบบเองไม่ได้ (คีย์ออเดอร์จากเครื่องแคชเชียร์ได้)`,
+        ),
+      );
+    else
+      out.push(
+        ok(
+          'modules',
+          'delivery',
+          `ดีลิเวอรี ${snap.delivery_platforms} แพลตฟอร์มพร้อมรับออเดอร์ (ยังไม่เคยต่อกับ LINE MAN / Grab จริง)`,
+        ),
+      );
+  }
+  if (mod.kiosk === true) {
+    if (n(snap.order_pages) === 0)
+      out.push(
+        info(
+          'modules',
+          'kiosk',
+          'เปิดโมดูลคีออสก์แล้ว แต่ยังไม่มีหน้าสั่งเองที่ /kiosk (ตู้สั่งเอง หรือหน้าสั่งอาหารออนไลน์)',
+        ),
+      );
+    else
+      out.push(
+        ok(
+          'modules',
+          'kiosk',
+          `มีหน้าสั่งเอง ${snap.order_pages} หน้า — ลูกค้าจ่ายที่เคาน์เตอร์/ตอนรับของ (ยังไม่รับเงินที่ตู้)`,
+        ),
+      );
+  }
+  if (
+    snap.profile === 'resort' &&
+    mod.folio !== false &&
+    n(snap.folio_rooms) > 0 &&
+    n(snap.folio_rooms_without_rate) > 0
+  )
+    out.push(
+      info(
+        'modules',
+        'folio_rate',
+        `${snap.folio_rooms_without_rate} ห้องยังไม่ตั้งราคาต่อคืน — ค่าห้องรายคืนจะไม่ลงโฟลิโอเอง`,
+      ),
+    );
+  if (mod['karaoke.booking'] === true && snap.karaoke_pay_note !== true)
+    out.push(
+      warn(
+        'modules',
+        'karaoke_pay_note',
+        'เปิดจองห้องคาราโอเกะออนไลน์แล้ว แต่ยังไม่ได้ใส่วิธีจ่ายมัดจำ (เช่น เลขพร้อมเพย์) — แขกจะไม่รู้ว่าโอนที่ไหน',
+      ),
+    );
 
   // ── people ──
   if (n(snap.owners) >= 1) out.push(ok('people', 'owner', 'มีเจ้าของอย่างน้อย 1 คน'));

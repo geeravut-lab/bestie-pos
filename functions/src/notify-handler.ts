@@ -81,7 +81,7 @@ export async function notifyTickResponse(
         })
       : null; // LINE not configured yet: the in-app inbox still works, the queue just waits
     // tidy once an hour (minute 0..4 of the first tick); cheap and idempotent either way
-    const tidyNow = new Date(now).getUTCMinutes() < 5;
+    const tidyNow = new Date(now).getUTCMinutes() < 15; // the scheduler may be a few minutes late; the tidy-up is safe to repeat
     const tidied = tidyNow
       ? await callRpc(supabaseUrl, serviceRoleKey, 'notify_housekeeping', {}, f)
       : null;
@@ -93,6 +93,10 @@ export async function notifyTickResponse(
     const photosErased = tidyNow
       ? await callRpc(supabaseUrl, serviceRoleKey, 'hair_photos_cleanup', {}, f).catch(() => 0)
       : 0;
+    // client photos older than their 12 months are erased
+    const clientPhotosErased = tidyNow
+      ? await callRpc(supabaseUrl, serviceRoleKey, 'client_photos_cleanup', {}, f).catch(() => 0)
+      : 0;
     // audit rows older than the retention (default 5 years) are removed in bulk; nothing else can delete audit rows
     const purged = tidyNow
       ? await callRpc(supabaseUrl, serviceRoleKey, 'audit_purge', {}, f)
@@ -101,6 +105,7 @@ export async function notifyTickResponse(
       summaries,
       reminders: typeof reminded === 'number' ? reminded : 0,
       guestReminders: guests,
+      clientPhotosErased: typeof clientPhotosErased === 'number' ? clientPhotosErased : 0,
       hairPhotosErased: typeof photosErased === 'number' ? photosErased : 0,
       guestContactsErased: typeof contactsErased === 'number' ? contactsErased : 0,
       line: cfg ? 'configured' : 'not_configured',

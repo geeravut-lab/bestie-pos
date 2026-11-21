@@ -45,6 +45,7 @@ import type { PageContext } from '@bestie/auth';
 import { CustomerPicker } from './CustomerPicker';
 import { tx } from './stockInput';
 import { bangkokToday } from './today';
+import { GuestHealthPanel } from './GuestHealthPanel';
 import { HairRequestPanel } from './HairRequestPanel';
 import { useRemote } from './useRemote';
 
@@ -715,6 +716,7 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
             {sel.note ? ` · ${sel.note}` : ''}
           </p>
           {sel.source === 'online' ? <HairRequestPanel ctx={ctx} appointmentId={sel.id} /> : null}
+          {sel.source === 'online' ? <GuestHealthPanel ctx={ctx} appointmentId={sel.id} /> : null}
           {sel.groupId && groupLive(sel).length > 1 ? (
             <p className="muted">
               {fmt(t.calGroupOf, { n: all.filter((a) => a.groupId === sel.groupId).length })}

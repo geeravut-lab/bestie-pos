@@ -6,6 +6,7 @@ import type { ErrorKey } from '@bestie/i18n';
 import { AsyncButton, Spinner } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
+import { ClientRecordPanel } from './ClientRecordPanel';
 import { CreditPanel } from './CreditPanel';
 import { CryptoPanel } from './CryptoPanel';
 import { CustomerPicker } from './CustomerPicker';
@@ -122,6 +123,7 @@ function CustomerDetail({ ctx, card }: { ctx: PageContext; card: CustomerCard })
           </ul>
         </>
       )}
+      <ClientRecordPanel ctx={ctx} customerId={card.id} />
       <CreditPanel ctx={ctx} card={card} />
       <CryptoPanel ctx={ctx} card={card} />
       {ctx.isOwner || ctx.permissions.includes('credit.adjust') ? (

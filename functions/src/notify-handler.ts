@@ -4,6 +4,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { readServerEnv } from './env.js';
 import { sendGuestReminders } from './guest-reminders.js';
+import { postPmsCharges } from './pms-sync.js';
 import { lineConfig } from './line-handler.js';
 import { callRpc, createSupabaseNotifyStore, deliverQueue } from './notify-deliver.js';
 import type { NotifyStore } from './notify-deliver.js';
@@ -76,6 +77,8 @@ export async function notifyTickResponse(
     const nights = await callRpc(supabaseUrl, serviceRoleKey, 'folio_post_nights_all', {}, f).catch(
       () => 0,
     );
+    // room charges of stays linked to the hotel's own system (PMS) are posted there, once each (does nothing without the PMS variables)
+    const pmsPosted = await postPmsCharges(env, f);
     const cfg = lineConfig(env);
     // guests who booked online and left a LINE / e-mail contact get one reminder shortly before the appointment
     const guests = await sendGuestReminders({
@@ -125,6 +128,7 @@ export async function notifyTickResponse(
       reminders: typeof reminded === 'number' ? reminded : 0,
       karaokeReleased: typeof released === 'number' ? released : 0,
       folioNights: typeof nights === 'number' ? nights : 0,
+      pmsPosted,
       guestReminders: guests,
       clientPhotosErased: typeof clientPhotosErased === 'number' ? clientPhotosErased : 0,
       hairPhotosErased: typeof photosErased === 'number' ? photosErased : 0,

@@ -34,6 +34,15 @@ type CheckIn = {
   outOn: string;
   note: string;
   rate: string;
+  /** the reservation in the hotel's own system, when the guest was imported from it */
+  pmsId?: string;
+};
+type PmsGuest = {
+  reservationId: string;
+  guestName: string;
+  room: string;
+  checkIn: string;
+  checkOut: string;
 };
 
 /** Baht typed by a person → satang, or null when empty; NaN when it is not a number. */
@@ -68,6 +77,7 @@ export function FolioPage({ ctx }: { ctx: PageContext }) {
   const [roomRate, setRoomRate] = useState('');
   const [rateEdit, setRateEdit] = useState<{ id: string; value: string } | null>(null);
   const [printing, setPrinting] = useState<string | null>(null);
+  const [pmsGuests, setPmsGuests] = useState<PmsGuest[] | null>(null);
   useEffect(() => {
     if (!printing) return;
     const id = window.setTimeout(() => {
@@ -88,7 +98,7 @@ export function FolioPage({ ctx }: { ctx: PageContext }) {
       ctx.client
         .from('folios')
         .select(
-          'id, room_id, guest_name, phone, check_in_at, check_out_on, note, status, closed_at, night_rate',
+          'id, room_id, guest_name, phone, check_in_at, check_out_on, note, status, closed_at, night_rate, pms_reservation_id',
         )
         .eq('store_id', storeId)
         .order('check_in_at', { ascending: false })
@@ -196,6 +206,40 @@ export function FolioPage({ ctx }: { ctx: PageContext }) {
     setMsg({ kind: 'info', text: n > 0 ? fmt(t.foNightsPosted, { n }) : t.foNightsNone });
     reload();
   };
+  const pmsOn = ctx.isModuleOn ? ctx.isModuleOn('pms') : false;
+  /** Who is checked in at the hotel's own system (Mews / Cloudbeds); the server holds the keys. */
+  const loadPms = async () => {
+    setMsg(null);
+    const { data } = await ctx.client.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token || !storeId) return setMsg({ kind: 'error', text: t.err_forbidden });
+    const res = await fetch(`/api/pms/in-house?store=${storeId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const body = (await res.json().catch(() => null)) as {
+      available?: boolean;
+      guests?: PmsGuest[];
+    } | null;
+    if (res.status === 403) return setMsg({ kind: 'error', text: t.err_forbidden });
+    if (!res.ok || !body) return setMsg({ kind: 'error', text: t.foPmsDown });
+    if (body.available === false) return setMsg({ kind: 'error', text: t.foPmsNotSet });
+    setPmsGuests(body.guests ?? []);
+  };
+  const pickPms = (g: PmsGuest) => {
+    const room = (d?.rooms ?? []).find(
+      (r) => r.name.trim().toLowerCase() === g.room.trim().toLowerCase(),
+    );
+    setInForm({
+      roomId: room?.id ?? '',
+      guest: g.guestName,
+      phone: '',
+      outOn: g.checkOut.slice(0, 10),
+      note: '',
+      rate: '',
+      pmsId: g.reservationId,
+    });
+    setPmsGuests(null);
+  };
   const checkIn = async () => {
     if (!inForm) return;
     const rate = bahtToSatang(inForm.rate);
@@ -214,6 +258,13 @@ export function FolioPage({ ctx }: { ctx: PageContext }) {
       },
     });
     if (r.error) return fail(r.error.code);
+    if (inForm.pmsId && typeof r.data === 'string') {
+      const l = await ctx.client.rpc('folio_link_pms', {
+        p_folio: r.data,
+        p_reservation: inForm.pmsId,
+      });
+      if (l.error) setMsg({ kind: 'error', text: t.foPmsLinkFailed });
+    }
     setInForm(null);
     reload();
   };
@@ -276,6 +327,11 @@ export function FolioPage({ ctx }: { ctx: PageContext }) {
                     {t.foBalance}: {money(due)}
                   </span>
                 </div>
+                {s.pmsReservationId ? (
+                  <p className="muted">
+                    {t.foPmsLinked}: {s.pmsReservationId}
+                  </p>
+                ) : null}
                 {s.checkOutOn || s.phone || s.nightRate ? (
                   <p className="muted">
                     {[
@@ -575,8 +631,34 @@ export function FolioPage({ ctx }: { ctx: PageContext }) {
             >
               {t.foCheckIn}
             </AsyncButton>
+            {pmsOn ? (
+              <AsyncButton variant="secondary" onClick={loadPms}>
+                {t.foPmsImport}
+              </AsyncButton>
+            ) : null}
           </div>
         )
+      ) : null}
+      {canDesk && pmsGuests ? (
+        <section className="card admin-card" aria-label={t.foPmsImport}>
+          <h2>{t.foPmsImport}</h2>
+          {pmsGuests.length === 0 ? <p className="muted">{t.foPmsNone}</p> : null}
+          <ul className="member-list">
+            {pmsGuests.map((g) => (
+              <li key={g.reservationId} className="member-row">
+                <div className="member-head">
+                  <strong>{g.guestName}</strong> <span className="muted">{g.room}</span>
+                </div>
+                <AsyncButton variant="secondary" onClick={async () => pickPms(g)}>
+                  {t.foPmsPick}
+                </AsyncButton>
+              </li>
+            ))}
+          </ul>
+          <button type="button" className="btn btn-secondary" onClick={() => setPmsGuests(null)}>
+            {t.menuCancel}
+          </button>
+        </section>
       ) : null}
 
       <section className="card admin-card" aria-label={t.foRooms}>

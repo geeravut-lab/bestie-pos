@@ -382,6 +382,60 @@ export function checkSystem({ auth, vercelEnvNames, siteUrl = 'https://bestie-po
       out.push(
         warn(g, 'env:ai', 'ไม่มี AI key (ANTHROPIC_API_KEY / GOOGLE_API_KEY) — ฟีเจอร์ AI จะปิด'),
       );
+    // optional services: each one is needed only by the module that uses it, so a missing one is information, not a failure
+    const optional = [
+      ['TRONGRID_API_KEY', 'เติมเครดิตด้วยคริปโตบน Tron (ถ้าไม่ใช้โมดูลนี้ ข้ามได้)'],
+      ['ETHERSCAN_API_KEY', 'เติมเครดิตด้วยคริปโตบน Ethereum (ถ้าไม่ใช้โมดูลนี้ ข้ามได้)'],
+      ['YOUTUBE_API_KEY', 'ค้นเพลงคาราโอเกะด้วยคำ (วางลิงก์ยังใช้ได้)'],
+      ['RESEND_API_KEY', 'ส่งอีเมลเตือนนัดให้แขก (ต้องมี EMAIL_FROM ด้วย)'],
+      ['GOOGLE_WALLET_ISSUER_ID', 'ปุ่ม Add to Google Wallet ของบัตรนักท่องเที่ยว'],
+    ];
+    for (const [name, what] of optional)
+      if (have.has(name)) out.push(ok(g, `env:${name}`, `${name} ตั้งแล้ว`));
+      else out.push(info(g, `env:${name}`, `${name} ยังไม่ได้ตั้งใน Vercel — ${what}`));
+    if (have.has('RESEND_API_KEY') && !have.has('EMAIL_FROM'))
+      out.push(warn(g, 'env:EMAIL_FROM', 'มี RESEND_API_KEY แต่ไม่มี EMAIL_FROM — ส่งอีเมลไม่ได้'));
+    // the hotel system (PMS): the provider name and ITS keys go together
+    const pmsKeys = [
+      ['MEWS', ['MEWS_CLIENT_TOKEN', 'MEWS_ACCESS_TOKEN']],
+      ['CLOUDBEDS', ['CLOUDBEDS_API_KEY']],
+    ];
+    const anyPmsKey = pmsKeys.some(([, ks]) => ks.some((k) => have.has(k)));
+    if (!have.has('PMS_PROVIDER')) {
+      if (anyPmsKey)
+        out.push(
+          warn(
+            g,
+            'env:PMS_PROVIDER',
+            'มีคีย์ PMS แต่ไม่ได้ตั้ง PMS_PROVIDER (mews หรือ cloudbeds) — ระบบจะไม่ส่งค่าห้องเข้า PMS',
+          ),
+        );
+      else
+        out.push(
+          info(
+            g,
+            'env:PMS_PROVIDER',
+            'ยังไม่ได้ตั้ง PMS_PROVIDER — ไม่เชื่อมระบบโรงแรม (โฟลิโอของ Bestie ใช้ได้ตามปกติ)',
+          ),
+        );
+    } else {
+      out.push(ok(g, 'env:PMS_PROVIDER', 'ตั้ง PMS_PROVIDER แล้ว'));
+      for (const [label, ks] of pmsKeys) {
+        const have1 = ks.filter((k) => have.has(k));
+        if (have1.length === ks.length)
+          out.push(ok(g, `env:pms:${label}`, `คีย์ ${label} ครบ (${ks.join(', ')})`));
+        else if (have1.length > 0 || (label === 'MEWS' && !anyPmsKey))
+          out.push(
+            warn(
+              g,
+              `env:pms:${label}`,
+              `คีย์ ${label} ไม่ครบ — ขาด ${ks.filter((k) => !have.has(k)).join(', ')}`,
+            ),
+          );
+      }
+      if (!anyPmsKey)
+        out.push(warn(g, 'env:pms:keys', 'ตั้ง PMS_PROVIDER แล้วแต่ยังไม่มีคีย์ของผู้ให้บริการเลย'));
+    }
     if (have.has('VITE_AIVORA_APP_SLUG') !== have.has('AIVORA_APP_SLUG'))
       out.push(
         fail(

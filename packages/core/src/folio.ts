@@ -51,6 +51,8 @@ export type Stay = {
   closedAt: string | null;
   /** The night rate copied onto this stay at check-in, satang (null = none). */
   nightRate: number | null;
+  /** The reservation in the hotel's own system (PMS) this stay is linked to, if any. */
+  pmsReservationId?: string | null;
 };
 export function parseStays(v: unknown): Stay[] {
   if (!Array.isArray(v)) return [];
@@ -69,6 +71,7 @@ export function parseStays(v: unknown): Stay[] {
       status: o.status === 'closed' ? 'closed' : 'open',
       closedAt: str(o.closed_at) || null,
       nightRate: o.night_rate == null ? null : num(o.night_rate),
+      pmsReservationId: str(o.pms_reservation_id) || null,
     });
   }
   return out;

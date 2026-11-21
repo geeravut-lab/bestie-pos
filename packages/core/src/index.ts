@@ -55,5 +55,6 @@ export * from './menuImages';
 export * from './barcode128';
 export * from './labels';
 export * from './returns';
+export * from './blocks';
 export * from './commission';
 export * from './packages';

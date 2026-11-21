@@ -475,6 +475,22 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
   return (
     <div className="admin-page">
       <h1>{t.calTitle}</h1>
+      <div className="actions">
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => ctx.navigate('/group-booking')}
+        >
+          {t.groupLink}
+        </button>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => ctx.navigate('/days-off')}
+        >
+          {t.daysOffLink}
+        </button>
+      </div>
       {error ? <Notice kind="error">{errorText(error, t)}</Notice> : null}
       {problem === 'off' ? <Notice kind="info">{t.calModuleOff}</Notice> : null}
       {problem === 'deposit' ? <Notice kind="error">{t.calDepositBad}</Notice> : null}

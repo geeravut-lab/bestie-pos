@@ -91,6 +91,14 @@ export function ResourcesPage({ ctx }: { ctx: PageContext }) {
       <h1>{t.resTitle}</h1>
       <Notice kind="info">{t.resIntro}</Notice>
       {error ? <Notice kind="error">{errorText(error, t)}</Notice> : null}
+      <div className="actions">
+        <AsyncButton variant="secondary" onClick={() => ctx.navigate('/days-off')}>
+          {t.daysOffLink}
+        </AsyncButton>
+        <AsyncButton variant="secondary" onClick={() => ctx.navigate('/group-booking')}>
+          {t.groupLink}
+        </AsyncButton>
+      </div>
       {data.status === 'loading' ? (
         <p className="sso-working" role="status">
           <Spinner /> {t.loading}

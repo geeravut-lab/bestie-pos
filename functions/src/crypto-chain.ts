@@ -93,13 +93,16 @@ export function tronClient(opts: {
 export function ethereumClient(opts: {
   apiKey: string;
   baseUrl?: string;
+  /** Etherscan API V2 serves every chain from one address and names the chain in `chainid` (1 = mainnet, 11155111 = Sepolia). */
+  chainId?: number;
   f?: typeof fetch;
 }): ChainClient {
   const f = opts.f ?? fetch;
-  const base = opts.baseUrl ?? 'https://api.etherscan.io/api';
+  const base = opts.baseUrl ?? 'https://api.etherscan.io/v2/api';
+  const chain = base.includes('/v2/') ? `&chainid=${opts.chainId ?? 1}` : '';
   return {
     incoming: async ({ address, contract }) => {
-      const url = `${base}?module=account&action=tokentx&contractaddress=${encodeURIComponent(contract)}&address=${encodeURIComponent(address)}&page=1&offset=100&sort=desc&apikey=${encodeURIComponent(opts.apiKey)}`;
+      const url = `${base}?module=account&action=tokentx&contractaddress=${encodeURIComponent(contract)}&address=${encodeURIComponent(address)}&page=1&offset=100&sort=desc${chain}&apikey=${encodeURIComponent(opts.apiKey)}`;
       const body = (await j(f, url)) as { status?: string; result?: unknown };
       const rows = Array.isArray(body.result) ? (body.result as Record<string, string>[]) : [];
       const out: ChainTransfer[] = [];

@@ -229,7 +229,15 @@ export function chainFor(
       f,
     });
   const key = env.ETHERSCAN_API_KEY?.trim();
-  return key ? ethereumClient({ apiKey: key, baseUrl: https(env.ETHERSCAN_BASE_URL), f }) : null;
+  const chainId = Number(env.ETHERSCAN_CHAIN_ID);
+  return key
+    ? ethereumClient({
+        apiKey: key,
+        baseUrl: https(env.ETHERSCAN_BASE_URL),
+        chainId: Number.isInteger(chainId) && chainId > 0 ? chainId : undefined,
+        f,
+      })
+    : null;
 }
 
 /** Reads one wallet's incoming transfers and reports each to the database; returns what happened. */

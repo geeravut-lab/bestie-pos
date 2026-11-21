@@ -42,3 +42,7 @@ export const LINE_MESSAGES = {
 /** The help text is sent to people we cannot identify yet, so it goes out in BOTH languages. */
 export const helpBothLanguages = (): string =>
   `${LINE_MESSAGES.help.th}\n\n${LINE_MESSAGES.help.en}`;
+
+/** `island`, `เกาะ`, `shops`, `market`, `ตลาด…` (any case) → the guest wants the island's shops. */
+export const isIslandCommand = (text: string): boolean =>
+  /^(island|shops|market|เกาะ|ร้านค้า|ร้านบนเกาะ|ตลาดเกาะ|ตลาด)$/i.test(text.trim());

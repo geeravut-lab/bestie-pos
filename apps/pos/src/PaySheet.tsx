@@ -58,7 +58,8 @@ export function PaySheet({
   splitCredit?: { name: string; balance: Satang } | null;
   /** Guests in the house the bill may be charged to (module `folio`); empty / absent = no Room tab. */
   roomStays?: { id: string; label: string }[];
-  onRoomCharge?: (folioId: string) => Promise<ErrorKey | null>;
+  /** `amount` is the room's share in satang; below the total means the rest is paid in cash (exact). */
+  onRoomCharge?: (folioId: string, amount: Satang) => Promise<ErrorKey | null>;
   /** A delivery bill the platform pays later (module `delivery`); null / absent = no Platform tab. `name` is null until the cashier picks the platform. */
   platform?: { name: string | null; commissionBps: number } | null;
   onPlatformClose?: () => Promise<ErrorKey | null>;
@@ -301,14 +302,18 @@ function RoomPane({
   stays: { id: string; label: string }[];
   total: Satang;
   locale: 'th-TH' | 'en-GB';
-  onCharge: (folioId: string) => Promise<ErrorKey | null>;
+  onCharge: (folioId: string, amount: Satang) => Promise<ErrorKey | null>;
 }) {
   const { t } = useI18n();
   const [folio, setFolio] = useState(stays[0]?.id ?? '');
+  const [part, setPart] = useState(priceInputValue(total));
   const [error, setError] = useState<ErrorKey | null>(null);
+  const typed = parsePriceInput(part);
+  const share = typed !== null && typed > 0 && typed <= total ? typed : null;
   const go = async () => {
     setError(null);
-    const err = await onCharge(folio);
+    if (share === null) return setError('err_pay_failed');
+    const err = await onCharge(folio, share);
     if (err) setError(err);
   };
   return (
@@ -337,9 +342,28 @@ function RoomPane({
           ))}
         </select>
       </div>
+      <div className="form-row">
+        <label className="label" htmlFor="pay-room-part">
+          {t.payRoomPart}
+        </label>
+        <input
+          id="pay-room-part"
+          className="field"
+          inputMode="decimal"
+          value={part}
+          onChange={(e) => setPart(e.target.value)}
+        />
+        {share !== null && share < total ? (
+          <p className="muted">
+            {fmt(t.payRoomRest, { amount: formatTHB(total - share, locale) })}
+          </p>
+        ) : null}
+      </div>
       {error ? <Notice kind="error">{errorText(error, t)}</Notice> : null}
       <div className="actions">
-        <AsyncButton onClick={go}>{t.payRoomCharge}</AsyncButton>
+        <AsyncButton onClick={go} disabled={share === null}>
+          {t.payRoomCharge}
+        </AsyncButton>
       </div>
     </>
   );

@@ -400,7 +400,8 @@ describe('spa advisor SQL mirror', () => {
     // a kiosk order is its own takeaway bill KS001…, at the takeaway prices, never auto-sent
     expect(sql).toContain("'takeaway'");
     expect(sql).toContain("'KS'");
-    expect(sql).toContain("(s.qr_auto_send and t.kind <> ''kiosk'')");
-    expect(sql).toContain("t.kind <> 'kiosk' and ord.table_id = t.id");
+    // kiosk and online-order pages never auto-send and never join an earlier bill (the flag `v_k`)
+    expect(sql).toContain('(s.qr_auto_send and not v_k)');
+    expect(sql).toContain('not v_k and ord.table_id = t.id');
   });
 });

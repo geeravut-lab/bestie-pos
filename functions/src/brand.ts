@@ -162,3 +162,6 @@ export function createSupabaseBrandStore(
     },
   };
 }
+
+/** The Google Wallet pass background (a literal hex, as Google Wallet needs one). */
+export const WALLET_BACKGROUND = '#0f766e';

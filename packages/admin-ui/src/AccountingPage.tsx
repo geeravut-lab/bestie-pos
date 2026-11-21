@@ -13,6 +13,7 @@ import { AsyncButton, Spinner } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
 import { bangkokToday } from './today';
+import { TaxProfilePanel } from './TaxProfilePanel';
 import { useRemote } from './useRemote';
 
 const guestLabel = (n: { th: string; en?: string }, lang: string): string =>
@@ -302,6 +303,7 @@ export function AccountingPage({ ctx }: { ctx: PageContext }) {
           ) : null}
         </section>
       ) : null}
+      {storeId ? <TaxProfilePanel ctx={ctx} storeId={storeId} /> : null}
     </div>
   );
 }

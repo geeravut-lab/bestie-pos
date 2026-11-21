@@ -53,6 +53,7 @@ import { useSplitInfo } from './useSplitInfo';
 import {
   cancelOnlinePayment,
   chargeOrderToRoom,
+  chargePartToRoom,
   closeDeliveryOrder,
   closeSplitPayment,
   findLiveAttempt,
@@ -664,8 +665,9 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
             return err;
           }}
           roomStays={roomStays}
-          onRoomCharge={async (folioId) => {
-            const err = await chargeOrderToRoom({
+          onRoomCharge={async (folioId, amount) => {
+            const billTotal = orderBill(order, billConfigFor(config, order.channel)).total;
+            const common = {
               client: ctx.client,
               orderId: order.id,
               binding,
@@ -673,7 +675,12 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
               folioId,
               staffId: ctx.staffId,
               lang: config.defaultLang,
-            });
+            };
+            // the whole bill on the room, or part on the room and the rest in cash
+            const err =
+              amount >= billTotal
+                ? await chargeOrderToRoom(common)
+                : await chargePartToRoom({ ...common, roomAmount: amount });
             if (!err) ctx.navigate(`/receipt/${order.id}`);
             return err;
           }}

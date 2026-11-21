@@ -58,7 +58,7 @@ describe('<PaySheet> Room tab', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Charge to room' }));
     await userEvent.selectOptions(screen.getByLabelText('The guest’s room'), 'f2');
     await userEvent.click(screen.getByRole('button', { name: 'Charge to this room' }));
-    expect(onRoomCharge).toHaveBeenCalledWith('f2');
+    expect(onRoomCharge).toHaveBeenCalledWith('f2', 21000);
   });
 
   it('shows the refusal and keeps the sheet', async () => {
@@ -195,5 +195,49 @@ describe('chargeOrderToRoom', () => {
     vi.spyOn(globalThis.navigator, 'onLine', 'get').mockReturnValue(false);
     expect(await chargeOrderToRoom(base)).toBe('err_pay_offline');
     vi.restoreAllMocks();
+  });
+});
+
+describe('<PaySheet> part of the bill on the room', () => {
+  const mount = (onRoomCharge: (id: string, amount: number) => Promise<null>) =>
+    mountEn(
+      <PaySheet
+        total={21000}
+        rule="none"
+        online={online()}
+        roomStays={[{ id: 'f1', label: '101 · Anna' }]}
+        onRoomCharge={onRoomCharge}
+        onPay={async () => null}
+        onClose={() => {}}
+      />,
+    );
+  it('puts part on the room and says the rest is taken in cash', async () => {
+    const charge = vi.fn(async () => null);
+    mount(charge);
+    await userEvent.click(screen.getByRole('tab', { name: 'Charge to room' }));
+    const amount = screen.getByLabelText('Amount to put on the room (baht)');
+    expect((amount as HTMLInputElement).value).toBe('210');
+    await userEvent.clear(amount);
+    await userEvent.type(amount, '120');
+    expect(screen.getByText(/The remaining ฿90 is taken in cash now/)).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Charge to this room' }));
+    await waitFor(() => expect(charge).toHaveBeenCalledWith('f1', 12000));
+  });
+  it('refuses an amount of zero or above the bill', async () => {
+    const charge = vi.fn(async () => null);
+    mount(charge);
+    await userEvent.click(screen.getByRole('tab', { name: 'Charge to room' }));
+    const amount = screen.getByLabelText('Amount to put on the room (baht)');
+    await userEvent.clear(amount);
+    await userEvent.type(amount, '500');
+    expect(
+      (screen.getByRole('button', { name: 'Charge to this room' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    await userEvent.clear(amount);
+    await userEvent.type(amount, '0');
+    expect(
+      (screen.getByRole('button', { name: 'Charge to this room' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(charge).not.toHaveBeenCalled();
   });
 });

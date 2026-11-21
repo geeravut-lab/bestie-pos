@@ -128,14 +128,15 @@ Server-only variables (never a public prefix):
 | `TRONGRID_API_KEY` | TronGrid API key (reads USDT-TRC20 transfers into the company wallet; read-only) |
 | `ETHERSCAN_API_KEY` | Etherscan API key (USDT-ERC20 transfers; read-only) |
 | `CRON_SECRET` | secret for `/api/crypto/poll` (constant-time compare) |
+| `TRONGRID_BASE_URL`, `ETHERSCAN_BASE_URL` | optional, https only: point the chain readers at a test network (Shasta / Sepolia); leave unset for the mainnet |
 | `PRICE_URL_COINGECKO`, `PRICE_URL_THAI_TICKER` | optional: override the two public price sources (the Thai exchange's public ticker is read for the PRICE only) |
 
 - **Scheduler:** `vercel.json` has **no** cron entry on purpose (a per-minute cron is refused on a Hobby plan and would break the deploy). On a Pro plan add `"crons": [{ "path": "/api/crypto/poll", "schedule": "* * * * *" }]`; otherwise call `GET /api/crypto/poll` with `Authorization: Bearer $CRON_SECRET` from any scheduler (GitHub Actions `schedule`, cron-job.org …). Until then staff use **Check now** on a request (rate limited).
 - **Before real money:** run the whole flow on **Tron Shasta / Ethereum Sepolia** with test USDT; confirm the TronGrid, Etherscan and price-source response shapes (marked ⚠️ in `functions/src/crypto-*.ts`); set the company wallet (read-only address) and print its 6+6-character card for the shop; get the lawyer's file uploaded and `legal_sign_off.cryptoTopup` set by the platform admin.
 
 - **Where the keys come from (so the test run can start):**
-  - **`TRONGRID_API_KEY`** — free: sign up at trongrid.io → *Dashboard* → *API Keys* → *Create API Key*. The key is for the **mainnet**; for the **Shasta test network** use the same key against `https://api.shasta.trongrid.io` (set the base URL in the chain adapter's test configuration, `functions/src/crypto-chain-tron.ts`).
-  - **`ETHERSCAN_API_KEY`** — free: sign up at etherscan.io → *My Profile* → *API Keys* → *Add*. One key covers the mainnet; for **Sepolia** use `https://api-sepolia.etherscan.io/api` with the same key.
+  - **`TRONGRID_API_KEY`** — free: sign up at trongrid.io → *Dashboard* → *API Keys* → *Create API Key*. The key is for the **mainnet**; for the **Shasta test network** set `TRONGRID_BASE_URL=https://api.shasta.trongrid.io` (the same key works).
+  - **`ETHERSCAN_API_KEY`** — free: sign up at etherscan.io → *My Profile* → *API Keys* → *Add*. One key covers the mainnet; for **Sepolia** set `ETHERSCAN_BASE_URL=https://api-sepolia.etherscan.io/api` (the same key works; Etherscan's newer V2 API may need `https://api.etherscan.io/v2/api` with a `chainid` — check Etherscan's current documentation before the run). Unset both variables for the mainnet.
   - **Test USDT** — Shasta: the faucet at shasta.tronex.io (TRX) and the Shasta USDT faucet / a test token you deploy yourself; Sepolia: a Sepolia ETH faucet (Alchemy / Infura / Google Cloud web3 faucets) and a test ERC-20 such as the Circle USDC testnet faucet (faucet.circle.com) — the chain adapter takes the token contract address as data, so any test token with the same shape works.
   - The test run itself needs a person (making a transfer from a test wallet to the company wallet); the sandbox that builds Bestie cannot reach these services.
 
@@ -166,3 +167,6 @@ The in-app bell and inbox (`/notifications`) work with nothing to set up. Delive
 
 ## 9. AI for guests and menu drafting (modules `ai.guest`, task `menu_tags`)
 Set `ANTHROPIC_API_KEY` and/or `GOOGLE_API_KEY` (server-only, Vercel). Then pick provider and model for the tasks `guest_menu_qa` (guest filter) and `menu_tags` (owner's tag draft) at `/ai` as platform admin and press **Test**. Switch the module **Guest menu assistant (AI)** on per shop at `/modules` (needs the Pro plan and QR ordering). Without a key, or with the module off, nothing breaks: the guest filter buttons and manual tags work as before. Check cost after a week: the target is under THB 1 per guest session with the small default models.
+
+## 7c. PMS (Cloudbeds / Mews) — optional, not wired to the till yet
+`functions/src/pms.ts` holds two adapters (guests in the house, post a charge) behind one interface. Set `PMS_PROVIDER=cloudbeds` with `CLOUDBEDS_API_KEY`, or `PMS_PROVIDER=mews` with `MEWS_CLIENT_TOKEN` + `MEWS_ACCESS_TOKEN` (server-only Vercel variables, never public). Without them the adapter is "none" — never a fallback. The adapters were written from the providers' public documentation and tested with a fake HTTP client only: **a sandbox run against a real Cloudbeds / Mews account is needed, and the paths and field names re-checked against their current docs, before any resort relies on it.** The resort's own folio (`/folio`) works without any PMS.

@@ -2514,3 +2514,13 @@ a.nav-card[aria-busy='true'] {
   height: 28mm;
   flex: none;
 }
+
+/* ── head office: a share bar next to the percentage ── */
+.hq-bar {
+  display: inline-block;
+  height: 0.6rem;
+  max-width: 6rem;
+  border-radius: 0.3rem;
+  background: var(--bp-brand);
+  vertical-align: middle;
+}

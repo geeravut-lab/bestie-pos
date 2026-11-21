@@ -14,7 +14,7 @@ import {
   parseLinkMessage,
 } from '../../packages/core/src/flex.js';
 import type { Notice } from '../../packages/core/src/flex.js';
-import { LINE_MESSAGES, helpBothLanguages } from './line-messages.js';
+import { LINE_MESSAGES, helpBothLanguages, isIslandCommand } from './line-messages.js';
 import type { Lang } from './line-messages.js';
 
 export type LineConfig = {
@@ -143,9 +143,7 @@ export type IslandListing = {
     orderToken: string | null;
   }[];
 };
-/** `island`, `เกาะ`, `shops`, `market`, `ตลาด…` (any case) → the guest wants the island's shops. */
-export const isIslandCommand = (text: string): boolean =>
-  /^(island|shops|market|เกาะ|ร้านค้า|ร้านบนเกาะ|ตลาดเกาะ|ตลาด)$/i.test(text.trim());
+export { isIslandCommand };
 
 /** The chat message for the marketplace: a plain list in both languages with links (LINE makes them tappable). At most 15 shops, under LINE's 5,000 characters. */
 export function buildIslandText(island: IslandListing | null, siteUrl: string): string {

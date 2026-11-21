@@ -69,3 +69,4 @@ export * from './karaokeBooking';
 export * from './shiftFigures';
 export * from './folio';
 export * from './delivery';
+export * from './hq';

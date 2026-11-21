@@ -5,6 +5,7 @@ import { AsyncButton } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
 import { TRANSLATE_TARGETS, translateText } from './aiApi';
+import { LiveTranslate } from './LiveTranslate';
 import type { TranslateTarget } from './aiApi';
 
 /** Live translation for staff (module `ai.translate`): type a message, pick the language, get a machine draft. Nothing is stored. */
@@ -100,6 +101,7 @@ export function TranslatePage({ ctx }: { ctx: PageContext }) {
       {note === 'off' ? <Notice kind="info">{t.trOff}</Notice> : null}
       {note === 'long' ? <Notice kind="error">{t.trTooLong}</Notice> : null}
       {note === 'failed' ? <Notice kind="error">{t.trFailed}</Notice> : null}
+      <LiveTranslate ctx={ctx} storeId={storeId} />
       {result ? (
         <section className="card admin-card" aria-label={t.trResult} dir="auto">
           <h2>{t.trResult}</h2>

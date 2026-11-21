@@ -4,6 +4,7 @@
 // Apple Wallet is NOT built: a .pkpass must be signed with an Apple Developer certificate that only the owner can obtain.
 import { createSign } from 'node:crypto';
 import { readServerEnv } from './env.js';
+import { WALLET_BACKGROUND } from './brand.js';
 import { clientKey, rpc } from './guest-extras-handler.js';
 import { createRateLimiter } from './line.js';
 import { parsePass } from '../../packages/core/src/network.js';
@@ -54,7 +55,7 @@ export function walletJwt(
           barcode: { type: 'QR_CODE', value: pass.link, alternateText: pass.code },
           textModulesData: [{ id: 'points', header: 'Points', body: String(pass.points) }],
           linksModuleData: { uris: [{ id: 'pass', uri: pass.link, description: 'Open my pass' }] },
-          hexBackgroundColor: '#0f766e',
+          hexBackgroundColor: WALLET_BACKGROUND,
         },
       ],
     },

@@ -72,6 +72,15 @@ function MenuEditor({ ctx, stores }: { ctx: PageContext; stores: StoreRow[] }) {
           >
             {t.labelsTitle}
           </button>
+          {ctx.isModuleOn?.('delivery') ? (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => ctx.navigate('/delivery')}
+            >
+              {t.dlLink}
+            </button>
+          ) : null}
         </div>
       ) : null}
       {stores.length > 1 ? (

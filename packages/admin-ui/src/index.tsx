@@ -28,6 +28,7 @@ import { AiUsagePage } from './AiUsagePage';
 import { AppointmentsPage } from './AppointmentsPage';
 import { KaraokePage } from './KaraokePage';
 import { KaraokeBookingsPage } from './KaraokeBookingsPage';
+import { DeliveryPage } from './DeliveryPage';
 import { FolioPage } from './FolioPage';
 import { KaraokePlayerPage } from './KaraokePlayerPage';
 import { TranslatePage } from './TranslatePage';
@@ -71,6 +72,7 @@ export function adminPages(ctx: PageContext): ReactNode | null {
   if (ctx.path === '/ai/usage') return <AiUsagePage ctx={ctx} />;
   if (ctx.path === '/calendar') return <AppointmentsPage ctx={ctx} />;
   if (ctx.path === '/folio') return <FolioPage ctx={ctx} />;
+  if (ctx.path === '/delivery') return <DeliveryPage ctx={ctx} />;
   if (ctx.path === '/karaoke') return <KaraokePage ctx={ctx} />;
   if (ctx.path === '/karaoke/bookings') return <KaraokeBookingsPage ctx={ctx} />;
   const playerRoom = karaokePlayerRoomFromPath(ctx.path);

@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { MODULE_BY_ID, PLAN_RANK } from './modules/registry';
 import { KARAOKE_GUEST_QUEUE_MAX, KARAOKE_REPEAT_MINUTES, KARAOKE_STEPS } from './karaoke';
 import { DEFAULT_KARAOKE_BOOKING } from './karaokeBooking';
+import { DELIVERY_CODES, MAX_COMMISSION_BPS } from './delivery';
 import { SPA_RULES_VERSION, SPA_TAGS } from './spaAdvisor';
 
 /**
@@ -367,5 +368,22 @@ describe('spa advisor SQL mirror', () => {
     );
     // the deposit is the same half-up percentage on both sides
     expect(sql).toContain('(p_price::bigint * greatest(least(p_pct, 100), 0) + 50) / 100');
+  });
+
+  it('delivery: the module mirror, the commission arithmetic and the tender live in migration 77', () => {
+    const dir = new URL('../../../supabase/migrations/', import.meta.url);
+    const sql = readFileSync(
+      new URL(readdirSync(dir).find((f) => f.endsWith('_delivery.sql')) ?? '', dir),
+      'utf8',
+    );
+    expect(MODULE_BY_ID.delivery.plan).toBe('pro');
+    expect(MODULE_BY_ID.delivery.defaultProfiles).toEqual([]);
+    expect(sql).toContain("s.plan in ('pro', 'resort')");
+    expect(sql).toContain("(s.module_overrides ->> 'delivery')::boolean");
+    // the commission is half up on the payable, the same as deliveryCommission()
+    expect(sql).toContain('v_comm := (v_payable * d.commission_bps + 5000) / 10000;');
+    expect(sql).toContain(`commission_bps between 0 and ${MAX_COMMISSION_BPS}`);
+    for (const c of DELIVERY_CODES) expect(sql).toContain(`'${c}'`);
+    expect(sql).toContain("'room', 'platform'");
   });
 });

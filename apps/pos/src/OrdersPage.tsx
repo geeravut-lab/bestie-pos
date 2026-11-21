@@ -55,6 +55,17 @@ export function OrdersPage({ ctx, mode }: { ctx: PageContext; mode: 'sell' | 'li
           >
             {t.sellNew}
           </AsyncButton>
+          {ctx.isModuleOn?.('delivery') ? (
+            <AsyncButton
+              variant="secondary"
+              onClick={async () => {
+                const id = await openOrder({ binding, staffId: ctx.staffId, channel: 'delivery' });
+                ctx.navigate(`/order/${id}`);
+              }}
+            >
+              {t.dlvNew}
+            </AsyncButton>
+          ) : null}
         </div>
       ) : null}
       <section className="card admin-card">

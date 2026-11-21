@@ -74,6 +74,13 @@ begin
   end loop;
 
   v_payload := b || jsonb_build_object('order_id', p_order, 'device_id', dev, 'staff_id', demo.staff(p_pay_by), 'issued_at', v_when, 'lang', 'th', 'payments', v_pay);
+  -- charge the whole bill to a guest's room: [{"t":"room","f":"<stay id>"}]
+  if jsonb_array_length(legs) = 1 and legs -> 0 ->> 't' = 'room' then
+    perform demo.run(p_pay_by, format('select public.charge_order_to_room(%L::jsonb)',
+      (b || jsonb_build_object('order_id', p_order, 'folio_id', p_legs -> 0 ->> 'f', 'payment_id', gen_random_uuid(), 'device_id', dev,
+         'staff_id', demo.staff(p_pay_by), 'issued_at', v_when, 'lang', 'th'))::text));
+    return (select number from public.receipts where order_id = p_order);
+  end if;
   if v_local then
     v_no := dcode || '-' || lpad(((select count(*) from public.receipts where device_id = dev and number like dcode || '-%') + 1)::text, 6, '0');
     perform demo.run(p_pay_by, format('select public.close_order(%L::jsonb)', (v_payload || jsonb_build_object('receipt_number', v_no))::text));

@@ -28,6 +28,8 @@ const route = (
     slots?: string[];
     book?: unknown;
     cancel?: unknown;
+    contact?: unknown;
+    lineBasicId?: string;
   } = {},
 ) =>
   vi.fn(async (url: unknown, init?: RequestInit) => {
@@ -38,6 +40,7 @@ const route = (
     });
     if (init?.method === 'POST') {
       const op = (JSON.parse(String(init.body)) as { op: string }).op;
+      if (op === 'contact') return new Response(JSON.stringify(o.contact ?? { ok: true }));
       return new Response(
         JSON.stringify({
           result:
@@ -47,7 +50,10 @@ const route = (
     }
     if (u.includes('&service='))
       return new Response(JSON.stringify({ slots: o.slots ?? ['10:00', '10:30'] }));
-    return new Response(JSON.stringify({ info: o.info ?? INFO }), { status: o.infoStatus ?? 200 });
+    return new Response(
+      JSON.stringify({ info: o.info ?? INFO, lineBasicId: o.lineBasicId ?? null }),
+      { status: o.infoStatus ?? 200 },
+    );
   });
 
 beforeEach(() => {
@@ -193,5 +199,37 @@ describe('<BookingPage>', () => {
     mount();
     expect(await screen.findByText('ZZZZ9999')).toBeTruthy();
     await waitFor(() => expect(screen.getByRole('button', { name: 'Book again' })).toBeTruthy());
+  });
+
+  describe('reminder before the appointment', () => {
+    const booked = { ok: true, id: 'a1', code: 'ABCD1234', starts_at: WHEN, provider: 'Nok' };
+
+    it('offers LINE (add the shop, send the code) and e-mail, and saves the e-mail with the booking code', async () => {
+      vi.stubGlobal('fetch', route({ book: booked, lineBasicId: '@bestie' }));
+      mount();
+      await fill();
+      await userEvent.click(screen.getByRole('button', { name: /Confirm|Book/ }));
+      expect(await screen.findByText('Get a reminder before your appointment')).toBeTruthy();
+      expect(screen.getByText(/send your booking code ABCD1234 in the chat/)).toBeTruthy();
+      const add = screen.getByRole('link', { name: "Add the shop's LINE" });
+      expect(add.getAttribute('href')).toBe('https://line.me/R/ti/p/@bestie');
+      await userEvent.type(screen.getByLabelText('Or by e-mail'), 'anna@example.com');
+      await userEvent.click(screen.getByRole('button', { name: 'Save the e-mail' }));
+      expect(await screen.findByText(/We will e-mail you a reminder/)).toBeTruthy();
+      const post = calls.find((c) => c.body?.op === 'contact')!;
+      expect(post.body).toMatchObject({ id: 'a1', code: 'ABCD1234', email: 'anna@example.com' });
+    });
+
+    it('without a LINE account set up only the e-mail is offered; a bad address is explained', async () => {
+      vi.stubGlobal('fetch', route({ book: booked, contact: { ok: false, error: 'bad_email' } }));
+      mount();
+      await fill();
+      await userEvent.click(screen.getByRole('button', { name: /Confirm|Book/ }));
+      await screen.findByText('Get a reminder before your appointment');
+      expect(screen.queryByRole('link', { name: "Add the shop's LINE" })).toBeNull();
+      await userEvent.type(screen.getByLabelText('Or by e-mail'), 'oops@x');
+      await userEvent.click(screen.getByRole('button', { name: 'Save the e-mail' }));
+      expect(await screen.findByText('That e-mail address is not valid.')).toBeTruthy();
+    });
   });
 });

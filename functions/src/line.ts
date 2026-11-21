@@ -49,6 +49,8 @@ export interface LineStore {
     error?: string;
   }): Promise<void>;
   ownerLang(ownerId: string): Promise<Lang>;
+  /** A guest sent the code of an online booking: remember this LINE user for that booking (reminders only). Optional: absent = feature off. */
+  bindGuest?(code: string, lineUserId: string): Promise<boolean>;
 }
 
 export const hashCode = (secret: string, code: string): string =>
@@ -121,6 +123,12 @@ type LineEvent = {
   source?: { userId?: string };
   message?: { type?: string; text?: string };
 };
+/** `1A2B3C4D`, `remind 1a2b3c4d` or `booking 1a2b3c4d` (any case) → the booking code; anything else → null. */
+export function parseGuestCode(text: string): string | null {
+  const m = /^(?:(?:REMIND|BOOKING)\s*)?([0-9A-F]{8})$/.exec(text.trim().toUpperCase());
+  return m?.[1] ?? null;
+}
+
 export type Reply = (replyToken: string, text: string) => Promise<void>;
 
 export async function handleLineWebhook(args: {
@@ -154,6 +162,15 @@ export async function handleLineWebhook(args: {
       }
       if (ev.type !== 'message' || ev.message?.type !== 'text' || !ev.replyToken) continue;
       if (!allow(`line:bind:${uid}`)) continue; // too many tries from this LINE account: stay silent
+      // a guest's booking code (8 hex characters, as shown on the booking page) → a reminder channel for that one booking
+      const guestCode = parseGuestCode(ev.message.text ?? '');
+      if (guestCode && store.bindGuest && (await store.bindGuest(guestCode, uid))) {
+        await reply(
+          ev.replyToken,
+          `${LINE_MESSAGES.guestLinked.th}\n\n${LINE_MESSAGES.guestLinked.en}`,
+        ).catch(() => {}); // the link already worked: a failed reply must not undo it
+        continue;
+      }
       const code = parseLinkMessage(ev.message.text ?? '');
       if (!code) {
         await reply(ev.replyToken, helpBothLanguages()).catch(() => {});

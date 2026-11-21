@@ -2,7 +2,8 @@ import { parseBookingInfo, parseBookingResult, parseCancelResult, parseSlots } f
 import type { BookingInfo, BookingResult, CancelResult } from '@bestie/core';
 
 export type BookingLoad =
-  { ok: true; info: BookingInfo } | { ok: false; reason: 'not_found' | 'failed' };
+  | { ok: true; info: BookingInfo; lineBasicId: string | null }
+  | { ok: false; reason: 'not_found' | 'failed' };
 
 const obj = (v: unknown): Record<string, unknown> =>
   v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
@@ -15,8 +16,10 @@ export async function loadBooking(
     const res = await fetchImpl(`/api/guest/booking?t=${encodeURIComponent(token)}`);
     if (res.status === 404) return { ok: false, reason: 'not_found' };
     if (!res.ok) return { ok: false, reason: 'failed' };
-    const info = parseBookingInfo(obj(await res.json().catch(() => null)).info);
-    return info ? { ok: true, info } : { ok: false, reason: 'not_found' };
+    const body = obj(await res.json().catch(() => null));
+    const info = parseBookingInfo(body.info);
+    const basic = typeof body.lineBasicId === 'string' ? body.lineBasicId : null;
+    return info ? { ok: true, info, lineBasicId: basic } : { ok: false, reason: 'not_found' };
   } catch {
     return { ok: false, reason: 'failed' };
   }
@@ -94,6 +97,38 @@ export async function cancelBooking(
     });
     if (!res.ok) return { ok: false, error: 'failed' };
     return parseCancelResult(obj(await res.json().catch(() => null)).result);
+  } catch {
+    return { ok: false, error: 'failed' };
+  }
+}
+
+export type ContactResult =
+  { ok: true } | { ok: false; error: 'bad_email' | 'closed' | 'invalid' | 'failed' };
+
+/** Save (or, with an empty string, remove) the e-mail for the reminder of this booking; the booking code is the proof. */
+export async function saveContact(
+  token: string,
+  id: string,
+  code: string,
+  email: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ContactResult> {
+  try {
+    const res = await fetchImpl('/api/guest/booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ t: token, op: 'contact', id, code, email }),
+    });
+    if (!res.ok) return { ok: false, error: 'failed' };
+    const o = obj(await res.json().catch(() => null));
+    if (o.ok === true) return { ok: true };
+    return {
+      ok: false,
+      error:
+        o.error === 'bad_email' || o.error === 'closed' || o.error === 'invalid'
+          ? o.error
+          : 'failed',
+    };
   } catch {
     return { ok: false, error: 'failed' };
   }

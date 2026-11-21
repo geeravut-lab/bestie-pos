@@ -3,7 +3,7 @@ import { addDays, bangkokParts, formatTHB, guestName } from '@bestie/core';
 import type { BookingInfo, BookingResult } from '@bestie/core';
 import { fmt, useI18n } from '@bestie/i18n';
 import { AsyncButton, LangSwitch, Spinner } from '@bestie/ui';
-import { cancelBooking, loadBooking, loadSlots, sendBooking } from './bookingApi';
+import { cancelBooking, loadBooking, loadSlots, saveContact, sendBooking } from './bookingApi';
 import type { BookingLoad } from './bookingApi';
 
 type Done = { id: string; code: string | null; startsAt: string; provider: string | null };
@@ -88,6 +88,7 @@ export function BookingPage({ token }: { token: string }) {
           done={done}
           cancelled={cancelled}
           lang={lang}
+          lineBasicId={load.lineBasicId}
           onCancelled={() => {
             setCancelled(true);
             writeSaved(token, null);
@@ -130,6 +131,7 @@ function DonePanel({
   done,
   cancelled,
   lang,
+  lineBasicId,
   onCancelled,
   onAgain,
 }: {
@@ -137,6 +139,7 @@ function DonePanel({
   done: Done;
   cancelled: boolean;
   lang: 'th' | 'en';
+  lineBasicId: string | null;
   onCancelled: () => void;
   onAgain: () => void;
 }) {
@@ -173,6 +176,9 @@ function DonePanel({
             ) : null}
           </dl>
           <p className="muted">{t.bkDoneNote}</p>
+          {done.code ? (
+            <ReminderBox token={token} id={done.id} code={done.code} lineBasicId={lineBasicId} />
+          ) : null}
           {problem ? <p role="alert">{t.bkCancelClosed}</p> : null}
           {done.code ? (
             <AsyncButton variant="secondary" onClick={cancel}>
@@ -187,6 +193,64 @@ function DonePanel({
         </button>
       </div>
     </section>
+  );
+}
+
+/** How the guest gets a reminder: add the shop's LINE and send the booking code, and / or leave an e-mail address. */
+function ReminderBox({
+  token,
+  id,
+  code,
+  lineBasicId,
+}: {
+  token: string;
+  id: string;
+  code: string;
+  lineBasicId: string | null;
+}) {
+  const { t } = useI18n();
+  const [email, setEmail] = useState('');
+  const [state, setState] = useState<'idle' | 'saved' | 'bad' | 'failed'>('idle');
+  const save = async () => {
+    setState('idle');
+    const r = await saveContact(token, id, code, email.trim());
+    setState(r.ok ? 'saved' : r.error === 'bad_email' ? 'bad' : 'failed');
+  };
+  const lineUrl = lineBasicId ? `https://line.me/R/ti/p/${lineBasicId}` : null;
+  return (
+    <div className="card" aria-label={t.bkRemindTitle}>
+      <h3>{t.bkRemindTitle}</h3>
+      {lineUrl ? (
+        <>
+          <p>{fmt(t.bkRemindLine, { code })}</p>
+          <a className="btn btn-secondary" href={lineUrl} target="_blank" rel="noopener noreferrer">
+            {t.bkRemindLineAdd}
+          </a>
+        </>
+      ) : null}
+      <div className="form-row">
+        <label className="label" htmlFor="bk-remind-email">
+          {t.bkRemindEmail}
+        </label>
+        <input
+          id="bk-remind-email"
+          className="field"
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          maxLength={120}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <AsyncButton variant="secondary" onClick={save} disabled={email.trim() === ''}>
+          {t.bkRemindEmailSave}
+        </AsyncButton>
+      </div>
+      {state === 'saved' ? <p role="status">{t.bkRemindEmailSaved}</p> : null}
+      {state === 'bad' ? <p role="alert">{t.bkRemindEmailBad}</p> : null}
+      {state === 'failed' ? <p role="alert">{t.err_load_failed}</p> : null}
+      <p className="muted">{t.bkRemindNote}</p>
+    </div>
   );
 }
 

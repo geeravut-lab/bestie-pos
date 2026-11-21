@@ -23,6 +23,16 @@ export function createSupabaseLineStore(
   };
 
   return {
+    async bindGuest(code, lineUserId) {
+      const res = await fetchImpl(`${supabaseUrl}/rest/v1/rpc/guest_bind_line`, {
+        method: 'POST',
+        headers: base,
+        body: JSON.stringify({ p_code: code, p_line_user_id: lineUserId }),
+      });
+      if (!res.ok) return false;
+      const out = (await res.json().catch(() => null)) as { ok?: unknown } | null;
+      return out?.ok === true;
+    },
     async startLink(userId, codeHash, expiresAt) {
       const res = await rest('notification_channels?on_conflict=owner_id,channel', {
         method: 'POST',

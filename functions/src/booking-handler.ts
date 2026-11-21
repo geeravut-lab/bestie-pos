@@ -3,6 +3,7 @@
 //   GET  /api/guest/booking?t=<token>&service=<id>&date=YYYY-MM-DD[&provider=<id>] → { slots: ["09:00", …] }
 //   POST /api/guest/booking { t, op: 'book', service_id, provider_id?, date, time, name, phone, note?, client_id } → { result }
 //   POST /api/guest/booking { t, op: 'cancel', id, code }                                                          → { result }
+//   POST /api/guest/booking { t, op: 'contact', id, code, email }                                                  → { ok, error? }  (e-mail for the reminder; '' removes it)
 // Every rule (module on, free time, limits, repeat = same answer) is checked by the database functions; this file only limits the
 // request rate, checks the shapes and talks to them with the service role. The browser never gets a key.
 import { createRateLimiter } from './line.js';
@@ -72,7 +73,10 @@ export async function guestBookingResponse(
       const r = await rpc(f, supabaseUrl, serviceRoleKey, 'guest_booking_info', { p_token: token });
       if (!r.ok) return reply({ error: 'server_error' }, 502);
       const info = parseBookingInfo(r.data);
-      return info ? reply({ info }) : reply({ error: 'not_found' }, 404);
+      // the Official Account a guest can add as a friend to get a reminder by LINE (absent = LINE is not set up)
+      const basic = env.LINE_BASIC_ID?.trim();
+      const lineBasicId = basic && /^@?[A-Za-z0-9._-]{2,40}$/.test(basic) ? basic : null;
+      return info ? reply({ info, lineBasicId }) : reply({ error: 'not_found' }, 404);
     }
 
     if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
@@ -128,6 +132,25 @@ export async function guestBookingResponse(
       });
       if (!r.ok) return reply({ error: 'server_error' }, 502);
       return reply({ result: parseCancelResult(r.data) });
+    }
+    if (b.op === 'contact') {
+      if (!allowCancel(`booking-contact:${ip}`)) return reply({ error: 'rate_limited' }, 429);
+      const code = str(b.code, 20);
+      const email = str(b.email, 120);
+      if (typeof b.id !== 'string' || !UUID.test(b.id) || code.length < 4)
+        return reply({ error: 'invalid' }, 422);
+      const r = await rpc(f, supabaseUrl, serviceRoleKey, 'guest_booking_contact', {
+        p_token: b.t,
+        p_id: b.id,
+        p_code: code,
+        p_email: email,
+      });
+      if (!r.ok) return reply({ error: 'server_error' }, 502);
+      const o = (r.data && typeof r.data === 'object' ? r.data : {}) as {
+        ok?: unknown;
+        error?: unknown;
+      };
+      return reply({ ok: o.ok === true, error: typeof o.error === 'string' ? o.error : null });
     }
     return reply({ error: 'invalid' }, 422);
   } catch {

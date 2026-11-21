@@ -133,6 +133,22 @@ Server-only variables (never a public prefix):
 - **Scheduler:** `vercel.json` has **no** cron entry on purpose (a per-minute cron is refused on a Hobby plan and would break the deploy). On a Pro plan add `"crons": [{ "path": "/api/crypto/poll", "schedule": "* * * * *" }]`; otherwise call `GET /api/crypto/poll` with `Authorization: Bearer $CRON_SECRET` from any scheduler (GitHub Actions `schedule`, cron-job.org …). Until then staff use **Check now** on a request (rate limited).
 - **Before real money:** run the whole flow on **Tron Shasta / Ethereum Sepolia** with test USDT; confirm the TronGrid, Etherscan and price-source response shapes (marked ⚠️ in `functions/src/crypto-*.ts`); set the company wallet (read-only address) and print its 6+6-character card for the shop; get the lawyer's file uploaded and `legal_sign_off.cryptoTopup` set by the platform admin.
 
+- **Where the keys come from (so the test run can start):**
+  - **`TRONGRID_API_KEY`** — free: sign up at trongrid.io → *Dashboard* → *API Keys* → *Create API Key*. The key is for the **mainnet**; for the **Shasta test network** use the same key against `https://api.shasta.trongrid.io` (set the base URL in the chain adapter's test configuration, `functions/src/crypto-chain-tron.ts`).
+  - **`ETHERSCAN_API_KEY`** — free: sign up at etherscan.io → *My Profile* → *API Keys* → *Add*. One key covers the mainnet; for **Sepolia** use `https://api-sepolia.etherscan.io/api` with the same key.
+  - **Test USDT** — Shasta: the faucet at shasta.tronex.io (TRX) and the Shasta USDT faucet / a test token you deploy yourself; Sepolia: a Sepolia ETH faucet (Alchemy / Infura / Google Cloud web3 faucets) and a test ERC-20 such as the Circle USDC testnet faucet (faucet.circle.com) — the chain adapter takes the token contract address as data, so any test token with the same shape works.
+  - The test run itself needs a person (making a transfer from a test wallet to the company wallet); the sandbox that builds Bestie cannot reach these services.
+
+## 7b. Google Wallet pass for the Tourist Pass (optional)
+Server-only variables, all three needed (without them the *Add to Google Wallet* button simply does not appear):
+
+| Name | Purpose |
+|---|---|
+| `GOOGLE_WALLET_ISSUER_ID` | the issuer id shown in the Google Wallet console (pay.google.com/business/console), digits only |
+| `GOOGLE_WALLET_SA_EMAIL` | the service account's e-mail (`…@…iam.gserviceaccount.com`) that is allowed to issue passes for that issuer |
+| `GOOGLE_WALLET_PRIVATE_KEY` | that service account's private key (PEM; write line breaks as `\n`) — used only to sign the save link |
+
+Steps: Google Wallet console → create an issuer → *Google Wallet API* → add the service account as a user of the issuer. A pass is signed as an RS256 JWT (`functions/src/wallet.ts`); nothing is stored at Google until the guest taps *Add*. **Apple Wallet is not built:** a `.pkpass` must be signed with an Apple Developer certificate (US$99 a year) that only the owner can obtain.
 
 ## 8. Notifications (in-app inbox + LINE) — what to set so the LINE messages actually leave
 The in-app bell and inbox (`/notifications`) work with nothing to set up. Delivery to LINE needs:

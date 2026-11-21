@@ -4,15 +4,31 @@ import { AsyncButton, QrSvg, Spinner } from '@bestie/ui';
 import { Notice, useLiveSync } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
 import { PrintPortal } from './PrintPortal';
+import { tx } from './stockInput';
 import { useRemote } from './useRemote';
 
-type Kiosk = { id: string; name: string; token: string; active: boolean };
+type Kiosk = {
+  id: string;
+  name: string;
+  token: string;
+  active: boolean;
+  kind: 'kiosk' | 'web' | 'info';
+};
+const KINDS = ['kiosk', 'web', 'info'] as const;
 
 const rows = (v: unknown): Kiosk[] =>
   (Array.isArray(v) ? v : []).flatMap((x) => {
     const o = (x && typeof x === 'object' ? x : {}) as Record<string, unknown>;
     return typeof o.id === 'string' && typeof o.name === 'string' && typeof o.qr_token === 'string'
-      ? [{ id: o.id, name: o.name, token: o.qr_token, active: o.active !== false }]
+      ? [
+          {
+            id: o.id,
+            name: o.name,
+            token: o.qr_token,
+            active: o.active !== false,
+            kind: o.kind === 'web' || o.kind === 'info' ? o.kind : ('kiosk' as const),
+          },
+        ]
       : [];
   });
 
@@ -23,6 +39,7 @@ export function KioskPage({ ctx }: { ctx: PageContext }) {
   const canEdit = ctx.isOwner || ctx.permissions.includes('menu.edit');
   const moduleOn = ctx.isModuleOn ? ctx.isModuleOn('kiosk') : true;
   const [name, setName] = useState<string | null>(null);
+  const [kind, setKind] = useState<'kiosk' | 'web' | 'info'>('kiosk');
   const [msg, setMsg] = useState<{ kind: 'error' | 'info'; text: string } | null>(null);
   const [printing, setPrinting] = useState<string | null>(null);
   useEffect(() => {
@@ -38,9 +55,9 @@ export function KioskPage({ ctx }: { ctx: PageContext }) {
     if (!storeId) throw new Error('shop');
     const r = await ctx.client
       .from('dining_tables')
-      .select('id, name, qr_token, active')
+      .select('id, name, qr_token, active, kind')
       .eq('store_id', storeId)
-      .eq('kind', 'kiosk')
+      .in('kind', ['kiosk', 'web', 'info'])
       .is('deleted_at', null)
       .order('created_at');
     if (r.error) throw new Error('load');
@@ -72,7 +89,7 @@ export function KioskPage({ ctx }: { ctx: PageContext }) {
   const add = async () => {
     const n = (name ?? '').trim();
     if (!n || n.length > 40) return setMsg({ kind: 'error', text: t.kiBad });
-    if (await call({ name: n })) setName(null);
+    if (await call({ name: n, kind })) setName(null);
   };
   const copy = (k: Kiosk) => async () => {
     try {
@@ -101,6 +118,7 @@ export function KioskPage({ ctx }: { ctx: PageContext }) {
           <li key={k.id} className="member-row">
             <div className="member-head">
               <strong>{k.name}</strong>
+              <span className="muted">{tx(t, `kiKind_${k.kind}`)}</span>
               {!k.active ? <span className="muted">{t.kiInactive}</span> : null}
             </div>
             <label className="label" htmlFor={`ki-${k.id}`}>
@@ -167,6 +185,23 @@ export function KioskPage({ ctx }: { ctx: PageContext }) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
+            </div>
+            <div className="form-row">
+              <label className="label" htmlFor="ki-kind">
+                {t.kiKind}
+              </label>
+              <select
+                id="ki-kind"
+                className="field"
+                value={kind}
+                onChange={(e) => setKind(e.target.value as (typeof KINDS)[number])}
+              >
+                {KINDS.map((k) => (
+                  <option key={k} value={k}>
+                    {tx(t, `kiKind_${k}`)}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="actions">
               <AsyncButton type="submit" onClick={add}>

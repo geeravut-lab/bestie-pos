@@ -18,6 +18,8 @@ export type GuestTable = {
   autoSend: boolean;
   /** A self-order kiosk (module `kiosk`): every order is its own bill with a queue number, paid at the counter. */
   kiosk: boolean;
+  /** table | kiosk | web (order food online: asks for a name and a phone) | info (concierge page, no ordering). */
+  kind: 'table' | 'kiosk' | 'web' | 'info';
   /** The shop switched the food assistant on (module ai.guest). The filter buttons work without it. */
   ai: boolean;
   menu: GuestMenu;
@@ -111,6 +113,7 @@ export async function loadGuestTable(
         tableName: nameOf(b.table),
         autoSend: b.autoSend === true,
         kiosk: b.kiosk === true,
+        kind: b.kind === 'kiosk' || b.kind === 'web' || b.kind === 'info' ? b.kind : 'table',
         ai: b.ai === true,
         menu: parseGuestMenu(b.menu),
         bill: parseGuestBill(b.bill),
@@ -129,12 +132,16 @@ export async function placeGuestOrder(
   clientId: string,
   cart: readonly CartLine[],
   fetchImpl: typeof fetch = fetch,
+  contact?: { name: string; phone: string },
 ): Promise<{ ok: true; order: PlacedOrder } | { ok: false; reason: GuestFailure }> {
   try {
     const res = await fetchImpl('/api/guest/order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(orderPayload(token, clientId, cart)),
+      body: JSON.stringify({
+        ...orderPayload(token, clientId, cart),
+        ...(contact ? { contact } : {}),
+      }),
     });
     const body = obj(await res.json().catch(() => null));
     if (!res.ok) return { ok: false, reason: reasonOf(body.error) };

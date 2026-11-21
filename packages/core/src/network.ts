@@ -56,6 +56,8 @@ export type IslandShop = {
   title: LocalizedText;
   about: { th?: string; en?: string } | null;
   bookingToken: string | null;
+  /** The shop's page for ordering food online (kind `web`), if it has one switched on. */
+  orderToken: string | null;
 };
 export type Island = {
   slug: string;
@@ -82,6 +84,7 @@ const parseShops = (raw: unknown): IslandShop[] =>
         title,
         about,
         bookingToken: /^[0-9a-f]{32}$/.test(str(o.booking_token)) ? str(o.booking_token) : null,
+        orderToken: /^[0-9a-f]{32}$/.test(str(o.order_token)) ? str(o.order_token) : null,
       },
     ];
   });

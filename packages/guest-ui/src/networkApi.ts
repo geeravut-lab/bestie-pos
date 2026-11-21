@@ -21,6 +21,25 @@ export async function loadPass(
   }
 }
 
+/** The "Add to Google Wallet" link of a pass, or null when Google Wallet is not set up (or the request failed). */
+export async function loadPassWallet(
+  token: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string | null> {
+  try {
+    const res = await fetchImpl(`/api/guest/pass-wallet?t=${encodeURIComponent(token)}`);
+    if (!res.ok) return null;
+    const b = obj(await res.json().catch(() => null));
+    return b.available === true &&
+      typeof b.url === 'string' &&
+      b.url.startsWith('https://pay.google.com/gp/v/save/')
+      ? b.url
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function loadIsland(
   slug: string,
   fetchImpl: typeof fetch = fetch,

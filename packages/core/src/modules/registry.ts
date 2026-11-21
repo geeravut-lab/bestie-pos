@@ -19,6 +19,7 @@ export const MODULE_IDS = [
   'kds',
   'order.qr',
   'kiosk',
+  'guest.concierge',
   'delivery',
   'service.charge',
   // services / bookings
@@ -112,6 +113,7 @@ export const MODULES: readonly ModuleDef[] = [
     phase: 1,
   },
   { id: 'kiosk', dependsOn: [], defaultProfiles: [], plan: 'pro', phase: 4 },
+  { id: 'guest.concierge', dependsOn: [], defaultProfiles: [], plan: 'basic', phase: 4 },
   { id: 'delivery', dependsOn: [], defaultProfiles: [], plan: 'pro', phase: 4 },
   {
     id: 'service.charge',

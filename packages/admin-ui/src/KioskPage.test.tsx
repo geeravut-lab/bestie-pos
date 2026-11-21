@@ -60,7 +60,7 @@ describe('<KioskPage>', () => {
     await waitFor(() => expect(db.rpcs.length).toBe(1));
     expect(db.rpcs[0]).toEqual({
       fn: 'save_kiosk',
-      args: { p: { store_id: 's1', name: 'Door kiosk' } },
+      args: { p: { store_id: 's1', name: 'Door kiosk', kind: 'kiosk' } },
     });
   });
   it('makes a new link and switches a kiosk off', async () => {

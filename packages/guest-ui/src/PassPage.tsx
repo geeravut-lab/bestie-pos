@@ -2,15 +2,33 @@ import { useEffect, useState } from 'react';
 import { guestName, passLink } from '@bestie/core';
 import type { Pass } from '@bestie/core';
 import { GUEST_LANGS, fmt, formatDateTime, useI18n } from '@bestie/i18n';
-import { LangSwitch, QrSvg, Spinner } from '@bestie/ui';
+import { AsyncButton, LangSwitch, QrSvg, Spinner } from '@bestie/ui';
+import { PrintArea } from './PrintArea';
 import { IslandShops } from './IslandShops';
-import { loadPass } from './networkApi';
+import { loadPass, loadPassWallet } from './networkApi';
 import type { Loaded } from './networkApi';
 
 /** The guest's Tourist Pass (`/pass/<token>`): QR + code for the cashier, her network points, recent movements and the island's shops. */
 export function PassPage({ token }: { token: string }) {
   const { t, lang } = useI18n();
   const [load, setLoad] = useState<Loaded<Pass> | null>(null);
+  const [wallet, setWallet] = useState<string | null>(null);
+  const [printing, setPrinting] = useState(false);
+  useEffect(() => {
+    if (!printing) return;
+    const id = window.setTimeout(() => {
+      window.print();
+      setPrinting(false);
+    }, 60);
+    return () => window.clearTimeout(id);
+  }, [printing]);
+  useEffect(() => {
+    let alive = true;
+    void loadPassWallet(token).then((u) => alive && setWallet(u));
+    return () => {
+      alive = false;
+    };
+  }, [token]);
   useEffect(() => {
     let alive = true;
     void loadPass(token).then((r) => alive && setLoad(r));
@@ -56,6 +74,30 @@ export function PassPage({ token }: { token: string }) {
         <p>
           {t.npCodeLabel}: <strong className="mono pass-code">{p.code}</strong>
         </p>
+        <div className="actions">
+          <AsyncButton variant="secondary" onClick={async () => setPrinting(true)}>
+            {t.npPrintCard}
+          </AsyncButton>
+          {wallet ? (
+            <a className="btn btn-secondary" href={wallet}>
+              {t.npWallet}
+            </a>
+          ) : null}
+        </div>
+        {printing ? (
+          <PrintArea pageCss="@page { size: 85.6mm 54mm; margin: 0 }">
+            <div className="pass-print">
+              <div className="pass-print-text">
+                <strong>{guestName(p.network.name, lang)}</strong>
+                <span>{t.npTitle}</span>
+                <span className="pass-print-name">{p.name}</span>
+                <span className="mono">{p.code}</span>
+                <span className="pass-print-note">{t.npShowCashier}</span>
+              </div>
+              <QrSvg value={passLink(globalThis.location?.origin ?? '', token)} label={t.npQrAlt} />
+            </div>
+          </PrintArea>
+        ) : null}
       </section>
       <section className="card" aria-label={t.npPoints}>
         <h2>{t.npPoints}</h2>

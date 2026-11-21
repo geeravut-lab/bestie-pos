@@ -105,3 +105,53 @@ describe('the self-order kiosk page', () => {
     expect(screen.queryByText(/You pay at the counter/)).toBeNull();
   });
 });
+
+describe('the online-order page (kind web)', () => {
+  const WEB = { ...KIOSK, kind: 'web' };
+  it('asks for a name and a phone before the order can be sent, and sends them with it', async () => {
+    const orders = stub(WEB);
+    mount();
+    await userEvent.click(await screen.findByText('Water'));
+    await userEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: /Add to basket/ }),
+    );
+    const send = screen.getByRole('button', { name: /Place order/ }) as HTMLButtonElement;
+    expect(send.disabled).toBe(true);
+    await userEvent.type(screen.getByLabelText('Your name'), 'Anna');
+    await userEvent.type(screen.getByLabelText(/^Phone/), '081 11');
+    expect(send.disabled).toBe(true); // a phone needs at least 6 digits
+    await userEvent.type(screen.getByLabelText(/^Phone/), '11111');
+    expect(send.disabled).toBe(false);
+    await userEvent.click(send);
+    expect(await screen.findByText('KS007')).toBeTruthy();
+    expect(screen.getByText(/Pay when you pick it up/)).toBeTruthy();
+    expect((orders[0] as { contact: unknown }).contact).toEqual({
+      name: 'Anna',
+      phone: '081 1111111',
+    });
+    expect(localStorage.getItem(`bestie-guest-contact:${TOKEN}`)).toContain('Anna');
+  });
+  it('a kiosk asks for no contact details', async () => {
+    stub();
+    mount();
+    await userEvent.click(await screen.findByText('Water'));
+    await userEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: /Add to basket/ }),
+    );
+    expect(screen.queryByLabelText('Your name')).toBeNull();
+    expect(
+      (screen.getByRole('button', { name: /Place order/ }) as HTMLButtonElement).disabled,
+    ).toBe(false);
+  });
+});
+
+describe('the concierge page (kind info)', () => {
+  it('shows information and call-the-staff, with no menu and no basket', async () => {
+    stub({ ...KIOSK, kiosk: false, kind: 'info' });
+    mount();
+    expect(await screen.findByText(/Information and help for guests/)).toBeTruthy();
+    expect(screen.getByText('Call the staff')).toBeTruthy();
+    expect(screen.queryByText('Water')).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Your basket' })).toBeNull();
+  });
+});

@@ -51,6 +51,8 @@ export interface LineStore {
   ownerLang(ownerId: string): Promise<Lang>;
   /** A guest sent the code of an online booking: remember this LINE user for that booking (reminders only). Optional: absent = feature off. */
   bindGuest?(code: string, lineUserId: string): Promise<boolean>;
+  /** The shops of the island marketplace (the guest typed "island"). Optional: absent = the command is off. */
+  islandShops?(): Promise<IslandListing | null>;
 }
 
 export const hashCode = (secret: string, code: string): string =>
@@ -131,6 +133,39 @@ export function parseGuestCode(text: string): string | null {
 
 export type Reply = (replyToken: string, text: string) => Promise<void>;
 
+/** What the marketplace gives the chat: shops with the tokens of their booking and online-order pages. */
+export type IslandListing = {
+  slug: string;
+  shops: {
+    category: string;
+    title: { th: string; en?: string };
+    bookingToken: string | null;
+    orderToken: string | null;
+  }[];
+};
+/** `island`, `เกาะ`, `shops`, `market`, `ตลาด…` (any case) → the guest wants the island's shops. */
+export const isIslandCommand = (text: string): boolean =>
+  /^(island|shops|market|เกาะ|ร้านค้า|ร้านบนเกาะ|ตลาดเกาะ|ตลาด)$/i.test(text.trim());
+
+/** The chat message for the marketplace: a plain list in both languages with links (LINE makes them tappable). At most 15 shops, under LINE's 5,000 characters. */
+export function buildIslandText(island: IslandListing | null, siteUrl: string): string {
+  const site = siteUrl.replace(/\/+$/, '');
+  const M = LINE_MESSAGES;
+  if (!island || island.shops.length === 0) return `${M.islandNone.th}\n${M.islandNone.en}`;
+  const lines: string[] = [`${M.islandTitle.th} / ${M.islandTitle.en}`, ''];
+  for (const s of island.shops.slice(0, 15)) {
+    const name =
+      s.title.en && s.title.en !== s.title.th ? `${s.title.th} / ${s.title.en}` : s.title.th;
+    lines.push(`• ${name}`);
+    if (s.bookingToken)
+      lines.push(`  ${M.islandBook.th} / ${M.islandBook.en}: ${site}/book/${s.bookingToken}`);
+    if (s.orderToken)
+      lines.push(`  ${M.islandOrder.th} / ${M.islandOrder.en}: ${site}/t/${s.orderToken}`);
+  }
+  lines.push('', `${M.islandMore.th} / ${M.islandMore.en}: ${site}/island/${island.slug}`);
+  return lines.join('\n').slice(0, 4800);
+}
+
 export async function handleLineWebhook(args: {
   rawBody: string;
   signature: string | null;
@@ -162,6 +197,12 @@ export async function handleLineWebhook(args: {
       }
       if (ev.type !== 'message' || ev.message?.type !== 'text' || !ev.replyToken) continue;
       if (!allow(`line:bind:${uid}`)) continue; // too many tries from this LINE account: stay silent
+      // the guest asks for the island's shops (no account needed): a list with booking / order links
+      if (store.islandShops && isIslandCommand(ev.message.text ?? '')) {
+        const island = await store.islandShops().catch(() => null);
+        await reply(ev.replyToken, buildIslandText(island, cfg.siteUrl)).catch(() => {});
+        continue;
+      }
       // a guest's booking code (8 hex characters, as shown on the booking page) → a reminder channel for that one booking
       const guestCode = parseGuestCode(ev.message.text ?? '');
       if (guestCode && store.bindGuest && (await store.bindGuest(guestCode, uid))) {

@@ -123,6 +123,51 @@ select t_rows(null, 'service_role', $$select 1 where (select count(*) from publi
 select t_val(null, 'service_role', 'gt2', $$select public.guest_table((select v from t_out where k='tbl'))::text$$);
 select t_rows(null, 'service_role', $$select 1 from t_out where k='gt2' and (v::jsonb ->> 'kiosk') = 'false'$$, 1, 'a table is not a kiosk');
 
+-- ── ordering food online (kind web) ──
+select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select public.save_kiosk(jsonb_build_object('store_id', (select v from t_out where k='store'), 'name', 'Order online', 'kind', 'pizza'))$$, '22023', 'an unknown kind of page is refused');
+select t_val('00000000-0000-0000-0000-0000000000a1', 'authenticated', 'w', $$select public.save_kiosk(jsonb_build_object('store_id', (select v from t_out where k='store'), 'name', 'Order online', 'kind', 'web'))::text$$);
+select t_val(null, 'service_role', 'wtok', $$select v::jsonb ->> 'token' from t_out where k='w'$$);
+select t_val(null, 'service_role', 'gtw', $$select public.guest_table((select v from t_out where k='wtok'))::text$$);
+select t_rows(null, 'service_role', $$select 1 from t_out where k='gtw' and (v::jsonb ->> 'kind') = 'web' and (v::jsonb ->> 'kiosk') = 'true' and (v::jsonb ->> 'qr_enabled') = 'true'$$, 1, 'the page learns it is an online-order page');
+create or replace function t_web(p_cid text, p_name text, p_phone text) returns jsonb language sql as $$
+  select jsonb_build_object('token', (select v from t_out where k='wtok'), 'client_id', p_cid, 'contact', jsonb_build_object('name', p_name, 'phone', p_phone),
+    'lines', jsonb_build_array(jsonb_build_object('item_id', (select v from t_out where k='rice'), 'quantity', 1, 'option_ids', '[]'::jsonb))) $$;
+select t_err(null, 'service_role', $$select public.guest_place_order(t_web('a0000000-0000-4000-8000-000000000001', '', '0811111111'))$$, '22023', 'a name is needed');
+select t_err(null, 'service_role', $$select public.guest_place_order(t_web('a0000000-0000-4000-8000-000000000001', 'Anna', '123'))$$, '22023', 'a phone number is needed');
+select t_err(null, 'service_role', $$select public.guest_place_order(jsonb_build_object('token', (select v from t_out where k='wtok'), 'client_id', 'a0000000-0000-4000-8000-000000000001',
+  'lines', jsonb_build_array(jsonb_build_object('item_id', (select v from t_out where k='rice'), 'quantity', 1))))$$, '22023', 'no contact at all is refused');
+select t_val(null, 'service_role', 'w1', $$select public.guest_place_order(t_web('a0000000-0000-4000-8000-000000000001', 'Anna', '081-111-1111'))::text$$);
+select t_rows(null, 'service_role', $$select 1 from t_out where k='w1' and (v::jsonb ->> 'number') = 'WB001' and (v::jsonb ->> 'status') = 'waiting'$$, 1, 'the online order is WB001 and waits for the shop');
+select t_rows(null, 'service_role', $$select 1 from public.orders where number = 'WB001' and channel = 'takeaway' and table_id is null and delivery_info ->> 'name' = 'Anna' and delivery_info ->> 'phone' = '081-111-1111'$$, 1, 'a takeaway bill with the guest''s name and phone');
+select t_rows('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select 1 from public.app_notifications where kind = 'web.order'$$, 1, 'the managers were told');
+select t_rows(null, 'service_role', $$select 1 from public.order_lines l join public.orders o on o.id = l.order_id where o.number = 'WB001' and l.unit_price = 9000 and l.status = 'new'$$, 1, 'takeaway price, unsent');
+select t_val(null, 'service_role', 'w2', $$select public.guest_place_order(t_web('a0000000-0000-4000-8000-000000000002', 'Anna', '0811111111'))::text$$);
+select t_val(null, 'service_role', 'w3', $$select public.guest_place_order(t_web('a0000000-0000-4000-8000-000000000003', 'Anna', '0811111111'))::text$$);
+select t_err(null, 'service_role', $$select public.guest_place_order(t_web('a0000000-0000-4000-8000-000000000004', 'Anna', '081 111 1111'))$$, '54000', 'a fourth unpaid order from one phone is refused (digits are compared)');
+select t_val(null, 'service_role', 'w5', $$select public.guest_place_order(t_web('a0000000-0000-4000-8000-000000000005', 'Bob', '0822222222'))::text$$);
+select t_rows(null, 'service_role', $$select 1 from t_out where k='w5' and (v::jsonb ->> 'number') = 'WB004'$$, 1, 'another phone is fine');
+
+-- ── the island lists an Order food button for a shop with a web page ──
+insert into public.networks (slug, name) values ('koh-test', '{"th":"เกาะทดสอบ","en":"Test Island"}');
+insert into public.network_orgs (network_id, org_id) select n.id, (select v::uuid from t_out where k='org') from public.networks n where n.slug = 'koh-test';
+insert into public.network_listings (store_id, network_id, org_id, category, title) select (select v::uuid from t_out where k='store'), n.id, (select v::uuid from t_out where k='org'), 'food', '{"th":"คาเฟ่"}' from public.networks n where n.slug = 'koh-test';
+select t_val(null, 'service_role', 'isl', $$select public.guest_island('koh-test')::text$$);
+select t_rows(null, 'service_role', $$select 1 from t_out where k='isl' and (v::jsonb #>> '{shops,0,order_token}') = (select v from t_out where k='wtok')$$, 1, 'the island shows the shop''s online-order link');
+select t_rows('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select public.save_kiosk(jsonb_build_object('store_id', (select v from t_out where k='store'), 'id', (select v::jsonb ->> 'id' from t_out where k='w'), 'active', false))$$, 1, 'switching the page off');
+select t_val(null, 'service_role', 'isl2', $$select public.guest_island('koh-test')::text$$);
+select t_rows(null, 'service_role', $$select 1 from t_out where k='isl2' and (v::jsonb #> '{shops,0,order_token}') = 'null'::jsonb$$, 1, 'a page switched off is no longer on the island');
+select t_err(null, 'service_role', $$select public.guest_place_order(t_web('a0000000-0000-4000-8000-000000000009', 'Cy', '0833333333'))$$, 'P0002', 'and cannot be ordered from');
+
+-- ── a concierge page (kind info): no ordering ──
+select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select public.save_kiosk(jsonb_build_object('store_id', (select v from t_out where k='store'), 'name', 'Room 1 info', 'kind', 'info'))$$, '0A000', 'a concierge page needs its own module');
+update public.stores set module_overrides = module_overrides || '{"guest.concierge": true}'::jsonb where id = (select v::uuid from t_out where k='store');
+select t_val('00000000-0000-0000-0000-0000000000a1', 'authenticated', 'inf', $$select public.save_kiosk(jsonb_build_object('store_id', (select v from t_out where k='store'), 'name', 'Room 1 info', 'kind', 'info'))::text$$);
+select t_val(null, 'service_role', 'itok', $$select v::jsonb ->> 'token' from t_out where k='inf'$$);
+select t_val(null, 'service_role', 'gti', $$select public.guest_table((select v from t_out where k='itok'))::text$$);
+select t_rows(null, 'service_role', $$select 1 from t_out where k='gti' and (v::jsonb ->> 'kind') = 'info' and (v::jsonb ->> 'qr_enabled') = 'true' and (v::jsonb ->> 'kiosk') = 'false'$$, 1, 'the page learns it is a concierge page');
+select t_err(null, 'service_role', $$select public.guest_place_order(jsonb_build_object('token', (select v from t_out where k='itok'), 'client_id', 'b0000000-0000-4000-8000-000000000001',
+  'lines', jsonb_build_array(jsonb_build_object('item_id', (select v from t_out where k='rice'), 'quantity', 1))))$$, '0A000', 'nothing can be ordered from it');
+
 -- ── off, switched off, replaced ──
 select t_rows('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select public.save_kiosk(jsonb_build_object('store_id', (select v from t_out where k='store'), 'id', (select v::jsonb ->> 'id' from t_out where k='k'), 'rotate', true))$$, 1, 'the owner makes a new token');
 select t_err(null, 'service_role', $$select public.guest_place_order(t_order('77777777-7777-4777-8777-777777777777'))$$, 'P0002', 'the old token stops working at once');

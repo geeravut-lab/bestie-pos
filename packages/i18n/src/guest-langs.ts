@@ -383,6 +383,18 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     kioskNew: 'Сделать новый заказ',
     kioskIntro: 'Выберите блюда и нажмите «Отправить заказ». Оплата на кассе.',
     kiScan: 'Сканируйте, чтобы заказать',
+    webName: 'Ваше имя',
+    webPhone: 'Телефон (магазин может позвонить для подтверждения)',
+    webPickupNote:
+      'Заказ отправлен в магазин, он свяжется с вами для подтверждения. Оплата при получении; назовите сотруднику этот номер.',
+    webIntro:
+      'Выберите блюда, укажите имя и телефон и нажмите «Отправить заказ». Оплата при получении.',
+    guestInfoIntro: 'Информация и помощь для гостей. Задайте вопрос или позовите персонал здесь.',
+    niSearch: 'Поиск заведений',
+    niNoMatch: 'Ничего не найдено.',
+    niOrder: 'Заказать еду',
+    npPrintCard: 'Распечатать карту (размер кредитной карты)',
+    npWallet: 'Добавить в Google Wallet',
   },
   he: {
     npTitle: 'כרטיס תייר',
@@ -754,6 +766,16 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     kioskNew: 'הזמנה חדשה',
     kioskIntro: 'בחרו מהתפריט ולחצו «שלחו הזמנה». משלמים בקופה.',
     kiScan: 'סרקו כדי להזמין',
+    webName: 'השם שלכם',
+    webPhone: 'טלפון (החנות עשויה להתקשר לאישור)',
+    webPickupNote: 'ההזמנה נשלחה לחנות והיא תאשר איתכם. משלמים באיסוף; מסרו לצוות את המספר הזה.',
+    webIntro: 'בחרו מהתפריט, השאירו שם וטלפון ולחצו «שלחו הזמנה». משלמים באיסוף.',
+    guestInfoIntro: 'מידע ועזרה לאורחים. שאלו שאלה או קראו לצוות כאן.',
+    niSearch: 'חיפוש עסקים',
+    niNoMatch: 'לא נמצאה חנות מתאימה.',
+    niOrder: 'הזמנת אוכל',
+    npPrintCard: 'הדפסת הכרטיס (בגודל כרטיס אשראי)',
+    npWallet: 'הוספה ל-Google Wallet',
   },
   de: {
     npTitle: 'Touristen-Pass',
@@ -1150,6 +1172,19 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     kioskIntro:
       'Wählen Sie aus der Karte und tippen Sie auf „Bestellung senden“. Bezahlt wird an der Kasse.',
     kiScan: 'Zum Bestellen scannen',
+    webName: 'Ihr Name',
+    webPhone: 'Telefon (das Lokal ruft ggf. zur Bestätigung an)',
+    webPickupNote:
+      'Ihre Bestellung wurde an das Lokal gesendet und wird bestätigt. Bezahlt wird bei der Abholung; nennen Sie dem Personal diese Nummer.',
+    webIntro:
+      'Wählen Sie aus der Karte, geben Sie Name und Telefon an und tippen Sie auf „Bestellung senden“. Bezahlt wird bei der Abholung.',
+    guestInfoIntro:
+      'Informationen und Hilfe für Gäste. Stellen Sie hier eine Frage oder rufen Sie das Personal.',
+    niSearch: 'Lokale suchen',
+    niNoMatch: 'Kein Lokal passt zu Ihrer Suche.',
+    niOrder: 'Essen bestellen',
+    npPrintCard: 'Karte drucken (Kreditkartenformat)',
+    npWallet: 'Zu Google Wallet hinzufügen',
   },
   zh: {
     npTitle: '游客通行卡',
@@ -1517,5 +1552,15 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     kioskNew: '重新点餐',
     kioskIntro: '请选择菜品并点击“提交订单”，在柜台付款。',
     kiScan: '扫码点餐',
+    webName: '您的姓名',
+    webPhone: '电话（店家可能致电确认）',
+    webPickupNote: '订单已发送给店家，店家会与您确认。取餐时付款，请向店员报出此号码。',
+    webIntro: '请选择菜品，填写姓名和电话，点击“提交订单”。取餐时付款。',
+    guestInfoIntro: '宾客信息与帮助。可在此提问或呼叫店员。',
+    niSearch: '搜索店铺',
+    niNoMatch: '没有匹配的店铺。',
+    niOrder: '在线点餐',
+    npPrintCard: '打印卡片（信用卡大小）',
+    npWallet: '添加到 Google Wallet',
   },
 };

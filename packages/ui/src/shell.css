@@ -2478,3 +2478,39 @@ a.nav-card[aria-busy='true'] {
   margin: 0.2em 0;
   color: var(--bp-ink);
 }
+
+/* ── the printed Tourist Pass card (credit-card size, 85.6 × 54 mm) ── */
+.pass-print {
+  box-sizing: border-box;
+  width: 85.6mm;
+  height: 54mm;
+  padding: 5mm;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4mm;
+  color: var(--bp-ink);
+  font-size: 8pt;
+}
+.pass-print-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5mm;
+  min-width: 0;
+}
+.pass-print-text strong {
+  font-size: 11pt;
+}
+.pass-print-name {
+  font-size: 10pt;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.pass-print-note {
+  font-size: 6.5pt;
+}
+.pass-print .qr-svg {
+  width: 28mm;
+  height: 28mm;
+  flex: none;
+}

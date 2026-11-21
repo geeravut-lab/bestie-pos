@@ -101,6 +101,7 @@ export async function guestMenuResponse(
       ...head,
       autoSend: t.auto_send === true,
       kiosk: t.kiosk === true,
+      kind: typeof t.kind === 'string' ? t.kind : 'table',
       ai: t.ai_enabled === true,
       menu: menu.data,
       bill: bill.data,
@@ -111,7 +112,15 @@ export async function guestMenuResponse(
   }
 }
 
-type OrderBody = { token?: unknown; clientId?: unknown; lines?: unknown };
+type OrderBody = { token?: unknown; clientId?: unknown; lines?: unknown; contact?: unknown };
+/** The name and phone an online-order page asks for (nothing else is passed on). */
+function contactOf(v: unknown): { name: string; phone: string } | undefined {
+  const o = v && typeof v === 'object' ? (v as Record<string, unknown>) : null;
+  if (!o) return undefined;
+  const name = typeof o.name === 'string' ? o.name.trim().slice(0, 80) : '';
+  const phone = typeof o.phone === 'string' ? o.phone.trim().slice(0, 30) : '';
+  return { name, phone };
+}
 function parseBody(raw: string): OrderBody | null {
   try {
     const v: unknown = JSON.parse(raw);
@@ -145,7 +154,12 @@ export async function guestOrderResponse(
   try {
     const { supabaseUrl, serviceRoleKey } = readServerEnv(env);
     const r = await rpc(fetchImpl, supabaseUrl, serviceRoleKey, 'guest_place_order', {
-      p: { token: body.token, client_id: body.clientId, lines: body.lines },
+      p: {
+        token: body.token,
+        client_id: body.clientId,
+        lines: body.lines,
+        contact: contactOf(body.contact),
+      },
     });
     if (r.ok) return reply(r.data);
     if (r.code === 'P0002') return reply({ error: 'not_found' }, 404);

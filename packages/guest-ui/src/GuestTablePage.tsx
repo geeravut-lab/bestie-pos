@@ -121,6 +121,22 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
   const [diet, setDiet] = useState<DietFilter>(EMPTY_FILTER);
   const [error, setError] = useState<GuestFailure | null>(null);
   const [placed, setPlaced] = useState<PlacedOrder | null>(null);
+  const web = data.kind === 'web';
+  const infoOnly = data.kind === 'info';
+  const contactKey = `bestie-guest-contact:${token}`;
+  const [contact, setContact] = useState<{ name: string; phone: string }>(() => {
+    try {
+      const v = JSON.parse(globalThis.localStorage?.getItem(contactKey) ?? 'null') as {
+        name?: string;
+        phone?: string;
+      } | null;
+      return { name: v?.name ?? '', phone: v?.phone ?? '' };
+    } catch {
+      return { name: '', phone: '' };
+    }
+  });
+  const contactOk =
+    !web || (contact.name.trim().length > 0 && contact.phone.replace(/\D/g, '').length >= 6);
   const [charge, setCharge] = useState<GuestCharge | null>(initial.pay.live);
   const [paid, setPaid] = useState<{ receipt: string | null } | null>(null);
   const [payNote, setPayNote] = useState<'failed' | 'review' | null>(null);
@@ -223,7 +239,20 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
 
   const send = async () => {
     setError(null);
-    const r = await placeGuestOrder(token, clientId.current, cart);
+    if (web) {
+      try {
+        globalThis.localStorage?.setItem(contactKey, JSON.stringify(contact));
+      } catch {
+        /* private mode: just not remembered */
+      }
+    }
+    const r = await placeGuestOrder(
+      token,
+      clientId.current,
+      cart,
+      undefined,
+      web ? { name: contact.name.trim(), phone: contact.phone.trim() } : undefined,
+    );
     if (!r.ok) return setError(r.reason);
     setPlaced(r.order);
     setCart([]);
@@ -240,7 +269,7 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
         <section className="card guest-sent kiosk-number" role="status">
           <h2>{t.kioskNumberTitle}</h2>
           <p className="kiosk-big tabular">{placed.number}</p>
-          <p>{t.kioskPayAtCounter}</p>
+          <p>{web ? t.webPickupNote : t.kioskPayAtCounter}</p>
           <button
             type="button"
             className="btn btn-primary"
@@ -263,7 +292,7 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
         </section>
       ) : null}
 
-      {menu.categories.length > 1 ? (
+      {infoOnly ? null : menu.categories.length > 1 ? (
         <div className="chips" role="group" aria-label={t.menuItemCategory}>
           <button
             type="button"
@@ -287,17 +316,22 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
         </div>
       ) : null}
 
-      {data.kiosk ? <p className="muted">{t.kioskIntro}</p> : <CallStaff token={token} />}
+      {infoOnly ? <p className="muted">{t.guestInfoIntro}</p> : null}
+      {data.kiosk ? (
+        <p className="muted">{web ? t.webIntro : t.kioskIntro}</p>
+      ) : (
+        <CallStaff token={token} />
+      )}
       {data.kiosk ? null : <ShopInfo token={token} ai={data.ai} />}
-      <FoodFilter token={token} ai={data.ai} filter={diet} onChange={setDiet} />
-      {dietActive ? <p className="muted">{t.gsFilterWarning}</p> : null}
+      {infoOnly ? null : <FoodFilter token={token} ai={data.ai} filter={diet} onChange={setDiet} />}
+      {dietActive && !infoOnly ? <p className="muted">{t.gsFilterWarning}</p> : null}
 
-      {menu.items.length === 0 ? <p className="muted">{t.gsEmptyMenu}</p> : null}
+      {!infoOnly && menu.items.length === 0 ? <p className="muted">{t.gsEmptyMenu}</p> : null}
       {menu.items.length > 0 && items.length === 0 && dietActive ? (
         <p className="muted">{t.gsFilterNone}</p>
       ) : null}
       <ul className="guest-items">
-        {items.map((i) => (
+        {(infoOnly ? [] : items).map((i) => (
           <li key={i.id}>
             <ItemButton item={i} lang={lang} money={money} onOpen={() => setOpen(i)} />
           </li>
@@ -321,77 +355,109 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
         <p className="muted">{fmt(t.gsFilterHidden, { n: found.hidden })}</p>
       ) : null}
 
-      <section className="card guest-cart" aria-label={t.gsCart}>
-        <h2>{t.gsCart}</h2>
-        {cart.length === 0 ? (
-          <p className="muted">{t.gsCartEmpty}</p>
-        ) : (
-          <ul className="guest-cart-lines">
-            {cart.map((l) => {
-              const item = menu.items.find((i) => i.id === l.itemId);
-              if (!item) return null;
-              const name = guestName(item.name, lang);
-              const groups = groupsOf(menu, item);
-              const optionNames = groups
-                .flatMap((g) => g.options.filter((o) => l.optionIds.includes(o.id)))
-                .map((o) => guestName(o.name, lang));
-              return (
-                <li key={l.key} className="guest-cart-line">
-                  <div>
-                    <strong>{name}</strong>
-                    {optionNames.length ? <p className="muted">{optionNames.join(', ')}</p> : null}
-                    {l.note ? <p className="muted">“{l.note}”</p> : null}
-                  </div>
-                  <div
-                    className="qty-stepper"
-                    role="group"
-                    aria-label={fmt(t.gsQtyLabel, { name })}
-                  >
-                    <button
-                      type="button"
-                      aria-label={fmt(l.quantity === 1 ? t.gsRemove : t.gsLess, { name })}
-                      onClick={() => changeCart(setCartQuantity(cart, l.key, l.quantity - 1))}
+      {infoOnly ? null : (
+        <section className="card guest-cart" aria-label={t.gsCart}>
+          <h2>{t.gsCart}</h2>
+          {cart.length === 0 ? (
+            <p className="muted">{t.gsCartEmpty}</p>
+          ) : (
+            <ul className="guest-cart-lines">
+              {cart.map((l) => {
+                const item = menu.items.find((i) => i.id === l.itemId);
+                if (!item) return null;
+                const name = guestName(item.name, lang);
+                const groups = groupsOf(menu, item);
+                const optionNames = groups
+                  .flatMap((g) => g.options.filter((o) => l.optionIds.includes(o.id)))
+                  .map((o) => guestName(o.name, lang));
+                return (
+                  <li key={l.key} className="guest-cart-line">
+                    <div>
+                      <strong>{name}</strong>
+                      {optionNames.length ? (
+                        <p className="muted">{optionNames.join(', ')}</p>
+                      ) : null}
+                      {l.note ? <p className="muted">“{l.note}”</p> : null}
+                    </div>
+                    <div
+                      className="qty-stepper"
+                      role="group"
+                      aria-label={fmt(t.gsQtyLabel, { name })}
                     >
-                      −
-                    </button>
-                    <output className="tabular">{l.quantity}</output>
-                    <button
-                      type="button"
-                      aria-label={fmt(t.gsMore, { name })}
-                      onClick={() => changeCart(setCartQuantity(cart, l.key, l.quantity + 1))}
-                    >
-                      +
-                    </button>
-                  </div>
-                  <span className="tabular">
-                    {money(unitPrice(item, groups, l.optionIds) * l.quantity)}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        {cart.length > 0 ? (
-          <>
-            <p className="guest-total">
-              <span>{t.gsTotalNote}</span>
-              <strong className="tabular">{money(cartTotal(menu, cart))}</strong>
-            </p>
-            {error ? (
-              <p className="notice notice-error" role="alert">
-                {failureText(t, error)}
+                      <button
+                        type="button"
+                        aria-label={fmt(l.quantity === 1 ? t.gsRemove : t.gsLess, { name })}
+                        onClick={() => changeCart(setCartQuantity(cart, l.key, l.quantity - 1))}
+                      >
+                        −
+                      </button>
+                      <output className="tabular">{l.quantity}</output>
+                      <button
+                        type="button"
+                        aria-label={fmt(t.gsMore, { name })}
+                        onClick={() => changeCart(setCartQuantity(cart, l.key, l.quantity + 1))}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <span className="tabular">
+                      {money(unitPrice(item, groups, l.optionIds) * l.quantity)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {cart.length > 0 && web ? (
+            <div className="form-row">
+              <label className="label" htmlFor="web-name">
+                {t.webName}
+              </label>
+              <input
+                id="web-name"
+                className="field"
+                autoComplete="name"
+                maxLength={80}
+                value={contact.name}
+                onChange={(e) => setContact({ ...contact, name: e.target.value })}
+              />
+              <label className="label" htmlFor="web-phone">
+                {t.webPhone}
+              </label>
+              <input
+                id="web-phone"
+                className="field"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                maxLength={30}
+                value={contact.phone}
+                onChange={(e) => setContact({ ...contact, phone: e.target.value })}
+              />
+            </div>
+          ) : null}
+          {cart.length > 0 ? (
+            <>
+              <p className="guest-total">
+                <span>{t.gsTotalNote}</span>
+                <strong className="tabular">{money(cartTotal(menu, cart))}</strong>
               </p>
-            ) : null}
-            {charge ? (
-              <p className="muted">{t.gsPayLocked}</p>
-            ) : (
-              <AsyncButton onClick={send}>
-                {t.gsSend} ({cartCount(cart)})
-              </AsyncButton>
-            )}
-          </>
-        ) : null}
-      </section>
+              {error ? (
+                <p className="notice notice-error" role="alert">
+                  {failureText(t, error)}
+                </p>
+              ) : null}
+              {charge ? (
+                <p className="muted">{t.gsPayLocked}</p>
+              ) : (
+                <AsyncButton onClick={send} disabled={!contactOk}>
+                  {t.gsSend} ({cartCount(cart)})
+                </AsyncButton>
+              )}
+            </>
+          ) : null}
+        </section>
+      )}
 
       {!data.kiosk && data.bill.lines.length > 0 ? (
         <section className="card" aria-label={t.gsBillTitle}>

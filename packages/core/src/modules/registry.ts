@@ -28,6 +28,7 @@ export const MODULE_IDS = [
   'commission',
   'packages',
   'booking.online',
+  'advisor.spa',
   'slots.booking',
   // resort
   'folio',
@@ -132,6 +133,7 @@ export const MODULES: readonly ModuleDef[] = [
   { id: 'commission', dependsOn: [], defaultProfiles: ['salon', 'spa'], plan: 'pro', phase: 2 },
   { id: 'packages', dependsOn: [], defaultProfiles: ['salon', 'spa'], plan: 'pro', phase: 2 },
   { id: 'booking.online', dependsOn: ['appointments'], defaultProfiles: [], plan: 'pro', phase: 2 },
+  { id: 'advisor.spa', dependsOn: ['booking.online'], defaultProfiles: [], plan: 'pro', phase: 2 },
   { id: 'slots.booking', dependsOn: [], defaultProfiles: ['tours'], plan: 'pro', phase: 2 },
 
   { id: 'folio', dependsOn: [], defaultProfiles: ['resort'], plan: 'resort', phase: 4 },

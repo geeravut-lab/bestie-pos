@@ -1,4 +1,5 @@
 import {
+  parseSpaInfo,
   parseBookingInfo,
   parseBookingResult,
   parseCancelResult,
@@ -6,6 +7,7 @@ import {
   parseSlots,
 } from '@bestie/core';
 import type {
+  SpaInfo,
   BookingInfo,
   BookingResult,
   CancelResult,
@@ -273,5 +275,19 @@ export async function sendHealthForm(
     };
   } catch {
     return { ok: false, error: 'failed' };
+  }
+}
+
+/** Is the spa / yoga advisor on for this booking link, and the tags of the services (no account, nothing secret). */
+export async function loadSpaInfo(
+  token: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<SpaInfo> {
+  try {
+    const res = await fetchImpl(`/api/guest/booking?t=${encodeURIComponent(token)}&op=spa`);
+    if (!res.ok) return { enabled: false, services: [] };
+    return parseSpaInfo(obj(await res.json().catch(() => null)).spa);
+  } catch {
+    return { enabled: false, services: [] };
   }
 }

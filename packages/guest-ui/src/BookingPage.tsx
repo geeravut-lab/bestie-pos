@@ -7,6 +7,7 @@ import { cancelBooking, loadBooking, loadSlots, saveContact, sendBooking } from 
 import type { BookingLoad } from './bookingApi';
 import { HairAdvisor } from './HairAdvisor';
 import { HealthForm } from './HealthForm';
+import { SpaAdvisor } from './SpaAdvisor';
 
 type Done = { id: string; code: string | null; startsAt: string; provider: string | null };
 const SAVED = (token: string) => `bestie.booking.${token}`;
@@ -335,6 +336,17 @@ function Form({
   if (info.services.length === 0) return <p>{t.bkNoServices}</p>;
   return (
     <form className="card auth-form" onSubmit={(e) => e.preventDefault()} aria-label={t.bkTitle}>
+      <SpaAdvisor
+        token={token}
+        services={info.services}
+        onPick={(id, advisorNote) => {
+          setService(id);
+          setProvider('');
+          setDate('');
+          setTime('');
+          setNote(advisorNote);
+        }}
+      />
       <fieldset className="form-row">
         <legend className="label">{t.bkStepService}</legend>
         <div className="chips">

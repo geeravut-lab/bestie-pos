@@ -113,6 +113,13 @@ export function StaffPage({ ctx }: { ctx: PageContext }) {
           >
             {t.rolesManage}
           </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => ctx.navigate('/settings/accounting')}
+          >
+            {t.accLink}
+          </button>
           {ctx.isModuleOn?.('commission') ? (
             <button
               type="button"

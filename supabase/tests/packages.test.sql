@@ -133,7 +133,7 @@ create or replace function t_rep() returns jsonb language sql as $$
   select jsonb_build_object('org_id', (select v from t_out where k='org'), 'from', to_char(now() at time zone 'Asia/Bangkok', 'YYYY-MM-DD'), 'to', to_char(now() at time zone 'Asia/Bangkok', 'YYYY-MM-DD')) $$;
 grant execute on function t_rep() to authenticated, service_role;
 select t_val('00000000-0000-0000-0000-0000000000b2', 'authenticated', 'rep', $$select public.commission_report(t_rep())::text$$);
-select t_rows(null, 'service_role', $$select 1 from t_out, jsonb_array_elements((v::jsonb) -> 'rows') r where k = 'rep' and r ->> 'name' = 'Stylist Nok' and (r ->> 'service_sales')::bigint = 80000 and (r ->> 'commission')::bigint = 8000$$, 1, 'Nok earns 10 % of the 800.00 visit; the package sale itself earns nobody');
+select t_rows(null, 'service_role', $$select 1 from t_out, jsonb_array_elements((v::jsonb) -> 'rows') r where k = 'rep' and r ->> 'name' = 'Stylist Nok' and (r ->> 'service_sales')::bigint = 74766 and (r ->> 'commission')::bigint = 7477$$, 1, 'Nok earns 10 % of the 800.00 visit before its 7 % VAT (747.66); the package sale itself earns nobody');
 
 -- ── undo ──
 select t_err('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$select public.undo_package_use((select v::uuid from t_out where k='u1'))$$, '42501', 'a cashier cannot take a visit back');
@@ -162,4 +162,18 @@ select t_rows(null, 'service_role', $$select 1 from public.orders where id = (se
 select t_rows(null, 'service_role', $$update public.orders set status = 'void' where id = (select v::uuid from t_out where k='o2') returning 1$$, 1, 'the bill is voided');
 select t_rows(null, 'service_role', $$select 1 from public.customer_packages where order_id = (select v::uuid from t_out where k='o2') and status = 'cancelled'$$, 1, 'and the package never starts');
 select t_rows('00000000-0000-0000-0000-0000000000e5', 'authenticated', $$select 1 from public.customer_packages$$, 0, 'another business sees no member packages');
+
+-- ── migration 65: income received in advance (owner rule E) ──
+select t_val('00000000-0000-0000-0000-0000000000d4', 'authenticated', 'u4', $$select public.use_package(t_use('a1'))::text$$);
+update public.customer_packages set valid_until = (now() at time zone 'Asia/Bangkok')::date - 1 where id = (select v::uuid from t_out where k='cp1');
+select t_val('00000000-0000-0000-0000-0000000000b2', 'authenticated', 'def', $$select public.package_deferred_report(jsonb_build_object('org_id', (select v from t_out where k='org'), 'store_id', (select v from t_out where k='store')))::text$$);
+select t_rows(null, 'service_role', $$select 1 from t_out o, public.customer_packages cp where o.k = 'def' and cp.id = (select v::uuid from t_out where k='cp1')
+   and (o.v::jsonb ->> 'sold')::bigint = cp.price
+   and (o.v::jsonb ->> 'released_by_visits')::bigint = (select sum(value) from public.package_uses where customer_package_id = cp.id)
+   and (o.v::jsonb ->> 'released_by_expiry')::bigint = cp.price - (select sum(value) from public.package_uses where customer_package_id = cp.id)
+   and (o.v::jsonb ->> 'deferred')::bigint = 0$$, 1, 'an expired package: what was paid is released by the visits used and the rest by the expiry; nothing is still deferred');
+select t_rows(null, 'service_role', $$select 1 from t_out o where o.k = 'def' and o.v::jsonb ->> 'policy' = 'deferred' and (o.v::jsonb -> 'rows' -> 0 ->> 'expired')::boolean$$, 1, 'the report shows the policy and marks the package expired');
+select t_err('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$select public.package_deferred_report(jsonb_build_object('org_id', (select v from t_out where k='org')))$$, '42501', 'a cashier cannot read it');
+select t_val('00000000-0000-0000-0000-0000000000b2', 'authenticated', 'def0', $$select public.package_deferred_report(jsonb_build_object('org_id', (select v from t_out where k='org'), 'store_id', (select v from t_out where k='store'), 'as_of', (now() at time zone 'Asia/Bangkok')::date - 5))::text$$);
+select t_rows(null, 'service_role', $$select 1 from t_out o, public.customer_packages cp where o.k = 'def0' and cp.id = (select v::uuid from t_out where k='cp1') and (o.v::jsonb ->> 'sold')::bigint = 0 and (o.v::jsonb ->> 'deferred')::bigint = 0$$, 1, 'five days ago the package had not been bought: nothing sold, nothing deferred (as-of date)');
 do $$ begin raise notice 'ALL PACKAGE TESTS PASSED'; end $$;

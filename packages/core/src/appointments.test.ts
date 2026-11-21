@@ -272,6 +272,12 @@ describe('billing and deposits', () => {
         method: 'cash',
         status: 'held',
         reference: 'slip 7',
+        invoiceNo: null,
+        invoiceVat: null,
+        feeInvoiceNo: null,
+        feeVat: null,
+        createdAt: null,
+        resolvedAt: null,
       },
     ]);
   });

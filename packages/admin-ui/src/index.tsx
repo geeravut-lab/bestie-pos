@@ -27,6 +27,7 @@ import { CommissionPage } from './CommissionPage';
 import { PackagesPage } from './PackagesPage';
 import { HairStylesPage } from './HairStylesPage';
 import { DaysOffPage } from './DaysOffPage';
+import { AccountingPage } from './AccountingPage';
 import { NetworkPage } from './NetworkPage';
 import { GroupBookingPage } from './GroupBookingPage';
 import { ResourcesPage } from './ResourcesPage';
@@ -65,6 +66,7 @@ export function adminPages(ctx: PageContext): ReactNode | null {
   if (ctx.path === '/labels') return <LabelsPage ctx={ctx} />;
   if (ctx.path === '/resources') return <ResourcesPage ctx={ctx} />;
   if (ctx.path === '/hair-styles') return <HairStylesPage ctx={ctx} />;
+  if (ctx.path === '/settings/accounting') return <AccountingPage ctx={ctx} />;
   if (ctx.path === '/network') return <NetworkPage ctx={ctx} />;
   if (ctx.path === '/days-off') return <DaysOffPage ctx={ctx} />;
   if (ctx.path === '/group-booking') return <GroupBookingPage ctx={ctx} />;

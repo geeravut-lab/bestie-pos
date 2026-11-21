@@ -19,7 +19,7 @@ const [target, ...rest] = process.argv.slice(2);
 const steps = rest.filter((a) => !a.startsWith('--'));
 const yes = rest.includes('--yes');
 if (!['local', 'remote'].includes(target) || steps.length === 0) {
-  console.error('usage: run.mjs <local|remote> <setup|simulate|cleanup>… [--yes]');
+  console.error('usage: run.mjs <local|remote> <setup|simulate|retail|cleanup>… [--yes]');
   process.exit(2);
 }
 const ref = process.env.SUPABASE_PROJECT_REF || 'pqomylchauwecpgqxoad';
@@ -33,6 +33,8 @@ const files = (prefix) =>
 const STEP_FILES = {
   setup: () => ['00_helpers.sql', ...files('1')],
   simulate: () => ['00_helpers.sql', ...files('2')],
+  // an extra shop (Retail) with sales and product returns, added to an existing demo; safe to run again (it skips what exists)
+  retail: () => ['00_helpers.sql', '20_sim_helpers.sql', ...files('3')],
   cleanup: () => ['00_helpers.sql', ...files('9')],
 };
 
@@ -81,7 +83,7 @@ end if; end $$;`;
 async function main() {
   for (const step of steps) {
     if (!STEP_FILES[step]) throw new Error(`unknown step ${step}`);
-    if (step === 'setup' && !password)
+    if ((step === 'setup' || step === 'retail') && !password)
       throw new Error('set DEMO_PASSWORD (the password every demo account gets)');
     if (step === 'cleanup' && !yes) {
       console.log(

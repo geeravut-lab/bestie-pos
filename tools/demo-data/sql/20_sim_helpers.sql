@@ -167,7 +167,8 @@ begin
     + coalesce((select sum(amount) from public.appointment_deposits where device_id = s.device_id and method = 'cash' and created_at >= s.opened_at), 0)
     - coalesce((select sum(amount) from public.appointment_deposits where resolved_device_id = s.device_id and method = 'cash' and status = 'refunded' and resolved_at >= s.opened_at), 0)
     + coalesce((select sum(amount) from public.staff_tips where device_id = s.device_id and method = 'cash' and created_at >= s.opened_at), 0)
-    - coalesce((select sum(amount) from public.staff_tips where paid_device_id = s.device_id and status = 'paid' and paid_at >= s.opened_at), 0);
+    - coalesce((select sum(amount) from public.staff_tips where paid_device_id = s.device_id and status = 'paid' and paid_at >= s.opened_at), 0)
+    - coalesce((select sum(amount) from public.order_returns where device_id = s.device_id and refund_method = 'cash' and created_at >= s.opened_at), 0);
   return demo.val(p_by, format($q$select public.close_shift(jsonb_build_object('id', %L, 'staff_id', %L, 'closed_at', now(), 'counted_cash', %s, 'note', %L))::text$q$,
     s.id, demo.staff(p_by), v_exp + p_diff, p_note))::jsonb;
 end $$;

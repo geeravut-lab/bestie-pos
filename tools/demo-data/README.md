@@ -22,6 +22,7 @@ Running `setup` / `simulate` twice does nothing new (each step checks first); ru
 | Breeze Café | cafe | `cashier.cafe.demo`, `kds.cafe.demo` |
 | Sunset Salon | salon | `reception.salon.demo`, `stylist.salon.demo` |
 | Lotus Spa | spa | `reception.spa.demo`, `therapist.spa.demo` |
+| Island Mart | retail (`retail` step, see below) | `cashier.retail.demo`, `manager.retail.demo` |
 | all shops | — | `owner.demo`, `manager.demo`, `accountant.demo` (custom role), `stockkeeper.demo` (custom role) |
 
 Also: 8 devices (tills with POS ID, handheld, kitchen / bar screens), ~40 menu items and services (some with barcodes), 8 members
@@ -41,3 +42,12 @@ tips), two table-QR guest orders, guest feedback, 4 closed shifts (one 20 baht s
 The demo accounts share one password and live in the real project: keep the list private, do not give them real roles, and run
 `cleanup --yes` before go-live. No demo account is a platform admin. The helper functions (`demo.*`, which can act as any demo user)
 exist only while a run is in progress; the tool drops them at the end.
+
+## The Retail shop and product returns (`retail` step)
+```bash
+DEMO_PASSWORD='…' SUPABASE_ACCESS_TOKEN=sbp_… node tools/demo-data/run.mjs remote retail
+```
+Adds **Island Mart** (retail, VAT 7 %) to an existing demo: a cashier and a manager (PIN 1234), a till, six products with barcodes
+and stock (30 each), a morning shift, **five sales** (cash, Bestie Credit, Points) and **three returns**: a T-shirt back for cash and on the
+shelf, a damaged bottle refunded onto the member's Credit (not restocked), and a wrong-size T-shirt for cash with the Points taken back. The
+shift closes with the drawer exactly right (cash refunds leave it). Safe to run again; `cleanup` removes it with the rest.

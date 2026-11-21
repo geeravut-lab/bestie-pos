@@ -2,6 +2,7 @@ import { PERMISSIONS } from './types';
 import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { MODULE_BY_ID, PLAN_RANK } from './modules/registry';
+import { KARAOKE_GUEST_QUEUE_MAX, KARAOKE_REPEAT_MINUTES, KARAOKE_STEPS } from './karaoke';
 import { SPA_RULES_VERSION, SPA_TAGS } from './spaAdvisor';
 
 /**
@@ -274,5 +275,49 @@ describe('spa advisor SQL mirror', () => {
     expect(sql).toContain('booking_online_enabled');
     // the database accepts exactly the tags the code knows
     for (const tag of SPA_TAGS) expect(sql).toContain(`'${tag}'`);
+  });
+
+  it('ai.hair: registry and SQL agree and the photo reaches a model only after a separate consent', () => {
+    const dir = new URL('../../../supabase/migrations/', import.meta.url);
+    const sql = readFileSync(
+      new URL(readdirSync(dir).find((f) => f.endsWith('_hair_ai.sql')) ?? '', dir),
+      'utf8',
+    );
+    expect(MODULE_BY_ID['ai.hair'].defaultProfiles).toEqual([]);
+    expect(MODULE_BY_ID['ai.hair'].dependsOn).toEqual(['booking.online']);
+    expect(MODULE_BY_ID['ai.hair'].plan).toBe('pro');
+    expect(sql).toContain("(s.module_overrides ->> 'ai.hair')::boolean, false");
+    expect(sql).toContain("s.plan in ('pro', 'resort')");
+    expect(sql).toContain('ph.ai_consent_at is null');
+    for (const v of [
+      'short',
+      'medium',
+      'long',
+      'straight',
+      'wavy',
+      'curly',
+      'fine',
+      'thick',
+      'dry_damaged',
+    ])
+      expect(sql).toContain(`'${v}'`);
+  });
+
+  it('karaoke: the module mirrors and the arithmetic live in migration 70', () => {
+    const dir = new URL('../../../supabase/migrations/', import.meta.url);
+    const sql = readFileSync(
+      new URL(readdirSync(dir).find((f) => f.endsWith('_karaoke.sql')) ?? '', dir),
+      'utf8',
+    );
+    expect(MODULE_BY_ID['karaoke.rooms'].defaultProfiles).toEqual(['karaoke']);
+    expect(MODULE_BY_ID['karaoke.songs'].dependsOn).toEqual(['karaoke.rooms']);
+    expect(sql).toContain("'karaoke.rooms','karaoke.songs'");
+    expect(sql).toContain("s.profile = 'karaoke'");
+    expect(sql).toContain("s.plan in ('pro', 'resort')");
+    // the rules of the queue are the ones the page tells the guest
+    expect(sql).toContain(`interval '${KARAOKE_REPEAT_MINUTES} minutes'`);
+    expect(sql).toContain(`'guest', ${KARAOKE_GUEST_QUEUE_MAX})`);
+    // the database accepts exactly the steps the screen offers
+    expect(sql).toContain(`step_minutes in (${KARAOKE_STEPS.join(', ')})`);
   });
 });

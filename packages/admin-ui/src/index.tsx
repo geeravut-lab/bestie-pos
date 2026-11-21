@@ -23,6 +23,7 @@ import type { ReactNode } from 'react';
 import type { PageContext } from '@bestie/auth';
 import { AiUsagePage } from './AiUsagePage';
 import { AppointmentsPage } from './AppointmentsPage';
+import { KaraokePage } from './KaraokePage';
 import { CommissionPage } from './CommissionPage';
 import { PackagesPage } from './PackagesPage';
 import { HairStylesPage } from './HairStylesPage';
@@ -62,6 +63,7 @@ export function adminPages(ctx: PageContext): ReactNode | null {
     return <BrandingPage ctx={ctx} />;
   if (ctx.path === '/ai/usage') return <AiUsagePage ctx={ctx} />;
   if (ctx.path === '/calendar') return <AppointmentsPage ctx={ctx} />;
+  if (ctx.path === '/karaoke') return <KaraokePage ctx={ctx} />;
   if (ctx.path === '/commission') return <CommissionPage ctx={ctx} />;
   if (ctx.path === '/packages') return <PackagesPage ctx={ctx} />;
   if (ctx.path === '/labels') return <LabelsPage ctx={ctx} />;

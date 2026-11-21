@@ -8,6 +8,7 @@ export const BUSINESS_PROFILES = [
   'resort',
   'retail',
   'tours',
+  'karaoke',
 ] as const;
 export type BusinessProfile = (typeof BUSINESS_PROFILES)[number];
 
@@ -18,8 +19,8 @@ export const isBusinessProfile = (v: unknown): v is BusinessProfile =>
   typeof v === 'string' && (BUSINESS_PROFILES as readonly string[]).includes(v);
 
 export type HomeScreen =
-  'floor-plan' | 'product-grid' | 'calendar' | 'outlets' | 'barcode' | 'slots';
-export type SellUnit = 'dish' | 'item' | 'service' | 'night' | 'sku' | 'seat';
+  'floor-plan' | 'product-grid' | 'calendar' | 'outlets' | 'barcode' | 'slots' | 'rooms';
+export type SellUnit = 'dish' | 'item' | 'service' | 'night' | 'sku' | 'seat' | 'room-hour';
 
 /**
  * A preset = what a profile pre-selects at signup. The module list is NOT stored here: it is derived
@@ -93,5 +94,13 @@ export const PROFILE_PRESETS: Readonly<Record<BusinessProfile, ProfilePreset>> =
     serviceChargeBps: 0,
     priceMode: 'inclusive',
     highlight: ['slots.booking', 'deposits'],
+  },
+  karaoke: {
+    id: 'karaoke',
+    homeScreen: 'rooms',
+    sellUnit: 'room-hour',
+    serviceChargeBps: 0,
+    priceMode: 'inclusive',
+    highlight: ['karaoke.rooms', 'karaoke.songs'],
   },
 };

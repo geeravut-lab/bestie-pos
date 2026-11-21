@@ -3,10 +3,13 @@ import {
   parseBookingInfo,
   parseBookingResult,
   parseCancelResult,
+  parseHairLabels,
+  labelsToAnswers,
   parseHairStyles,
   parseSlots,
 } from '@bestie/core';
 import type {
+  HairLabels,
   SpaInfo,
   BookingInfo,
   BookingResult,
@@ -290,4 +293,86 @@ export async function loadSpaInfo(
   } catch {
     return { enabled: false, services: [] };
   }
+}
+
+export type HairAiState = {
+  enabled: boolean;
+  consent: boolean;
+  labels: HairLabels | null;
+  answers: HairAnswers;
+};
+const NO_AI: HairAiState = { enabled: false, consent: false, labels: null, answers: {} };
+
+async function hairAiCall(
+  token: string,
+  id: string,
+  code: string,
+  body: Record<string, unknown>,
+  fetchImpl: typeof fetch,
+): Promise<Record<string, unknown> | null> {
+  try {
+    const res = await fetchImpl('/api/guest/booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ t: token, op: 'hair_ai', id, code, ...body }),
+    });
+    if (res.status === 429) return { ok: false, error: 'rate_limited' };
+    if (!res.ok) return null;
+    return obj(await res.json().catch(() => null));
+  } catch {
+    return null;
+  }
+}
+
+/** Is the AI step offered for this booking's photo, and has the guest consented / has the AI already read it? */
+export async function loadHairAi(
+  token: string,
+  id: string,
+  code: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<HairAiState> {
+  const o = await hairAiCall(token, id, code, { action: 'state' }, fetchImpl);
+  if (!o || o.enabled !== true) return NO_AI;
+  const labels = parseHairLabels(o.labels);
+  return {
+    enabled: true,
+    consent: o.consent === true,
+    labels,
+    answers: labels ? labelsToAnswers(labels) : {},
+  };
+}
+
+export async function setHairAiConsent(
+  token: string,
+  id: string,
+  code: string,
+  on: boolean,
+  fetchImpl: typeof fetch = fetch,
+): Promise<boolean> {
+  const o = await hairAiCall(token, id, code, { action: 'consent', on }, fetchImpl);
+  return o?.ok === true;
+}
+
+export type HairAiReadResult =
+  | { ok: true; labels: HairLabels; answers: HairAnswers }
+  | { ok: false; error: 'unclear' | 'no_key' | 'consent_needed' | 'rate_limited' | 'failed' };
+
+export async function readHairWithAi(
+  token: string,
+  id: string,
+  code: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<HairAiReadResult> {
+  const o = await hairAiCall(token, id, code, { action: 'read' }, fetchImpl);
+  if (!o) return { ok: false, error: 'failed' };
+  const labels = parseHairLabels(o.labels);
+  if (o.ok === true && labels) return { ok: true, labels, answers: labelsToAnswers(labels) };
+  const e = o.error;
+  return {
+    ok: false,
+    error:
+      e === 'unclear' || e === 'no_key' || e === 'consent_needed' || e === 'rate_limited'
+        ? e
+        : 'failed',
+  };
 }

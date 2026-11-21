@@ -6,7 +6,9 @@
 import { PROVIDERS } from '../../packages/core/src/ai.js';
 import type { ProviderId } from '../../packages/core/src/ai.js';
 
-export type AiRequest = { system?: string; prompt: string; maxTokens?: number };
+/** A picture for a vision task: base64 bytes and the type the server already checked. */
+export type AiImage = { mime: 'image/jpeg' | 'image/png' | 'image/webp'; data: string };
+export type AiRequest = { system?: string; prompt: string; maxTokens?: number; images?: AiImage[] };
 export type AiResponse = {
   text: string;
   provider: ProviderId;
@@ -49,7 +51,20 @@ export function createAnthropicAdapter(fetchImpl: typeof fetch = fetch): Provide
           model,
           max_tokens: req.maxTokens ?? 1024,
           ...(req.system ? { system: req.system } : {}),
-          messages: [{ role: 'user', content: req.prompt }],
+          messages: [
+            {
+              role: 'user',
+              content: req.images?.length
+                ? [
+                    ...req.images.map((i) => ({
+                      type: 'image',
+                      source: { type: 'base64', media_type: i.mime, data: i.data },
+                    })),
+                    { type: 'text', text: req.prompt },
+                  ]
+                : req.prompt,
+            },
+          ],
         }),
       });
       if (!res.ok) throw new AiError('provider_failed', res.status);
@@ -86,7 +101,17 @@ export function createGoogleAdapter(fetchImpl: typeof fetch = fetch): ProviderAd
           headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
           body: JSON.stringify({
             ...(req.system ? { systemInstruction: { parts: [{ text: req.system }] } } : {}),
-            contents: [{ role: 'user', parts: [{ text: req.prompt }] }],
+            contents: [
+              {
+                role: 'user',
+                parts: [
+                  ...(req.images ?? []).map((i) => ({
+                    inlineData: { mimeType: i.mime, data: i.data },
+                  })),
+                  { text: req.prompt },
+                ],
+              },
+            ],
             generationConfig: { maxOutputTokens: req.maxTokens ?? 1024 },
           }),
         },

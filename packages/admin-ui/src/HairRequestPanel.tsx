@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { localizedName, parseHairStyles } from '@bestie/core';
-import { useI18n } from '@bestie/i18n';
+import { localizedName, parseHairLabels, parseHairStyles } from '@bestie/core';
+import type { HairLabels } from '@bestie/core';
+import { hairLabelsText, useI18n } from '@bestie/i18n';
 import { AsyncButton } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
@@ -19,6 +20,7 @@ export function HairRequestPanel({
   const { t, lang } = useI18n();
   const [photo, setPhoto] = useState<string | null>(null);
   const [gone, setGone] = useState(false);
+  const [aiLabels, setAiLabels] = useState<HairLabels | null>(null);
   const label = (k: string): string => (t as Record<string, string>)[k] ?? k;
   const data = useRemote<Req>(async () => {
     const r = await ctx.client
@@ -59,9 +61,10 @@ export function HairRequestPanel({
     const { data: out, error } = await ctx.client.rpc('get_hair_photo', {
       p_appointment: appointmentId,
     });
-    const o = out as { mime?: string; data?: string } | null;
+    const o = out as { mime?: string; data?: string; ai_labels?: unknown } | null;
     if (error || !o?.data || !o.mime) return setGone(true);
     setPhoto(`data:${o.mime};base64,${o.data}`);
+    setAiLabels(parseHairLabels(o.ai_labels));
   };
   return (
     <section className="card admin-card" aria-label={t.hrTitle}>
@@ -85,6 +88,11 @@ export function HairRequestPanel({
           <>
             <img src={photo} alt={t.hrPhotoAlt} style={{ maxWidth: '100%', maxHeight: '60vh' }} />
             <p className="muted">{t.hrPhotoNote}</p>
+            {aiLabels ? (
+              <p>
+                <strong>{t.hairAiLabelsTitle}:</strong> {hairLabelsText(t, aiLabels)}
+              </p>
+            ) : null}
           </>
         ) : (
           <AsyncButton variant="secondary" onClick={show}>

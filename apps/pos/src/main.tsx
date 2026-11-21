@@ -6,5 +6,5 @@ import { App } from './App';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('#root not found');
-// /t/<token> (table QR), /book/<token>, /pass/<token>, /join/<network>, /island/<network> are a guest's phone: no account, no shell.
+// /t/<token> (table QR), /book/<token>, /pass/<token>, /join/<network>, /island/<network>, /r/<room token> are a guest's phone: no account, no shell.
 createRoot(root).render(<StrictMode>{guestEntry(window.location.pathname) ?? <App />}</StrictMode>);

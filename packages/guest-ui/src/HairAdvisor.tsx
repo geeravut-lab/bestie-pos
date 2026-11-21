@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { adviseStyles, HAIR_FACES, HAIR_LENGTHS, HAIR_TEXTURES, HAIR_UPKEEP } from '@bestie/core';
-import type { HairAnswers, HairStyle } from '@bestie/core';
+import type { HairAnswers, HairLabels, HairStyle } from '@bestie/core';
 import { localizedName } from '@bestie/core';
-import { useI18n } from '@bestie/i18n';
+import { fmt, hairLabelsText, useI18n } from '@bestie/i18n';
 import { AsyncButton } from '@bestie/ui';
-import { loadStyles, sendHair } from './bookingApi';
+import { loadHairAi, loadStyles, readHairWithAi, sendHair, setHairAiConsent } from './bookingApi';
+import type { HairAiState } from './bookingApi';
 import { preparePhoto } from './photoPrep';
 
 /**
@@ -22,6 +23,26 @@ export function HairAdvisor({ token, id, code }: { token: string; id: string; co
   const [note, setNote] = useState<
     'saved' | 'removed' | 'consent' | 'early' | 'photo' | 'failed' | null
   >(null);
+  const [ai, setAi] = useState<HairAiState | null>(null);
+  const [aiNote, setAiNote] = useState<
+    'result' | 'unclear' | 'failed' | 'withdrawn' | 'photo' | 'consent' | null
+  >(null);
+  const [aiLabels, setAiLabels] = useState<HairLabels | null>(null);
+  const [aiTick, setAiTick] = useState(false);
+  const [photoSent, setPhotoSent] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void loadHairAi(token, id, code).then((s) => {
+      if (!alive) return;
+      setAi(s);
+      setAiTick(s.consent);
+      setAiLabels(s.labels);
+      if (s.labels) setPhotoSent(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [token, id, code]);
   useEffect(() => {
     let alive = true;
     void loadStyles(token).then((s) => alive && setStyles(s));
@@ -47,7 +68,18 @@ export function HairAdvisor({ token, id, code }: { token: string; id: string; co
     }
     const r = await sendHair(token, id, code, { styleId, answers, photo, removePhoto });
     if (r.ok) {
-      if (removePhoto) setFile(null);
+      if (removePhoto) {
+        setFile(null);
+        setPhotoSent(false);
+        setAiLabels(null);
+        setAiTick(false);
+        void loadHairAi(token, id, code).then(setAi);
+      } else if (photo) {
+        setPhotoSent(true);
+        setAiLabels(null);
+        setAiTick(false);
+        void loadHairAi(token, id, code).then(setAi);
+      }
       return setNote(removePhoto ? 'removed' : 'saved');
     }
     setNote(
@@ -61,6 +93,30 @@ export function HairAdvisor({ token, id, code }: { token: string; id: string; co
     );
   };
 
+  const readWithAi = async () => {
+    setAiNote(null);
+    if (!photoSent) return setAiNote('photo');
+    if (!aiTick) return setAiNote('consent');
+    if (!ai?.consent) {
+      if (!(await setHairAiConsent(token, id, code, true))) return setAiNote('failed');
+      setAi({ ...ai!, consent: true });
+    }
+    const r = await readHairWithAi(token, id, code);
+    if (r.ok) {
+      setAiLabels(r.labels);
+      setAnswers((a) => ({ ...a, ...r.answers }));
+      return setAiNote('result');
+    }
+    setAiNote(r.error === 'unclear' ? 'unclear' : 'failed');
+  };
+  const withdrawAi = async () => {
+    setAiNote(null);
+    if (!(await setHairAiConsent(token, id, code, false))) return setAiNote('failed');
+    setAiTick(false);
+    setAiLabels(null);
+    setAi((s) => (s ? { ...s, consent: false, labels: null } : s));
+    setAiNote('withdrawn');
+  };
   const set = <K extends keyof HairAnswers>(k: K, v: HairAnswers[K]) =>
     setAnswers({ ...answers, [k]: v });
   const label = (key: string): string => (t as Record<string, string>)[key] ?? key;
@@ -154,6 +210,33 @@ export function HairAdvisor({ token, id, code }: { token: string; id: string; co
           {t.hairRemovePhoto}
         </AsyncButton>
       </div>
+      {ai?.enabled ? (
+        <div aria-label={t.hairAiTitle}>
+          <h4>{t.hairAiTitle}</h4>
+          <label className="check">
+            <input type="checkbox" checked={aiTick} onChange={(e) => setAiTick(e.target.checked)} />{' '}
+            {t.hairAiConsent}
+          </label>
+          <div className="actions">
+            <AsyncButton variant="secondary" onClick={readWithAi}>
+              {t.hairAiRead}
+            </AsyncButton>
+            {ai.consent ? (
+              <AsyncButton variant="secondary" onClick={withdrawAi}>
+                {t.hairAiWithdraw}
+              </AsyncButton>
+            ) : null}
+          </div>
+          {aiNote === 'photo' ? <p role="alert">{t.hairAiNeedPhoto}</p> : null}
+          {aiNote === 'consent' ? <p role="alert">{t.hairAiNeedConsent}</p> : null}
+          {aiNote === 'unclear' ? <p role="alert">{t.hairAiUnclear}</p> : null}
+          {aiNote === 'failed' ? <p role="alert">{t.hairAiFailed}</p> : null}
+          {aiNote === 'withdrawn' ? <p role="status">{t.hairAiWithdrawn}</p> : null}
+          {aiLabels ? (
+            <p role="status">{fmt(t.hairAiResult, { labels: hairLabelsText(t, aiLabels) })}</p>
+          ) : null}
+        </div>
+      ) : null}
       {note === 'saved' ? <p role="status">{t.hairSaved}</p> : null}
       {note === 'removed' ? <p role="status">{t.hairRemoved}</p> : null}
       {note === 'consent' ? <p role="alert">{t.hairNeedConsent}</p> : null}

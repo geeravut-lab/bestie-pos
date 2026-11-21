@@ -126,3 +126,49 @@ export function hairStylePayload(input: {
     upkeep: input.upkeep || null,
   };
 }
+
+// ── what an AI may say about a hair photo (closed labels only; module `ai.hair`, off by default) ──────────────────
+export const HAIR_THICKNESS = ['fine', 'medium', 'thick'] as const;
+export const HAIR_CONDITION = ['healthy', 'dry_damaged'] as const;
+export type HairThickness = (typeof HAIR_THICKNESS)[number];
+export type HairCondition = (typeof HAIR_CONDITION)[number];
+export type HairLabels = {
+  length: HairLength | null;
+  texture: HairTexture | null;
+  thickness: HairThickness | null;
+  colored: boolean | null;
+  condition: HairCondition | null;
+};
+const oneOf = <T extends string>(all: readonly T[], v: unknown): T | null =>
+  typeof v === 'string' && (all as readonly string[]).includes(v) ? (v as T) : null;
+
+/** The first JSON object in a model answer, cut down to the closed labels. Null when the photo was not readable or nothing usable came back. */
+export function parseHairLabels(raw: unknown): HairLabels | null {
+  let o: unknown = raw;
+  if (typeof raw === 'string') {
+    const m = /\{[\s\S]*\}/.exec(raw);
+    if (!m) return null;
+    try {
+      o = JSON.parse(m[0]);
+    } catch {
+      return null;
+    }
+  }
+  if (!o || typeof o !== 'object' || Array.isArray(o)) return null;
+  const r = o as Record<string, unknown>;
+  if (r.readable === false) return null;
+  const labels: HairLabels = {
+    length: oneOf(HAIR_LENGTHS, r.length),
+    texture: oneOf(HAIR_TEXTURES, r.texture),
+    thickness: oneOf(HAIR_THICKNESS, r.thickness),
+    colored: typeof r.colored === 'boolean' ? r.colored : null,
+    condition: oneOf(HAIR_CONDITION, r.condition),
+  };
+  return Object.values(labels).every((v) => v === null) ? null : labels;
+}
+
+/** The answers the labels fill in for the advisor (length and texture only; the guest can change them). */
+export const labelsToAnswers = (l: HairLabels): HairAnswers => ({
+  ...(l.length ? { length: l.length } : {}),
+  ...(l.texture ? { texture: l.texture } : {}),
+});

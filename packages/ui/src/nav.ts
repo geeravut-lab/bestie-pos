@@ -61,6 +61,7 @@ export const ART_IDS = [
   'pass',
   'book',
   'calendar',
+  'karaoke',
   'pay',
   'home',
   'account',
@@ -124,6 +125,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   item('pass', '/g/pass', 'navPass', 'hintPass', ['loyalty.network']),
   item('book', '/g/book', 'navBook', 'hintBook', ['appointments']),
   item('calendar', '/calendar', 'navCalendar', 'hintCalendar', ['appointments']),
+  item('karaoke', '/karaoke', 'navKaraoke', 'hintKaraoke', ['karaoke.rooms']),
   item('pay', '/g/pay', 'navPay', 'hintPay', ['tender.promptpay']),
 ];
 
@@ -145,7 +147,7 @@ export const ROLE_LAYOUT: Readonly<Record<AppRole, RoleLayout>> = {
   cashier: {
     center: 'sell',
     tabs: ['home', 'orders', 'tables'],
-    cards: ['sell', 'tables', 'queue', 'orders', 'customers', 'shift', 'receipts'],
+    cards: ['sell', 'tables', 'queue', 'karaoke', 'orders', 'customers', 'shift', 'receipts'],
   },
   waiter: {
     center: 'takeOrder',
@@ -156,7 +158,18 @@ export const ROLE_LAYOUT: Readonly<Record<AppRole, RoleLayout>> = {
   manager: {
     center: 'sell',
     tabs: ['home', 'orders', 'reports'],
-    cards: ['reports', 'sell', 'calendar', 'menu', 'stock', 'staff', 'credit', 'points', 'audit'],
+    cards: [
+      'reports',
+      'sell',
+      'calendar',
+      'karaoke',
+      'menu',
+      'stock',
+      'staff',
+      'credit',
+      'points',
+      'audit',
+    ],
   },
   owner: {
     center: 'dashboard',

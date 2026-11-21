@@ -64,3 +64,4 @@ export * from './spaAdvisor';
 export * from './creditTerms';
 export * from './commission';
 export * from './packages';
+export * from './karaoke';

@@ -45,7 +45,7 @@ describe('<DaysOffPage>', () => {
     const db = fakeDb(tables());
     wrap(<DaysOffPage ctx={ctx(db.client)} />);
     expect(await screen.findByText('holiday')).toBeTruthy();
-    await userEvent.type(screen.getByLabelText('Reason (optional)'), 'lunch');
+    await userEvent.type(screen.getAllByLabelText('Reason (optional)')[0]!, 'lunch');
     await userEvent.click(screen.getByRole('button', { name: 'Save the day off' }));
     await waitFor(() => expect(db.rpcs.some((r) => r.fn === 'save_resource_block')).toBe(true));
     const call = db.rpcs.find((r) => r.fn === 'save_resource_block')!.args as {

@@ -2434,6 +2434,40 @@ const th = {
   saAsk: 'ถามนักบำบัดก่อน',
   saPrint: 'พิมพ์กฎ',
   saLink: 'ผู้ช่วยแนะนำสปา',
+
+  // ── weekly days off and counter reminders ──
+  wkTitle: 'ซ้ำทุกสัปดาห์',
+  wkIntro:
+    'วันหยุดประจำสัปดาห์ของช่างหรือห้อง เช่น หยุดทุกวันจันทร์ หรือพักเที่ยงทุกวัน ระบบปฏิเสธการจองในช่วงนี้ให้เองทุกสัปดาห์ รวมถึงหน้าจองออนไลน์',
+  wkDays: 'วันที่หยุด',
+  wkDay_1: 'จันทร์',
+  wkDay_2: 'อังคาร',
+  wkDay_3: 'พุธ',
+  wkDay_4: 'พฤหัสบดี',
+  wkDay_5: 'ศุกร์',
+  wkDay_6: 'เสาร์',
+  wkDay_7: 'อาทิตย์',
+  wkAllDay: 'ทั้งวัน',
+  wkFromTime: 'ตั้งแต่เวลา',
+  wkToTime: 'ถึงเวลา',
+  wkSave: 'ซ้ำทุกสัปดาห์',
+  wkSaved: 'บันทึกแล้ว',
+  wkBad: 'เลือกอย่างน้อยหนึ่งวัน และเวลาเริ่มต้องมาก่อนเวลาสิ้นสุด',
+  wkClash: 'มีนัดอยู่ในช่วงนี้ กรุณาย้ายหรือยกเลิกนัดก่อน',
+  wkList: 'วันหยุดประจำสัปดาห์ที่ตั้งไว้',
+  wkNone: 'ยังไม่มี',
+  wkEvery: 'ทุกวัน{day}',
+  wkRemove: 'ลบ',
+  calRemTitle: 'แจ้งเตือนลูกค้าก่อนถึงนัด',
+  calRemIntro:
+    'ถ้าลูกค้าสะดวก ใส่อีเมลหรือให้ส่งรหัสเข้า LINE ของร้าน ระบบจะส่งข้อความเตือนครั้งเดียวก่อนนัด และลบข้อมูลติดต่อหลังนัดเสร็จ',
+  calRemEmail: 'อีเมลลูกค้า',
+  calRemSave: 'บันทึกอีเมล',
+  calRemSaved: 'บันทึกแล้ว',
+  calRemBad: 'อีเมลไม่ถูกต้อง',
+  calRemCode: 'แสดงรหัสสำหรับ LINE',
+  calRemCodeShown: 'ให้ลูกค้าเพิ่มเพื่อน LINE ของร้าน แล้วพิมพ์รหัสนี้ส่งในแชต: {code}',
+  calRemCodeOnce: 'รหัสนี้แสดงครั้งเดียว ถ้ากดอีกครั้งจะได้รหัสใหม่และรหัสเดิมใช้ไม่ได้',
 };
 
 export type Dict = { [K in keyof typeof th]: string };
@@ -4909,6 +4943,41 @@ const en = {
   saAsk: 'Ask first',
   saPrint: 'Print the rules',
   saLink: 'Spa advisor',
+
+  // ── weekly days off and counter reminders ──
+  wkTitle: 'Repeats every week',
+  wkIntro:
+    'A stylist’s or room’s regular days off, for example every Monday or a lunch break every day. Bookings in these times are refused every week by themselves, online booking included.',
+  wkDays: 'On these days',
+  wkDay_1: 'Monday',
+  wkDay_2: 'Tuesday',
+  wkDay_3: 'Wednesday',
+  wkDay_4: 'Thursday',
+  wkDay_5: 'Friday',
+  wkDay_6: 'Saturday',
+  wkDay_7: 'Sunday',
+  wkAllDay: 'All day',
+  wkFromTime: 'From',
+  wkToTime: 'To',
+  wkSave: 'Repeat every week',
+  wkSaved: 'Saved.',
+  wkBad: 'Choose at least one day, and the start must be before the end.',
+  wkClash: 'There are bookings in that time: move or cancel them first.',
+  wkList: 'Weekly days off in place',
+  wkNone: 'None yet.',
+  wkEvery: 'Every {day}',
+  wkRemove: 'Remove',
+  calRemTitle: 'Reminder for the guest',
+  calRemIntro:
+    'If the guest agrees, add an e-mail or let them send a code to the shop’s LINE. One reminder is sent before the appointment and the contact is erased afterwards.',
+  calRemEmail: 'Guest e-mail',
+  calRemSave: 'Save the e-mail',
+  calRemSaved: 'Saved.',
+  calRemBad: 'That e-mail address is not valid.',
+  calRemCode: 'Show a code for LINE',
+  calRemCodeShown: 'Ask the guest to add the shop’s LINE and send this code in the chat: {code}',
+  calRemCodeOnce:
+    'This code is shown once; pressing again makes a new code and the old one stops working.',
 } satisfies Dict;
 
 /** A guest language only overrides what it translates; every other key falls back to English (never to a blank). */

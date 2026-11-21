@@ -6,6 +6,7 @@ import type { ErrorKey } from '@bestie/i18n';
 import { AsyncButton, Spinner } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
+import { WeeklyOffPanel } from './WeeklyOffPanel';
 import { useRemote } from './useRemote';
 
 type Block = { id: string; resourceId: string; startsAt: string; endsAt: string; reason: string };
@@ -202,6 +203,9 @@ export function DaysOffPage({ ctx }: { ctx: PageContext }) {
             </AsyncButton>
           </div>
         </section>
+      ) : null}
+      {storeId && resources.data ? (
+        <WeeklyOffPanel ctx={ctx} storeId={storeId} resources={resources.data} canEdit={canEdit} />
       ) : null}
       {blocks.data && blocks.data.length === 0 ? <p className="muted">{t.daysOffNone}</p> : null}
       <ul className="member-list">

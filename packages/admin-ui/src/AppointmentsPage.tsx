@@ -27,6 +27,8 @@ import {
   parseResources,
   timeLabel,
   toBangkokIso,
+  parseWeeklyOffs,
+  weeklyOffsForDay,
   isProviderKind,
 } from '@bestie/core';
 import type {
@@ -44,6 +46,7 @@ import { AsyncButton, Spinner } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
 import { CustomerPicker } from './CustomerPicker';
+import { CounterReminder } from './CounterReminder';
 import { DepositSlip, loadSeller } from './DepositSlip';
 import { tx } from './stockInput';
 import { bangkokToday } from './today';
@@ -190,6 +193,10 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
       const uses: Record<string, string> = {};
       for (const u of (us.error ? [] : (us.data ?? [])) as { id: string; appointment_id: string }[])
         uses[u.appointment_id] = u.id; // ascending: the last one wins = the latest use
+      const wk = await ctx.client
+        .from('resource_weekly_offs')
+        .select('id, resource_id, weekday, from_time, to_time, reason')
+        .eq('store_id', storeId);
       const blk = await ctx.client
         .from('resource_blocks')
         .select('resource_id, starts_at, ends_at, reason')
@@ -232,14 +239,18 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
             })),
         packages: pk.error ? [] : parseCustomerPackages(pk.data),
         uses,
-        blocks: blk.error
-          ? []
-          : ((blk.data ?? []) as Record<string, string | null>[]).map((b) => ({
-              resourceId: String(b.resource_id),
-              startsAt: String(b.starts_at),
-              endsAt: String(b.ends_at),
-              reason: b.reason ?? '',
-            })),
+        blocks: [
+          ...(blk.error
+            ? []
+            : ((blk.data ?? []) as Record<string, string | null>[]).map((b) => ({
+                resourceId: String(b.resource_id),
+                startsAt: String(b.starts_at),
+                endsAt: String(b.ends_at),
+                reason: b.reason ?? '',
+              }))),
+          // the weekly days off of this weekday, drawn like any other day off
+          ...(wk.error ? [] : weeklyOffsForDay(date, parseWeeklyOffs(wk.data))),
+        ],
         deposits: dep.error ? [] : parseDeposits(dep.data),
         tills: dev.error
           ? []
@@ -743,6 +754,11 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
           </p>
           {sel.source === 'online' ? <HairRequestPanel ctx={ctx} appointmentId={sel.id} /> : null}
           {sel.source === 'online' ? <GuestHealthPanel ctx={ctx} appointmentId={sel.id} /> : null}
+          {sel.source === 'staff' &&
+          (sel.status === 'booked' || sel.status === 'confirmed') &&
+          bangkokParts(sel.startsAt).date >= todayDate ? (
+            <CounterReminder ctx={ctx} appointmentId={sel.id} />
+          ) : null}
           {sel.groupId && groupLive(sel).length > 1 ? (
             <p className="muted">
               {fmt(t.calGroupOf, { n: all.filter((a) => a.groupId === sel.groupId).length })}

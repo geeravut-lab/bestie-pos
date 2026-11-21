@@ -66,10 +66,10 @@ update public.stores set vat_registered = true, vat_bps = 700 where name = 'Acme
 
 select t_val('00000000-0000-0000-0000-0000000000a1', 'authenticated', 'org', $$select id::text from public.orgs where name = 'Acme Co'$$);
 select t_val('00000000-0000-0000-0000-0000000000a1', 'authenticated', 'store', $$select id::text from public.stores where name = 'Acme'$$);
-select t_val('00000000-0000-0000-0000-0000000000a1', 'authenticated', 'dev', $$insert into public.devices (org_id, store_id, name, role, revenue_pos_id, stripe_reader_id) values ((select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), 'Counter', 'cashier', 'POS-77', 'tmr_ABC123xyz') returning id::text$$);
+select t_val('00000000-0000-0000-0000-0000000000a1', 'authenticated', 'dev', $$insert into public.devices (org_id, store_id, name, role, revenue_pos_id, reader_id) values ((select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), 'Counter', 'cashier', 'POS-77', 'tmr_ABC123xyz') returning id::text$$);
 select t_val('00000000-0000-0000-0000-0000000000a1', 'authenticated', 'dev2', $$insert into public.devices (org_id, store_id, name, role) values ((select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), 'No reader', 'staff') returning id::text$$);
 select t_val('00000000-0000-0000-0000-0000000000d4', 'authenticated', 'cashier_staff', $$select id::text from public.staff where display_name = 'Cashier'$$);
-select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$update public.devices set stripe_reader_id = 'not a reader' where name = 'Counter'$$, '23514', 'a malformed reader id is refused');
+select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$update public.devices set reader_id = 'not a reader' where name = 'Counter'$$, '23514', 'a malformed reader id is refused');
 
 -- card payments are an owner's choice per shop (tender.gateway has no default-on profile)
 select t_err('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$select public.begin_payment_attempt(jsonb_build_object('order_id', '10000000-0000-4000-8000-000000000001', 'tender', 'gateway'))$$, 'P0002', 'an unknown bill is not found (before any switch is read)');
@@ -117,7 +117,7 @@ select t_err('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$insert i
 select t_err('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$select public.confirm_payment_attempt((select v::uuid from t_out where k='att1'), 'pi_1', 21000, 'thb')$$, '42501', 'a cashier cannot confirm a payment');
 select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select public.confirm_payment_attempt((select v::uuid from t_out where k='att1'), 'pi_1', 21000, 'thb')$$, '42501', 'not even the owner can confirm a payment from the browser');
 select t_err('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$select public.attach_payment_intent((select v::uuid from t_out where k='att1'), 'pi_1', 'x', null)$$, '42501', 'attach is server only');
-select t_err('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$select public.record_stripe_event('evt_1', 'x')$$, '42501', 'recording provider events is server only');
+select t_err('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$select public.record_payment_event('evt_1', 'x')$$, '42501', 'recording provider events is server only');
 select t_err(null, 'anon', $$select public.confirm_payment_attempt(gen_random_uuid(), 'pi_1', 1, 'thb')$$, '42501', 'anon cannot confirm');
 select t_err('00000000-0000-0000-0000-0000000000d4', 'authenticated', $$select public.finalize_order_payment(gen_random_uuid(), gen_random_uuid(), null, 'A-000001', now(), '{}', '[]')$$, '42501', 'the internal closing function is not callable');
 
@@ -169,11 +169,11 @@ select t_rows(null, 'service_role', $$select 1 from t_out where k='r6' and v='ne
 select t_rows(null, 'service_role', $$select 1 from public.payment_attempts where id = (select v::uuid from t_out where k='att6') and error = 'bill changed'$$, 1, 'with the reason');
 
 -- ── events seen once ──
-select t_val(null, 'service_role', 'e1', $$select public.record_stripe_event('evt_100', 'payment_intent.succeeded')::text$$);
-select t_val(null, 'service_role', 'e2', $$select public.record_stripe_event('evt_100', 'payment_intent.succeeded')::text$$);
+select t_val(null, 'service_role', 'e1', $$select public.record_payment_event('evt_100', 'payment_intent.succeeded')::text$$);
+select t_val(null, 'service_role', 'e2', $$select public.record_payment_event('evt_100', 'payment_intent.succeeded')::text$$);
 select t_rows(null, 'service_role', $$select 1 from t_out where k='e1' and v='true'$$, 1, 'the first delivery of an event is new');
 select t_rows(null, 'service_role', $$select 1 from t_out where k='e2' and v='false'$$, 1, 'the second is a repeat');
-select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select * from public.stripe_events$$, '42501', 'the event table is invisible to the browser');
+select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select * from public.payment_events$$, '42501', 'the event table is invisible to the browser');
 
 -- the owner can switch a payment method off: no new attempt of that kind
 update public.stores set module_overrides = '{"tender.gateway": true, "tender.promptpay": false}' where id = (select v::uuid from t_out where k='store');

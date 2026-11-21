@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { blockRange, blockSpan, groupPayload } from './blocks';
+import {
+  blockRange,
+  blockSpan,
+  groupPayload,
+  isoWeekday,
+  parseWeeklyOffs,
+  weeklyOffPayload,
+  weeklyOffsForDay,
+} from './blocks';
 
 describe('blockRange', () => {
   it('an all-day block runs from the start of the first day to the end of the last (Bangkok time)', () => {
@@ -105,5 +113,88 @@ describe('blockSpan', () => {
         1260,
       ),
     ).toBeNull();
+  });
+});
+
+describe('weekly days off', () => {
+  it('knows the weekday of a Bangkok date', () => {
+    expect(isoWeekday('2030-01-06')).toBe(7); // Sunday
+    expect(isoWeekday('2030-01-07')).toBe(1); // Monday
+    expect(isoWeekday('2030-02-30')).toBeNull();
+    expect(isoWeekday('x')).toBeNull();
+  });
+  it('reads rows and drops broken ones; times lose their seconds', () => {
+    const r = parseWeeklyOffs([
+      {
+        id: 'a',
+        resource_id: 'r1',
+        weekday: 1,
+        from_time: '00:00:00',
+        to_time: null,
+        reason: 'rest',
+      },
+      { id: 'b', resource_id: 'r1', weekday: 3, from_time: '12:00:00', to_time: '13:00:00' },
+      { id: 'c', resource_id: 'r1', weekday: 9, from_time: '12:00:00' },
+      { nope: 1 },
+    ]);
+    expect(r.map((x) => x.id)).toEqual(['a', 'b']);
+    expect(r[1]).toMatchObject({ from: '12:00', to: '13:00', reason: '' });
+  });
+  it('draws a weekly off on its day only, as a block', () => {
+    const rows = parseWeeklyOffs([
+      { id: 'a', resource_id: 'r1', weekday: 7, from_time: '00:00:00', to_time: null },
+      {
+        id: 'b',
+        resource_id: 'r2',
+        weekday: 7,
+        from_time: '12:00:00',
+        to_time: '13:00:00',
+        reason: 'lunch',
+      },
+    ]);
+    expect(weeklyOffsForDay('2030-01-07', rows)).toEqual([]);
+    expect(weeklyOffsForDay('2030-01-06', rows)).toEqual([
+      {
+        resourceId: 'r1',
+        startsAt: '2030-01-05T17:00:00.000Z',
+        endsAt: '2030-01-06T17:00:00.000Z',
+        reason: '',
+      },
+      {
+        resourceId: 'r2',
+        startsAt: '2030-01-06T05:00:00.000Z',
+        endsAt: '2030-01-06T06:00:00.000Z',
+        reason: 'lunch',
+      },
+    ]);
+  });
+  it('builds the payload and refuses what the database would refuse', () => {
+    const base = { storeId: 's', resourceId: 'r', weekdays: [3, 1, 3], allDay: true };
+    expect(weeklyOffPayload(base)).toEqual({
+      store_id: 's',
+      resource_id: 'r',
+      weekdays: [1, 3],
+      from_time: null,
+      to_time: null,
+      reason: null,
+    });
+    expect(weeklyOffPayload({ ...base, weekdays: [] })).toBeNull();
+    expect(weeklyOffPayload({ ...base, weekdays: [8] })).toBeNull();
+    expect(
+      weeklyOffPayload({ ...base, allDay: false, timeFrom: '13:00', timeTo: '12:00' }),
+    ).toBeNull();
+    expect(
+      weeklyOffPayload({
+        ...base,
+        allDay: false,
+        timeFrom: '12:00',
+        timeTo: '13:00',
+        reason: ' lunch ',
+      }),
+    ).toMatchObject({
+      from_time: '12:00',
+      to_time: '13:00',
+      reason: 'lunch',
+    });
   });
 });

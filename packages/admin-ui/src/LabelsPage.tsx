@@ -207,7 +207,13 @@ export function LabelsPage({ ctx }: { ctx: PageContext }) {
               <p className="muted">{t.labelsNone}</p>
             ) : (
               <>
-                <Sheet plan={plan} size={size} shop={shop} lang={lang} limit={6} />
+                <Sheet
+                  plan={plan}
+                  size={size}
+                  shop={shop}
+                  lang={lang === 'th' ? 'th' : 'en'}
+                  limit={6}
+                />
                 <p className="muted">
                   {fmt(t.labelsCount, { n: total, sheets: sheetCount(total, size) })}
                 </p>
@@ -227,7 +233,7 @@ export function LabelsPage({ ctx }: { ctx: PageContext }) {
                   : '@page { size: A4; margin: 8mm; }'
               }
             >
-              <Sheet plan={plan} size={size} shop={shop} lang={lang} />
+              <Sheet plan={plan} size={size} shop={shop} lang={lang === 'th' ? 'th' : 'en'} />
             </PrintPortal>
           ) : null}
         </>

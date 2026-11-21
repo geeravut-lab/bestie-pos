@@ -153,18 +153,18 @@ export async function paymentChargeResponse(
           amount: attempt.amount,
         });
       } else {
-        const dev = await selectOne<{ stripe_reader_id: string | null }>(
+        const dev = await selectOne<{ reader_id: string | null }>(
           fetchImpl,
           supabaseUrl,
           serviceRoleKey,
-          `devices?id=eq.${attempt.device_id}&select=stripe_reader_id`,
+          `devices?id=eq.${attempt.device_id}&select=reader_id`,
         );
-        if (!dev?.stripe_reader_id) throw new GatewayError(422, 'no_reader');
+        if (!dev?.reader_id) throw new GatewayError(422, 'no_reader');
         started = await gateway.startReader({
           attemptId,
           orderId: attempt.order_id,
           amount: attempt.amount,
-          readerId: dev.stripe_reader_id,
+          readerId: dev.reader_id,
         });
       }
       const expires = new Date(Date.now() + 15 * 60_000).toISOString();
@@ -296,7 +296,7 @@ export async function paymentWebhookResponse(
       });
     }
     if (event.eventId)
-      await rpc(fetchImpl, svc, 'record_stripe_event', {
+      await rpc(fetchImpl, svc, 'record_payment_event', {
         p_id: event.eventId,
         p_type: event.type,
       });

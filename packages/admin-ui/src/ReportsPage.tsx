@@ -12,6 +12,7 @@ import type { Dict, ErrorKey } from '@bestie/i18n';
 import { AsyncButton, Spinner } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
+import { CreditLiabilityPanel } from './CreditLiabilityPanel';
 import { useRemote } from './useRemote';
 
 type Tab = 'summary' | 'items' | 'hours' | 'payments' | 'staff';
@@ -272,6 +273,9 @@ export function ReportsPage({ ctx }: { ctx: PageContext }) {
             ])}
           />
         </section>
+      ) : null}
+      {tab === 'summary' && (credit.data?.length ?? 0) > 0 ? (
+        <CreditLiabilityPanel ctx={ctx} />
       ) : null}
     </div>
   );

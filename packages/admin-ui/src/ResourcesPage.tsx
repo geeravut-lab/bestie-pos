@@ -98,6 +98,9 @@ export function ResourcesPage({ ctx }: { ctx: PageContext }) {
         <AsyncButton variant="secondary" onClick={() => ctx.navigate('/hair-styles')}>
           {t.hsLink}
         </AsyncButton>
+        <AsyncButton variant="secondary" onClick={() => ctx.navigate('/spa-advisor')}>
+          {t.saLink}
+        </AsyncButton>
         <AsyncButton variant="secondary" onClick={() => ctx.navigate('/group-booking')}>
           {t.groupLink}
         </AsyncButton>

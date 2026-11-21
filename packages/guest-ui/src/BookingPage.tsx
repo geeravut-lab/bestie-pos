@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { addDays, bangkokParts, formatTHB, guestName } from '@bestie/core';
 import type { BookingInfo, BookingResult } from '@bestie/core';
-import { fmt, useI18n } from '@bestie/i18n';
+import { GUEST_LANGS, fmt, useI18n } from '@bestie/i18n';
 import { AsyncButton, LangSwitch, Spinner } from '@bestie/ui';
 import { cancelBooking, loadBooking, loadSlots, saveContact, sendBooking } from './bookingApi';
 import type { BookingLoad } from './bookingApi';
 import { HairAdvisor } from './HairAdvisor';
 import { HealthForm } from './HealthForm';
+import { SpaAdvisor } from './SpaAdvisor';
 
 type Done = { id: string; code: string | null; startsAt: string; provider: string | null };
 const SAVED = (token: string) => `bestie.booking.${token}`;
@@ -54,7 +55,7 @@ export function BookingPage({ token }: { token: string }) {
   const head = (
     <div className="guest-head">
       <h1>{load?.ok ? load.info.storeName : t.bkTitle}</h1>
-      <LangSwitch />
+      <LangSwitch langs={GUEST_LANGS} />
     </div>
   );
   if (!load)
@@ -118,7 +119,7 @@ export function BookingPage({ token }: { token: string }) {
   );
 }
 
-function whenLabel(iso: string, lang: 'th' | 'en'): string {
+function whenLabel(iso: string, lang: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return new Intl.DateTimeFormat(lang === 'th' ? 'th-TH' : 'en-GB', {
@@ -140,7 +141,7 @@ function DonePanel({
   token: string;
   done: Done;
   cancelled: boolean;
-  lang: 'th' | 'en';
+  lang: string;
   lineBasicId: string | null;
   onCancelled: () => void;
   onAgain: () => void;
@@ -335,6 +336,17 @@ function Form({
   if (info.services.length === 0) return <p>{t.bkNoServices}</p>;
   return (
     <form className="card auth-form" onSubmit={(e) => e.preventDefault()} aria-label={t.bkTitle}>
+      <SpaAdvisor
+        token={token}
+        services={info.services}
+        onPick={(id, advisorNote) => {
+          setService(id);
+          setProvider('');
+          setDate('');
+          setTime('');
+          setNote(advisorNote);
+        }}
+      />
       <fieldset className="form-row">
         <legend className="label">{t.bkStepService}</legend>
         <div className="chips">

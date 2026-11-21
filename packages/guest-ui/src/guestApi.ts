@@ -153,14 +153,14 @@ export type GuestCharge = { attemptId: string; amount: number; qrImageUrl: strin
 /** Ask the server for a PromptPay QR for the table's bill. The amount is the server's, not ours. */
 export async function startGuestPayment(
   token: string,
-  lang: 'th' | 'en',
+  lang: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<{ ok: true; charge: GuestCharge } | { ok: false; reason: GuestFailure }> {
   try {
     const res = await fetchImpl('/api/guest/pay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, lang }),
+      body: JSON.stringify({ token, lang: lang === 'th' ? 'th' : 'en' }),
     });
     const b = obj(await res.json().catch(() => null));
     if (!res.ok) return { ok: false, reason: reasonOf(b.error) };

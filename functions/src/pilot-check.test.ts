@@ -97,6 +97,16 @@ describe('checkStore', () => {
     expect(
       find(checkStore({ ...GOOD, module_overrides: { 'tender.credit': true } }), 'credit')?.level,
     ).toBe('warn');
+    // Credit for real customers: the terms must be required, and the company needs a tax ID
+    const on = { ...GOOD, module_overrides: { 'tender.credit': true } };
+    expect(find(checkStore({ ...on, credit_terms_required: true }), 'credit_terms')?.level).toBe(
+      'ok',
+    );
+    expect(find(checkStore({ ...on, credit_terms_required: false }), 'credit_terms')?.level).toBe(
+      'warn',
+    );
+    expect(find(checkStore({ ...on, tax_id: null }), 'credit_entity')?.level).toBe('warn');
+    expect(find(checkStore({ ...on, tax_id: '0105560123456' }), 'credit_entity')).toBeUndefined();
   });
 
   it('card enabled but no reader linked, and staff without a PIN, are warned', () => {

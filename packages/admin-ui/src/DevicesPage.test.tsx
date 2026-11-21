@@ -20,7 +20,7 @@ const device = {
   role: 'cashier',
   station: null,
   revenue_pos_id: 'POS-001',
-  stripe_reader_id: null,
+  reader_id: null,
   active: true,
 };
 const ctx = (client: unknown, over: Partial<PageContext> = {}): PageContext => ({
@@ -178,18 +178,16 @@ describe('<DevicesPage> card reader', () => {
     await waitFor(() => expect(db.writes).toHaveLength(1));
     expect(db.writes[0]).toMatchObject({
       table: 'devices',
-      values: { stripe_reader_id: 'tmr_ABC123xyz' },
+      values: { reader_id: 'tmr_ABC123xyz' },
     });
     await userEvent.clear(input);
     await userEvent.click(within(li).getByRole('button', { name: 'Save card reader' }));
     await waitFor(() => expect(db.writes).toHaveLength(2));
-    expect(db.writes[1]!.values).toEqual({ stripe_reader_id: null });
+    expect(db.writes[1]!.values).toEqual({ reader_id: null });
   });
 
   it('binding a tablet remembers whether the device has a reader', async () => {
-    mount(
-      ctx(fakeDb({ devices: [{ ...device, stripe_reader_id: 'tmr_ABC123xyz' }], stores }).client),
-    );
+    mount(ctx(fakeDb({ devices: [{ ...device, reader_id: 'tmr_ABC123xyz' }], stores }).client));
     await screen.findByText('Counter iPad');
     await userEvent.click(screen.getByRole('button', { name: 'Use this tablet as this device' }));
     expect(JSON.parse(localStorage.getItem('bestie-device')!)).toMatchObject({ reader: true });

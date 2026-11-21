@@ -65,6 +65,12 @@ export async function guestBookingResponse(
         if (!r.ok) return reply({ error: 'server_error' }, 502);
         return r.data === null ? reply({ error: 'not_found' }, 404) : reply({ styles: r.data });
       }
+      if (q.get('op') === 'spa') {
+        if (!allowRead(`booking-spa:${ip}`)) return reply({ error: 'rate_limited' }, 429);
+        const r = await rpc(f, supabaseUrl, serviceRoleKey, 'guest_spa_info', { p_token: token });
+        if (!r.ok) return reply({ error: 'server_error' }, 502);
+        return r.data === null ? reply({ error: 'not_found' }, 404) : reply({ spa: r.data });
+      }
       if (q.get('op') === 'health_form') {
         if (!allowRead(`booking-hf:${ip}`)) return reply({ error: 'rate_limited' }, 429);
         const r = await rpc(f, supabaseUrl, serviceRoleKey, 'guest_health_form_info', {

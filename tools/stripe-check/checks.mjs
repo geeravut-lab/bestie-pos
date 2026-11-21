@@ -208,7 +208,7 @@ export function checkPromptPay(snap) {
     out.push(
       fail(
         'events',
-        'ตาราง stripe_events ไม่มี payment_intent.succeeded เลย — webhook ไม่เคยถึงเซิร์ฟเวอร์',
+        'ตาราง payment_events ไม่มี payment_intent.succeeded เลย — webhook ไม่เคยถึงเซิร์ฟเวอร์',
       ),
     );
   else out.push(ok('events', `webhook ถึงเซิร์ฟเวอร์แล้ว ${ev.length} ครั้ง`));
@@ -376,7 +376,7 @@ select jsonb_build_object(
                           from public.payments p where p.order_id in (select order_id from att)), '[]'),
   'partials', coalesce((select jsonb_agg(jsonb_build_object('order_id', x.order_id, 'status', x.status, 'amount', x.amount))
                           from public.order_partial_payments x where x.order_id in (select order_id from att)), '[]'),
-  'events', coalesce((select jsonb_agg(jsonb_build_object('type', e.type)) from public.stripe_events e where e.received_at >= (select t0 from w)), '[]'),
+  'events', coalesce((select jsonb_agg(jsonb_build_object('type', e.type)) from public.payment_events e where e.received_at >= (select t0 from w)), '[]'),
   'audit', coalesce((select jsonb_agg(jsonb_build_object('entity_id', l.entity_id, 'action', l.action, 'detail', l.detail))
                        from public.audit_log l where l.action = 'payment.tender' and l.created_at >= (select t0 from w)), '[]'),
   'notices', coalesce((select jsonb_agg(jsonb_build_object('kind', n.kind)) from public.app_notifications n where n.kind = 'payment.review' and n.created_at >= (select t0 from w)), '[]')

@@ -83,3 +83,98 @@ export function blockSpan(
   const span = endMin - startMin;
   return { topPct: ((from - startMin) / span) * 100, heightPct: ((to - from) / span) * 100 };
 }
+
+// ── weekly days off (they repeat by themselves) ─────────────────────────────
+
+export type WeeklyOff = {
+  id: string;
+  resourceId: string;
+  /** ISO weekday: 1 = Monday … 7 = Sunday (Bangkok). */
+  weekday: number;
+  from: string;
+  /** null = until the end of the day */
+  to: string | null;
+  reason: string;
+};
+
+const hhmm = (v: unknown): string | null => {
+  const m = /^(\d{2}):(\d{2})/.exec(typeof v === 'string' ? v : '');
+  return m ? `${m[1]}:${m[2]}` : null;
+};
+
+/** Read `resource_weekly_offs` rows (the database gives times as HH:MM:SS). */
+export function parseWeeklyOffs(raw: unknown): WeeklyOff[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((r): WeeklyOff[] => {
+    if (!r || typeof r !== 'object') return [];
+    const o = r as Record<string, unknown>;
+    const from = hhmm(o.from_time);
+    const wd = Number(o.weekday);
+    if (typeof o.id !== 'string' || typeof o.resource_id !== 'string' || !from) return [];
+    if (!Number.isInteger(wd) || wd < 1 || wd > 7) return [];
+    return [
+      {
+        id: o.id,
+        resourceId: o.resource_id,
+        weekday: wd,
+        from,
+        to: o.to_time == null ? null : hhmm(o.to_time),
+        reason: typeof o.reason === 'string' ? o.reason : '',
+      },
+    ];
+  });
+}
+
+/** ISO weekday (1 = Monday … 7 = Sunday) of a Bangkok date "YYYY-MM-DD". */
+export function isoWeekday(date: string): number | null {
+  if (!DATE.test(date)) return null;
+  const d = new Date(`${date}T00:00:00+07:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  const bangkok = new Date(d.getTime() + 7 * 3_600_000);
+  if (bangkok.toISOString().slice(0, 10) !== date) return null; // 30 February and friends roll over: not a date
+  const js = bangkok.getUTCDay(); // 0 = Sunday in Bangkok
+  return js === 0 ? 7 : js;
+}
+
+/** The weekly days off that fall on one Bangkok date, as ordinary blocks (so the calendar draws them like a one-off day off). */
+export function weeklyOffsForDay(
+  date: string,
+  rows: readonly WeeklyOff[],
+): { resourceId: string; startsAt: string; endsAt: string; reason: string }[] {
+  const wd = isoWeekday(date);
+  if (wd === null) return [];
+  return rows
+    .filter((r) => r.weekday === wd)
+    .map((r) => ({
+      resourceId: r.resourceId,
+      startsAt: iso(instant(date, r.from)),
+      endsAt: iso(r.to ? instant(date, r.to) : instant(date, '00:00') + DAY_MS),
+      reason: r.reason,
+    }));
+}
+
+/** The body of `save_weekly_off`; null for anything that is not valid. */
+export function weeklyOffPayload(input: {
+  storeId: string;
+  resourceId: string;
+  weekdays: readonly number[];
+  allDay: boolean;
+  timeFrom?: string;
+  timeTo?: string;
+  reason?: string;
+}): Record<string, unknown> | null {
+  const days = [...new Set(input.weekdays)].filter((d) => Number.isInteger(d) && d >= 1 && d <= 7);
+  if (days.length === 0 || !input.storeId || !input.resourceId) return null;
+  if (!input.allDay) {
+    if (!TIME.test(input.timeFrom ?? '') || !TIME.test(input.timeTo ?? '')) return null;
+    if ((input.timeTo ?? '') <= (input.timeFrom ?? '')) return null;
+  }
+  return {
+    store_id: input.storeId,
+    resource_id: input.resourceId,
+    weekdays: days.sort(),
+    from_time: input.allDay ? null : input.timeFrom,
+    to_time: input.allDay ? null : input.timeTo,
+    reason: input.reason?.trim() || null,
+  };
+}

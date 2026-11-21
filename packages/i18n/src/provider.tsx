@@ -1,7 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Brand } from '@bestie/core';
-import { DEFAULT_LANG, LANG_STORAGE_KEY, brandedDict, fmt, isLang } from './dict';
+import {
+  DEFAULT_LANG,
+  GUEST_LANG_STORAGE_KEY,
+  LANG_STORAGE_KEY,
+  RTL_LANGS,
+  brandedDict,
+  fmt,
+  isGuestLang,
+  isLang,
+} from './dict';
 import type { Dict, Lang } from './dict';
 
 type I18nValue = {
@@ -14,18 +23,18 @@ type I18nValue = {
 
 const I18nContext = createContext<I18nValue | null>(null);
 
-function readStoredLang(): Lang | null {
+function readStoredLang(guest: boolean): Lang | null {
   try {
-    const v = globalThis.localStorage?.getItem(LANG_STORAGE_KEY);
-    return isLang(v) ? v : null;
+    const v = globalThis.localStorage?.getItem(guest ? GUEST_LANG_STORAGE_KEY : LANG_STORAGE_KEY);
+    return (guest ? isGuestLang(v) : isLang(v)) ? (v as Lang) : null;
   } catch {
     return null; // private mode / blocked storage — fall back to default
   }
 }
 
-function writeStoredLang(lang: Lang): void {
+function writeStoredLang(lang: Lang, guest: boolean): void {
   try {
-    globalThis.localStorage?.setItem(LANG_STORAGE_KEY, lang);
+    globalThis.localStorage?.setItem(guest ? GUEST_LANG_STORAGE_KEY : LANG_STORAGE_KEY, lang);
   } catch {
     /* best effort */
   }
@@ -35,25 +44,32 @@ export function I18nProvider({
   children,
   initialLang,
   brand,
+  guest = false,
 }: {
   children: ReactNode;
   initialLang?: Lang;
+  /** A guest page: six languages, its own stored choice, right-to-left where the language needs it. */
+  guest?: boolean;
   /** Admin-chosen product name (BRANDING-KNOWLEDGE). Absent = Bestie POS. */
   brand?: Brand;
 }) {
   const [lang, setLangState] = useState<Lang>(
-    () => initialLang ?? readStoredLang() ?? DEFAULT_LANG,
+    () => initialLang ?? readStoredLang(guest) ?? DEFAULT_LANG,
   );
 
   // Keep <html lang> truthful for screen readers and hyphenation.
   useEffect(() => {
     document.documentElement.lang = lang;
+    document.documentElement.dir = RTL_LANGS.includes(lang) ? 'rtl' : 'ltr';
   }, [lang]);
 
-  const setLang = useCallback((next: Lang) => {
-    setLangState(next);
-    writeStoredLang(next);
-  }, []);
+  const setLang = useCallback(
+    (next: Lang) => {
+      setLangState(next);
+      writeStoredLang(next, guest);
+    },
+    [guest],
+  );
 
   const nameTh = brand?.nameTh;
   const nameEn = brand?.nameEn;

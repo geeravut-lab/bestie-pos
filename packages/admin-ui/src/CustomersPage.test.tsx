@@ -48,6 +48,12 @@ function fakeClient(
       },
       error: null,
     });
+    // a plain `await` of the chain (the Credit terms and the shops of the company): the customer has accepted the terms
+    c.then = (resolve: (v: unknown) => unknown) =>
+      Promise.resolve({
+        data: table === 'credit_terms_acceptances' ? [{ id: 'a1' }] : [],
+        error: null,
+      }).then(resolve);
     c.limit = async () =>
       table === 'credit_ledger'
         ? {

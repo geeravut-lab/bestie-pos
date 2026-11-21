@@ -1,6 +1,7 @@
 -- Crypto top-up of Bestie Credit: gated by module + lawyer sign-off, KYC tiers, locked rate, unique amounts, confirmations, review, AML.
 \set ON_ERROR_STOP on
 \set QUIET on
+alter table public.orgs alter column credit_terms_required set default false;   -- these tests are about the ledger, not the terms (credit_terms.test.sql covers them)
 
 create or replace function t_exec(uid uuid, role_name text, q text) returns bigint language plpgsql as $$
 declare n bigint;

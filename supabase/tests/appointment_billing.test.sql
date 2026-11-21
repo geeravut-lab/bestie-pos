@@ -163,4 +163,16 @@ select t_val('00000000-0000-0000-0000-0000000000d4', 'authenticated', 'close2', 
 select t_rows(null, 'service_role', $$select 1 from t_out where k='close2' and (v::jsonb ->> 'expected_cash')::bigint = 2000 and (v::jsonb ->> 'variance')::bigint = 0$$, 1, 'the drawer: 20.00 + 100.00 in − 100.00 out = 20.00');
 select t_rows(null, 'service_role', $$select 1 from public.audit_log where action = 'payment.refund' and entity_id = (select v from t_out where k='a3')$$, 1, 'the refund is in the audit trail');
 select t_rows(null, 'service_role', $$select 1 where public.deposits_enabled((select v::uuid from t_out where k='store'))$$, 1, 'deposits are on for a salon by default');
+
+-- ── migration 65: documents for a deposit and for a kept no-show fee (owner rules D) ──
+select t_rows(null, 'service_role', $$select 1 from public.appointment_deposits d where d.id = (select v::uuid from t_out where k='dep1') and d.invoice_no = 'DP-000001' and d.invoice_vat = 1963$$, 1, 'the 300.00 deposit has its own number and the VAT inside it (7 % of 300.00 incl. = 19.63)');
+select t_rows(null, 'service_role', $$select 1 from public.appointment_deposits d where d.id = (select v::uuid from t_out where k='dep2') and d.invoice_no = 'DP-000002' and d.fee_invoice_no = 'NF-000001' and d.fee_vat = 1308$$, 1, 'the kept 200.00 no-show fee has VAT (13.08) and its own number');
+select t_rows(null, 'service_role', $$select 1 from public.appointment_deposits d where d.id = (select v::uuid from t_out where k='dep3') and d.fee_invoice_no is null$$, 1, 'a refunded deposit makes no fee document');
+select t_err('00000000-0000-0000-0000-0000000000b2', 'authenticated', $$select public.save_service_policy((select v::uuid from t_out where k='store'), '{"commission_base":"net"}'::jsonb)$$, '42501', 'a manager cannot change the accounting policy');
+select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select public.save_service_policy((select v::uuid from t_out where k='store'), '{"commission_base":"gross"}'::jsonb)$$, '22023', 'an unknown choice is refused');
+select t_rows('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select public.save_service_policy((select v::uuid from t_out where k='store'), '{"noshow_fee_vat":false,"deposit_invoice":false}'::jsonb)$$, 1, 'the owner switches the fee VAT and the deposit document off');
+select t_val('00000000-0000-0000-0000-0000000000d4', 'authenticated', 'a9', $$select public.book_appointment(t_book('2030-01-15T18:00:00+07:00', 'Dee'))::text$$);
+select t_val('00000000-0000-0000-0000-0000000000d4', 'authenticated', 'dep9', $$select public.record_appointment_deposit(t_dep('a9', 5000, 'promptpay'))::text$$);
+select t_rows(null, 'service_role', $$select 1 from public.appointment_deposits d where d.id = (select v::uuid from t_out where k='dep9') and d.invoice_no is null and d.invoice_vat is null$$, 1, 'with the document switched off the deposit has no number');
+select t_rows(null, 'service_role', $$select 1 where (public.service_policy((select v::uuid from t_out where k='store')) ->> 'commission_base') = 'net' and (public.service_policy((select v::uuid from t_out where k='store')) ->> 'package_revenue') = 'deferred'$$, 1, 'the other choices keep the owner''s defaults');
 do $$ begin raise notice 'ALL APPOINTMENT BILLING TESTS PASSED'; end $$;

@@ -2,6 +2,7 @@ import { PERMISSIONS } from './types';
 import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { MODULE_BY_ID, PLAN_RANK } from './modules/registry';
+import { SPA_RULES_VERSION, SPA_TAGS } from './spaAdvisor';
 
 /**
  * The database decides on its own whether a table QR may take orders (the guest has no account and the module registry
@@ -253,5 +254,25 @@ describe('appointments and resources in the database mirror the registry', () =>
     expect(MODULE_BY_ID['booking.online'].dependsOn).toEqual([m![3]]);
     // the database's list of known module ids must include it
     expect(sql).toContain("'booking.online'");
+  });
+});
+
+describe('spa advisor SQL mirror', () => {
+  const dir = new URL('../../../supabase/migrations/', import.meta.url);
+  it('the rules version, the module and its gate match the code', () => {
+    const sql = readFileSync(
+      new URL(readdirSync(dir).find((f) => f.endsWith('_spa_advisor.sql')) ?? '', dir),
+      'utf8',
+    );
+    expect(/spa_rules_version\(\) returns integer[^;]*select (\d+)/.exec(sql)?.[1]).toBe(
+      String(SPA_RULES_VERSION),
+    );
+    expect(MODULE_BY_ID['advisor.spa'].defaultProfiles).toEqual([]);
+    expect(MODULE_BY_ID['advisor.spa'].dependsOn).toEqual(['booking.online']);
+    expect(MODULE_BY_ID['advisor.spa'].plan).toBe('pro');
+    expect(sql).toContain("'advisor.spa'");
+    expect(sql).toContain('booking_online_enabled');
+    // the database accepts exactly the tags the code knows
+    for (const tag of SPA_TAGS) expect(sql).toContain(`'${tag}'`);
   });
 });

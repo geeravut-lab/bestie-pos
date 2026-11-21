@@ -277,6 +277,14 @@ export type Deposit = {
   method: DepositMethod;
   status: DepositStatus;
   reference: string | null;
+  /** The receipt / tax-invoice number given the day the deposit was received, and the VAT inside it. */
+  invoiceNo: string | null;
+  invoiceVat: Satang | null;
+  /** The document of a kept no-show fee and the VAT it carries. */
+  feeInvoiceNo: string | null;
+  feeVat: Satang | null;
+  createdAt: string | null;
+  resolvedAt: string | null;
 };
 
 /** The usual deposit: a share of the price (default 30 %), rounded to a whole baht, never above the price. */
@@ -341,6 +349,12 @@ export function parseDeposits(raw: unknown): Deposit[] {
       method: r.method as DepositMethod,
       status: r.status as DepositStatus,
       reference: str(r.reference),
+      invoiceNo: str(r.invoice_no),
+      invoiceVat: r.invoice_vat == null ? null : int(r.invoice_vat),
+      feeInvoiceNo: str(r.fee_invoice_no),
+      feeVat: r.fee_vat == null ? null : int(r.fee_vat),
+      createdAt: str(r.created_at),
+      resolvedAt: str(r.resolved_at),
     });
   }
   return out;

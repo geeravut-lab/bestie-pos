@@ -121,8 +121,10 @@ export function HairAdvisor({ token, id, code }: { token: string; id: string; co
               />{' '}
               <strong>{localizedName(style.name, lang)}</strong>
             </label>
-            {style.about?.[lang] || style.about?.th ? (
-              <p className="muted">{style.about?.[lang] || style.about?.th}</p>
+            {(lang === 'th' ? style.about?.th : style.about?.en) || style.about?.th ? (
+              <p className="muted">
+                {(lang === 'th' ? style.about?.th : style.about?.en) || style.about?.th}
+              </p>
             ) : null}
           </li>
         ))}

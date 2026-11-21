@@ -2413,3 +2413,19 @@ a.nav-card[aria-busy='true'] {
   margin: 0;
   overflow-wrap: anywhere;
 }
+.karaoke-player {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  max-height: 70vh;
+  background: var(--bp-ink);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.karaoke-player:empty {
+  display: none;
+}
+.karaoke-player iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}

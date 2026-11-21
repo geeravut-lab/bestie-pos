@@ -354,6 +354,9 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     hairAi_colored_false: 'натуральный цвет',
     hairAi_condition_healthy: 'здоровые',
     hairAi_condition_dry_damaged: 'сухие / повреждённые',
+    krPaused: 'Время комнаты приостановлено',
+    krTimeLeft: 'Осталось в пакете',
+    krOverPackage: 'Сверх пакета',
   },
   he: {
     npTitle: 'כרטיס תייר',
@@ -696,6 +699,9 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     hairAi_colored_false: 'צבע טבעי',
     hairAi_condition_healthy: 'בריא',
     hairAi_condition_dry_damaged: 'יבש / פגום',
+    krPaused: 'שעון החדר מושהה',
+    krTimeLeft: 'זמן שנותר בחבילה',
+    krOverPackage: 'מעבר לחבילה',
   },
   de: {
     npTitle: 'Touristen-Pass',
@@ -1061,6 +1067,9 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     hairAi_colored_false: 'Naturfarbe',
     hairAi_condition_healthy: 'gesund',
     hairAi_condition_dry_damaged: 'trocken / geschädigt',
+    krPaused: 'Die Uhr des Raums ist angehalten',
+    krTimeLeft: 'Restzeit im Paket',
+    krOverPackage: 'Über das Paket hinaus',
   },
   zh: {
     npTitle: '游客通行卡',
@@ -1399,5 +1408,8 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     hairAi_colored_false: '自然发色',
     hairAi_condition_healthy: '健康',
     hairAi_condition_dry_damaged: '干燥/受损',
+    krPaused: '包间计时已暂停',
+    krTimeLeft: '套餐剩余时间',
+    krOverPackage: '已超出套餐',
   },
 };

@@ -8,7 +8,7 @@ import type { Satang } from './money.js';
  */
 export type RoundingRule = 'none' | 'nearest-25' | 'nearest-50' | 'nearest-baht' | 'floor-baht';
 
-export type TenderKind = 'cash' | 'promptpay' | 'gateway' | 'credit' | 'points';
+export type TenderKind = 'cash' | 'promptpay' | 'gateway' | 'credit' | 'points' | 'room';
 
 /** Store-configurable; defaults keep digital tenders exact and cash exact until the owner opts in. */
 export type RoundingConfig = Partial<Record<TenderKind, RoundingRule>>;
@@ -19,6 +19,7 @@ export const DEFAULT_ROUNDING: Required<RoundingConfig> = {
   gateway: 'none',
   credit: 'none',
   points: 'none',
+  room: 'none',
 };
 
 const STEP: Record<Exclude<RoundingRule, 'none' | 'floor-baht'>, number> = {

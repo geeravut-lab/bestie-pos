@@ -36,6 +36,8 @@ import { AsyncButton } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
 import { useOnline, useOpenOrders, useOpenShift, useOrder, useOutboxCounts } from '@bestie/offline';
+import { NoteTranslate } from './NoteTranslate';
+import { useOpenStays } from './useOpenStays';
 import { billConfigFor, usePosData } from './posData';
 import type { PosTable } from './posData';
 import { changeOrder, mergeBills, payCash, splitBill } from './orderActions';
@@ -49,6 +51,7 @@ import { PaySheet } from './PaySheet';
 import { useSplitInfo } from './useSplitInfo';
 import {
   cancelOnlinePayment,
+  chargeOrderToRoom,
   closeSplitPayment,
   findLiveAttempt,
   finishOnlinePayment,
@@ -134,6 +137,7 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
     };
   }, [paying, ctx.client, orderId]);
   const splitInfo = useSplitInfo(ctx, orderId, netUp, paying);
+  const roomStays = useOpenStays(ctx, paying && netUp);
   const [splitting, setSplitting] = useState(false);
   const [mergeInto, setMergeInto] = useState('');
   const { binding } = usePosStore(ctx);
@@ -416,6 +420,7 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
                   }
                   apply={apply}
                   seatsOn={canEdit}
+                  translate={{ ctx, storeId: order.storeId }}
                 />
               ))}
           </ul>
@@ -619,6 +624,20 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
                 }
               : undefined
           }
+          roomStays={roomStays}
+          onRoomCharge={async (folioId) => {
+            const err = await chargeOrderToRoom({
+              client: ctx.client,
+              orderId: order.id,
+              binding,
+              billConfig: billConfigFor(config, order.channel),
+              folioId,
+              staffId: ctx.staffId,
+              lang: config.defaultLang,
+            });
+            if (!err) ctx.navigate(`/receipt/${order.id}`);
+            return err;
+          }}
           onSplitPay={async (legs, heldNow) => {
             const err = await closeSplitPayment({
               client: ctx.client,
@@ -691,6 +710,7 @@ function LineRow({
   mgrVoid,
   apply,
   seatsOn,
+  translate,
 }: {
   line: LineDoc;
   locale: 'th-TH' | 'en-GB';
@@ -700,6 +720,7 @@ function LineRow({
   mgrVoid: { ctx: PageContext; orderId: string; online: boolean } | null;
   apply: (fn: (o: OrderDoc) => OrderDoc) => Promise<void>;
   seatsOn: boolean;
+  translate: { ctx: PageContext; storeId: string };
 }) {
   const { t, lang } = useI18n();
   const name = localizedName(line.name, lang);
@@ -794,6 +815,9 @@ function LineRow({
             × {line.quantity}
             {line.note ? ` · ${line.note}` : ''}
           </p>
+          {line.note ? (
+            <NoteTranslate ctx={translate.ctx} storeId={translate.storeId} text={line.note} />
+          ) : null}
           {canVoid && !isNew ? (
             voiding ? (
               <div className="confirm-box">

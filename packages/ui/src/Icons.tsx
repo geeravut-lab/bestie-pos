@@ -61,6 +61,7 @@ const PATHS: Record<ArtId | 'more' | 'close' | 'back' | 'bell', string[]> = {
     'M8 3v4M16 3v4',
     'M8 14h3M13 14h3M8 17.5h3',
   ],
+  folio: ['M3 10l9-6 9 6v10H3z', 'M9 20v-6h6v6', 'M7 10h.01M17 10h.01'],
   translate: ['M4 5h9M8.5 3v2M6 5c0 4 3 7 6 8M11 5c0 3-2 6-6 8', 'M13 21l4-10 4 10M14.5 18h5'],
   karaoke: [
     'M9 3h6a3 3 0 0 1 3 3v3a6 6 0 0 1-12 0V6a3 3 0 0 1 3-3z',

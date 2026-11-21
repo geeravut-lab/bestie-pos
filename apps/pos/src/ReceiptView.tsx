@@ -107,6 +107,14 @@ export function ReceiptView({
               <dd>{money(p.amount)}</dd>
             </div>
           ))}
+        {receipt.payments
+          .filter((p) => p.tender === 'room')
+          .map((p) => (
+            <div key={p.id}>
+              <dt>{d.receiptRoom}</dt>
+              <dd>{money(p.amount)}</dd>
+            </div>
+          ))}
         {cash.length > 0 ? (
           <>
             <div>

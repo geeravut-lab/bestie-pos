@@ -23,12 +23,40 @@ export function karaokeAmount(ratePerHour: number, minutes: number): number {
   return Math.floor((ratePerHour * minutes + 30) / 60);
 }
 
+/** Minutes beyond the package's included minutes, rounded UP to a whole step (0 while still inside the package). */
+export function karaokeOverageMinutes(
+  elapsedSeconds: number,
+  includedMinutes: number,
+  step: number,
+): number {
+  const secs = Math.max(0, Math.floor(elapsedSeconds));
+  if (secs <= includedMinutes * 60) return 0;
+  const stepSecs = 60 * step;
+  return Math.floor((secs - includedMinutes * 60 + stepSecs - 1) / stepSecs) * step;
+}
+
 export type KaraokeSettlement = { billedMinutes: number; amount: number };
-/** What a room costs if it were stopped after `elapsedSeconds` (the screen's running estimate; the database fixes the real figure at the stop). */
+/**
+ * What a room costs if it were stopped after `elapsedSeconds` (the screen's running estimate; the database fixes the real figure at the stop).
+ * With package time (`includedMinutes` > 0): the packages' price plus the time beyond them at the room's rate; without: rate × time, shortest time, step.
+ */
 export function karaokeSettle(
   elapsedSeconds: number,
-  room: { ratePerHour: number; minMinutes: number; stepMinutes: number },
+  room: {
+    ratePerHour: number;
+    minMinutes: number;
+    stepMinutes: number;
+    includedMinutes?: number;
+    packageTotal?: number;
+  },
 ): KaraokeSettlement {
+  if ((room.includedMinutes ?? 0) > 0) {
+    const over = karaokeOverageMinutes(elapsedSeconds, room.includedMinutes ?? 0, room.stepMinutes);
+    return {
+      billedMinutes: (room.includedMinutes ?? 0) + over,
+      amount: (room.packageTotal ?? 0) + karaokeAmount(room.ratePerHour, over),
+    };
+  }
   const billedMinutes = karaokeBilledMinutes(elapsedSeconds, room.minMinutes, room.stepMinutes);
   return { billedMinutes, amount: karaokeAmount(room.ratePerHour, billedMinutes) };
 }
@@ -114,6 +142,9 @@ export type KaraokeRoomView = {
   room: string;
   songsEnabled: boolean;
   running: boolean;
+  paused: boolean;
+  /** Minutes of package time the room has bought (null = pay per use). */
+  includedMinutes: number | null;
   elapsedSeconds: number;
   queue: QueueSong[];
 };
@@ -135,6 +166,8 @@ export function parseKaraokeRoomView(v: unknown): KaraokeRoomView | null {
     room: str(o.room),
     songsEnabled: o.songs_enabled === true,
     running: o.running === true,
+    paused: o.paused === true,
+    includedMinutes: typeof o.included_minutes === 'number' ? o.included_minutes : null,
     elapsedSeconds: num(o.elapsed_seconds),
     queue,
   };
@@ -193,7 +226,19 @@ export type KaraokeSession = {
   billedMinutes: number | null;
   amount: number | null;
   orderId: string | null;
+  pausedAt: string | null;
+  pausedSeconds: number;
+  includedMinutes: number;
+  packageTotal: number;
+  packageName: string | null;
+  bookingId: string | null;
 };
+
+/** Seconds counted so far on the screen's clock: start → (stop | pause | now), minus the time spent paused. The database's own figure is the real one. */
+export function sessionElapsedSeconds(s: KaraokeSession, nowMs: number): number {
+  const end = s.endedAt ? Date.parse(s.endedAt) : s.pausedAt ? Date.parse(s.pausedAt) : nowMs;
+  return Math.max(0, Math.floor((end - Date.parse(s.startedAt)) / 1000) - s.pausedSeconds);
+}
 export function parseKaraokeSessions(v: unknown): KaraokeSession[] {
   if (!Array.isArray(v)) return [];
   const out: KaraokeSession[] = [];
@@ -212,6 +257,12 @@ export function parseKaraokeSessions(v: unknown): KaraokeSession[] {
       billedMinutes: typeof o.billed_minutes === 'number' ? o.billed_minutes : null,
       amount: typeof o.amount === 'number' ? o.amount : null,
       orderId: str(o.order_id) || null,
+      pausedAt: str(o.paused_at) || null,
+      pausedSeconds: num(o.paused_seconds),
+      includedMinutes: num(o.included_minutes),
+      packageTotal: num(o.package_total),
+      packageName: str(o.package_name) || null,
+      bookingId: str(o.booking_id) || null,
     });
   }
   return out;
@@ -244,4 +295,111 @@ export function parseStaffSongs(v: unknown): StaffSong[] {
     });
   }
   return out;
+}
+
+// ── the in-room player (staff screen `/karaoke/player/<room>`) ───────────────
+const PLAYER_PATH =
+  /^\/karaoke\/player\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i;
+export const karaokePlayerRoomFromPath = (pathname: string): string | null =>
+  PLAYER_PATH.exec(pathname)?.[1]?.toLowerCase() ?? null;
+
+export type PlayerStep =
+  | { kind: 'play'; song: StaffSong } // the database says this song is playing: make sure the player shows it
+  | { kind: 'start'; song: StaffSong } // nothing is playing: mark the first waiting song as playing
+  | { kind: 'idle' };
+
+/** What the player should do next, from the room's songs (oldest first). The database is the one source of truth: the player never keeps its own queue. */
+export function pickPlayerStep(songs: readonly StaffSong[]): PlayerStep {
+  const playing = songs.find((s) => s.status === 'playing');
+  if (playing) return { kind: 'play', song: playing };
+  const next = songs.find((s) => s.status === 'queued');
+  return next ? { kind: 'start', song: next } : { kind: 'idle' };
+}
+
+// ── packages and reservations ────────────────────────────────────────────────
+export type KaraokePackage = {
+  id: string;
+  name: string;
+  minutes: number;
+  price: number;
+  active: boolean;
+  sort: number;
+};
+export function parseKaraokePackages(v: unknown): KaraokePackage[] {
+  if (!Array.isArray(v)) return [];
+  const out: KaraokePackage[] = [];
+  for (const x of v) {
+    const o = obj(x);
+    if (!str(o.id) || !str(o.name) || num(o.minutes) <= 0) continue;
+    out.push({
+      id: str(o.id),
+      name: str(o.name),
+      minutes: num(o.minutes),
+      price: num(o.price),
+      active: o.active !== false,
+      sort: num(o.sort),
+    });
+  }
+  return out.sort((a, b) => a.sort - b.sort || a.minutes - b.minutes);
+}
+
+export const KARAOKE_BOOKING_STATUSES = [
+  'booked',
+  'arrived',
+  'cancelled',
+  'no_show',
+  'done',
+] as const;
+export type KaraokeBookingStatus = (typeof KARAOKE_BOOKING_STATUSES)[number];
+export type KaraokeBooking = {
+  id: string;
+  roomId: string;
+  guestName: string;
+  phone: string | null;
+  guests: number | null;
+  startsAt: string;
+  endsAt: string;
+  status: KaraokeBookingStatus;
+  note: string | null;
+};
+export function parseKaraokeBookings(v: unknown): KaraokeBooking[] {
+  if (!Array.isArray(v)) return [];
+  const out: KaraokeBooking[] = [];
+  for (const x of v) {
+    const o = obj(x);
+    const status = (KARAOKE_BOOKING_STATUSES as readonly string[]).includes(str(o.status))
+      ? (str(o.status) as KaraokeBookingStatus)
+      : null;
+    if (!status || !str(o.id) || !str(o.room_id) || !str(o.starts_at) || !str(o.ends_at)) continue;
+    out.push({
+      id: str(o.id),
+      roomId: str(o.room_id),
+      guestName: str(o.guest_name),
+      phone: str(o.phone) || null,
+      guests: typeof o.guests === 'number' ? o.guests : null,
+      startsAt: str(o.starts_at),
+      endsAt: str(o.ends_at),
+      status,
+      note: str(o.note) || null,
+    });
+  }
+  return out.sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
+}
+
+/** Does a new reservation [start, end) clash with a live one of the same room? (The database refuses it too; this lets the screen warn first.) */
+export function bookingClash(
+  existing: readonly KaraokeBooking[],
+  roomId: string,
+  startMs: number,
+  endMs: number,
+): KaraokeBooking | null {
+  return (
+    existing.find(
+      (b) =>
+        b.roomId === roomId &&
+        (b.status === 'booked' || b.status === 'arrived') &&
+        Date.parse(b.startsAt) < endMs &&
+        Date.parse(b.endsAt) > startMs,
+    ) ?? null
+  );
 }

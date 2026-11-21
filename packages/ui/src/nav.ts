@@ -63,6 +63,7 @@ export const ART_IDS = [
   'calendar',
   'karaoke',
   'translate',
+  'folio',
   'pay',
   'home',
   'account',
@@ -128,6 +129,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   item('calendar', '/calendar', 'navCalendar', 'hintCalendar', ['appointments']),
   item('karaoke', '/karaoke', 'navKaraoke', 'hintKaraoke', ['karaoke.rooms']),
   item('translate', '/translate', 'navTranslate', 'hintTranslate', ['ai.translate']),
+  item('folio', '/folio', 'navFolio', 'hintFolio', ['folio']),
   item('pay', '/g/pay', 'navPay', 'hintPay', ['tender.promptpay']),
 ];
 
@@ -159,6 +161,7 @@ export const ROLE_LAYOUT: Readonly<Record<AppRole, RoleLayout>> = {
       'shift',
       'receipts',
       'translate',
+      'folio',
     ],
   },
   waiter: {
@@ -175,6 +178,7 @@ export const ROLE_LAYOUT: Readonly<Record<AppRole, RoleLayout>> = {
       'sell',
       'calendar',
       'karaoke',
+      'folio',
       'menu',
       'stock',
       'staff',

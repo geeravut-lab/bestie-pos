@@ -109,3 +109,57 @@ describe('<ClientRecordPanel>', () => {
     expect(screen.getAllByRole('button', { name: 'Erase' }).length).toBe(2);
   });
 });
+
+describe('<ClientRecordPanel> photos', () => {
+  const photoTables = () =>
+    tables({
+      client_photos: [
+        {
+          id: 'p1',
+          kind: 'before',
+          note: 'roots',
+          created_at: '2026-11-01T05:00:00Z',
+          expires_at: '2027-11-01T05:00:00Z',
+        },
+        {
+          id: 'p2',
+          kind: 'after',
+          note: null,
+          created_at: '2026-11-01T07:00:00Z',
+          expires_at: '2027-11-01T07:00:00Z',
+        },
+      ],
+    });
+
+  it('lists before / after photos and loads a picture only when asked', async () => {
+    const db = fakeDb(photoTables(), {
+      rpc: { get_client_photo: { data: { mime: 'image/jpeg', data: 'QUJD' } } },
+    });
+    mount(ctx(db.client));
+    await screen.findByText('roots');
+    expect(db.rpcs.length).toBe(0);
+    await userEvent.click(screen.getByRole('button', { name: 'Compare before / after' }));
+    await waitFor(() => expect(db.rpcs.filter((r) => r.fn === 'get_client_photo').length).toBe(2));
+    expect((await screen.findAllByRole('img', { name: 'Client photo' })).length).toBe(2);
+  });
+
+  it('a photo cannot be added without the consent tick and a file', async () => {
+    const db = fakeDb(photoTables());
+    mount(ctx(db.client));
+    await screen.findByText('roots');
+    expect(
+      (screen.getByLabelText('Choose a photo (JPG / PNG / WebP)') as HTMLInputElement).disabled,
+    ).toBe(true);
+    await userEvent.click(screen.getByRole('button', { name: 'Add the photo' }));
+    expect(await screen.findByText(/Tick the consent box/)).toBeTruthy();
+    expect(db.rpcs.length).toBe(0);
+  });
+
+  it('only a manager can erase a photo', async () => {
+    const db = fakeDb(photoTables());
+    mount(ctx(db.client, { permissions: ['order.create', 'staff.manage'] }));
+    await screen.findByText('roots');
+    await userEvent.click(screen.getAllByRole('button', { name: 'Erase' }).at(-1)!);
+    await waitFor(() => expect(db.rpcs.some((r) => r.fn === 'delete_client_photo')).toBe(true));
+  });
+});

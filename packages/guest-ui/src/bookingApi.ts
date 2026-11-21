@@ -216,3 +216,62 @@ export async function sendHair(
     return { ok: false, error: 'failed' };
   }
 }
+
+/** Does this shop offer the health form on the guest's phone (spas only)? */
+export async function loadHealthFormEnabled(
+  token: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<boolean> {
+  try {
+    const res = await fetchImpl(`/api/guest/booking?t=${encodeURIComponent(token)}&op=health_form`);
+    if (!res.ok) return false;
+    return obj(await res.json().catch(() => null)).enabled === true;
+  } catch {
+    return false;
+  }
+}
+
+export type HealthSend = {
+  consent: boolean;
+  signedName: string;
+  answers: Record<string, boolean | string>;
+};
+export type HealthResult =
+  | { ok: true }
+  | { ok: false; error: 'consent_needed' | 'bad_name' | 'closed' | 'too_many' | 'failed' };
+
+/** Send the signed health form for ONE booking; the booking code is the proof. */
+export async function sendHealthForm(
+  token: string,
+  id: string,
+  code: string,
+  f: HealthSend,
+  fetchImpl: typeof fetch = fetch,
+): Promise<HealthResult> {
+  try {
+    const res = await fetchImpl('/api/guest/booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        t: token,
+        op: 'health',
+        id,
+        code,
+        form: { consent: f.consent, signed_name: f.signedName, answers: f.answers },
+      }),
+    });
+    if (!res.ok) return { ok: false, error: 'failed' };
+    const o = obj(await res.json().catch(() => null));
+    if (o.ok === true) return { ok: true };
+    const e = o.error;
+    return {
+      ok: false,
+      error:
+        e === 'consent_needed' || e === 'bad_name' || e === 'closed' || e === 'too_many'
+          ? e
+          : 'failed',
+    };
+  } catch {
+    return { ok: false, error: 'failed' };
+  }
+}

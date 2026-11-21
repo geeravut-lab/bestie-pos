@@ -13,10 +13,12 @@ import type { ErrorKey } from '@bestie/i18n';
 import { AsyncButton, Spinner } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
+import { preparePicture } from './imagePrep';
 import { tx } from './stockInput';
 import { useRemote } from './useRemote';
 
 type Note = { id: string; kind: string; title: string; body: string; createdAt: string };
+type Photo = { id: string; kind: string; note: string; createdAt: string; expiresAt: string };
 type Intake = { id: string; answers: HealthAnswers; signedName: string; signedAt: string };
 
 /** A member's service notes (colour formula …) and the spa's health form with the guest's consent and typed signature. */
@@ -35,10 +37,22 @@ export function ClientRecordPanel({ ctx, customerId }: { ctx: PageContext; custo
     name: string;
   } | null>(null);
   const [error, setError] = useState<ErrorKey | null>(null);
-  const [bad, setBad] = useState<'note' | 'health' | null>(null);
+  const [bad, setBad] = useState<'note' | 'health' | 'photo' | null>(null);
 
-  const data = useRemote<{ notes: Note[]; intakes: Intake[] }>(async () => {
-    const [n, h] = await Promise.all([
+  const [shown, setShown] = useState<Record<string, string>>({});
+  const [pForm, setPForm] = useState<{
+    kind: string;
+    consent: boolean;
+    note: string;
+    file: File | null;
+  }>({
+    kind: 'before',
+    consent: false,
+    note: '',
+    file: null,
+  });
+  const data = useRemote<{ notes: Note[]; intakes: Intake[]; photos: Photo[] }>(async () => {
+    const [n, h, ph] = await Promise.all([
       ctx.client
         .from('client_notes')
         .select('id, kind, title, body, created_at')
@@ -51,9 +65,24 @@ export function ClientRecordPanel({ ctx, customerId }: { ctx: PageContext; custo
         .eq('customer_id', customerId)
         .order('signed_at', { ascending: false })
         .limit(5),
+      ctx.client
+        .from('client_photos')
+        .select('id, kind, note, created_at, expires_at')
+        .eq('customer_id', customerId)
+        .order('created_at', { ascending: false })
+        .limit(30),
     ]);
     if (n.error || h.error) throw new Error('load');
     return {
+      photos: ph.error
+        ? []
+        : ((ph.data ?? []) as Record<string, string | null>[]).map((x) => ({
+            id: String(x.id),
+            kind: String(x.kind),
+            note: x.note ?? '',
+            createdAt: String(x.created_at),
+            expiresAt: String(x.expires_at),
+          })),
       notes: ((n.data ?? []) as Record<string, string>[]).map((x) => ({
         id: String(x.id),
         kind: String(x.kind),
@@ -118,6 +147,53 @@ export function ClientRecordPanel({ ctx, customerId }: { ctx: PageContext; custo
       p_id: id,
     });
     if (err) return setError(fail(err.code));
+    data.reload();
+  };
+
+  const showPhoto = async (id: string) => {
+    setError(null);
+    const { data: out, error: err } = await ctx.client.rpc('get_client_photo', { p_id: id });
+    const o = out as { mime?: string; data?: string } | null;
+    if (err || !o?.data || !o.mime) return setError('err_load_failed');
+    setShown((m) => ({ ...m, [id]: `data:${o.mime};base64,${o.data}` }));
+  };
+  const comparePair = async () => {
+    const list = data.data?.photos ?? [];
+    const b = list.find((x) => x.kind === 'before');
+    const a = list.find((x) => x.kind === 'after');
+    if (b) await showPhoto(b.id);
+    if (a) await showPhoto(a.id);
+  };
+  const addPhoto = async () => {
+    setError(null);
+    setBad(null);
+    if (!pForm.consent || !pForm.file || !storeId) return setBad('photo');
+    let pic;
+    try {
+      pic = await preparePicture(pForm.file);
+    } catch {
+      return setBad('photo');
+    }
+    const { error: err } = await ctx.client.rpc('add_client_photo', {
+      p: {
+        store_id: storeId,
+        customer_id: customerId,
+        kind: pForm.kind,
+        consent: true,
+        mime: pic.mime,
+        data: pic.base64,
+        note: pForm.note.trim() || null,
+      },
+    });
+    if (err) return setError(fail(err.code));
+    setPForm({ kind: pForm.kind, consent: false, note: '', file: null });
+    data.reload();
+  };
+  const erasePhoto = async (id: string) => {
+    setError(null);
+    const { error: err } = await ctx.client.rpc('delete_client_photo', { p_id: id });
+    if (err) return setError(fail(err.code));
+    setShown((m) => Object.fromEntries(Object.entries(m).filter(([k]) => k !== id)));
     data.reload();
   };
 
@@ -290,6 +366,87 @@ export function ClientRecordPanel({ ctx, customerId }: { ctx: PageContext; custo
               {t.crCancel}
             </AsyncButton>
           </div>
+        </div>
+      ) : null}
+
+      <h4>{t.crPhotos}</h4>
+      {data.data && data.data.photos.length === 0 ? (
+        <p className="muted">{t.crPhotosNone}</p>
+      ) : null}
+      {(data.data?.photos ?? []).length > 1 ? (
+        <AsyncButton variant="secondary" onClick={comparePair}>
+          {t.crPhotoCompare}
+        </AsyncButton>
+      ) : null}
+      <ul className="member-list">
+        {(data.data?.photos ?? []).map((p) => (
+          <li key={p.id} className="member-row">
+            <div className="member-head">
+              <span className="badge">{tx(t, `crPhoto_${p.kind}`)}</span>
+              <span className="muted">{formatDateTime(lang, p.createdAt)}</span>
+              <span className="muted">
+                {fmt(t.crPhotoExpires, { when: formatDateTime(lang, p.expiresAt) })}
+              </span>
+              {p.note ? <span>{p.note}</span> : null}
+            </div>
+            {shown[p.id] ? (
+              <img
+                src={shown[p.id]}
+                alt={t.crPhotoAlt}
+                style={{ maxWidth: '100%', maxHeight: '50vh' }}
+              />
+            ) : (
+              <AsyncButton variant="secondary" onClick={() => showPhoto(p.id)}>
+                {t.crPhotoShow}
+              </AsyncButton>
+            )}
+            {canErase ? (
+              <AsyncButton variant="secondary" onClick={() => erasePhoto(p.id)}>
+                {t.crErase}
+              </AsyncButton>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+      {canWrite ? (
+        <div className="form-row">
+          <label className="label" htmlFor="cr-pkind">
+            {t.crPhotoKind}
+          </label>
+          <select
+            id="cr-pkind"
+            className="field"
+            value={pForm.kind}
+            onChange={(e) => setPForm({ ...pForm, kind: e.target.value })}
+          >
+            {['before', 'after', 'other'].map((k) => (
+              <option key={k} value={k}>
+                {tx(t, `crPhoto_${k}`)}
+              </option>
+            ))}
+          </select>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={pForm.consent}
+              onChange={(e) => setPForm({ ...pForm, consent: e.target.checked })}
+            />{' '}
+            {t.crPhotoConsent}
+          </label>
+          <label className="label" htmlFor="cr-pfile">
+            {t.crPhotoFile}
+          </label>
+          <input
+            id="cr-pfile"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            disabled={!pForm.consent}
+            onChange={(e) => setPForm({ ...pForm, file: e.target.files?.[0] ?? null })}
+          />
+          {bad === 'photo' ? <Notice kind="error">{t.crPhotoBad}</Notice> : null}
+          <AsyncButton variant="secondary" onClick={addPhoto}>
+            {t.crPhotoAdd}
+          </AsyncButton>
         </div>
       ) : null}
     </section>

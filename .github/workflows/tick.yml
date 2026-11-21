@@ -1,0 +1,23 @@
+# The scheduler for /api/notify/tick: delivers LINE notices, sends guest reminders, erases expired hair photos and guest contacts,
+# writes the daily summary. GitHub runs it every 10 minutes (it may be a few minutes late; everything the tick does is safe to repeat).
+# Needs ONE repository secret: CRON_SECRET (the same value as the Vercel variable of that name). Without it the job does nothing.
+name: tick
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+permissions: {}
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Call the tick
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then echo "CRON_SECRET is not set as a repository secret: nothing to do"; exit 0; fi
+          code=$(curl -sS -o /tmp/tick.json -w '%{http_code}' --max-time 60 -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" https://bestie-pos.vercel.app/api/notify/tick)
+          echo "HTTP $code"; cat /tmp/tick.json; echo
+          test "$code" = "200"

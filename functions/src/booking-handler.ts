@@ -5,6 +5,8 @@
 //   POST /api/guest/booking { t, op: 'cancel', id, code }                                                          → { result }
 //   GET  /api/guest/booking?t=<token>&op=styles                                                                   → { styles }       (the shop's hair-style catalogue)
 //   POST /api/guest/booking { t, op: 'hair', id, code, request: { style_id?, answers?, photo?: {consent, mime, data}, remove_photo? } } → { ok, error?, photo }
+//   GET  /api/guest/booking?t=<token>&op=health_form                                                              → { enabled }     (the spa health form is offered)
+//   POST /api/guest/booking { t, op: 'health', id, code, form: { consent, signed_name, answers } }               → { ok, error? }
 //   POST /api/guest/booking { t, op: 'contact', id, code, email }                                                  → { ok, error? }  (e-mail for the reminder; '' removes it)
 // Every rule (module on, free time, limits, repeat = same answer) is checked by the database functions; this file only limits the
 // request rate, checks the shapes and talks to them with the service role. The browser never gets a key.
@@ -62,6 +64,17 @@ export async function guestBookingResponse(
         });
         if (!r.ok) return reply({ error: 'server_error' }, 502);
         return r.data === null ? reply({ error: 'not_found' }, 404) : reply({ styles: r.data });
+      }
+      if (q.get('op') === 'health_form') {
+        if (!allowRead(`booking-hf:${ip}`)) return reply({ error: 'rate_limited' }, 429);
+        const r = await rpc(f, supabaseUrl, serviceRoleKey, 'guest_health_form_info', {
+          p_token: token,
+        });
+        if (!r.ok) return reply({ error: 'server_error' }, 502);
+        const o = (r.data && typeof r.data === 'object' ? r.data : {}) as { enabled?: unknown };
+        return r.data === null
+          ? reply({ error: 'not_found' }, 404)
+          : reply({ enabled: o.enabled === true });
       }
       const service = q.get('service');
       if (service !== null) {
@@ -164,6 +177,22 @@ export async function guestBookingResponse(
         ok?: unknown;
         error?: unknown;
       };
+      return reply({ ok: o.ok === true, error: typeof o.error === 'string' ? o.error : null });
+    }
+    if (b.op === 'health') {
+      if (!allowHair(`booking-health:${ip}`)) return reply({ error: 'rate_limited' }, 429);
+      const code = str(b.code, 20);
+      if (typeof b.id !== 'string' || !UUID.test(b.id) || code.length < 4)
+        return reply({ error: 'invalid' }, 422);
+      const p = b.form && typeof b.form === 'object' ? (b.form as Record<string, unknown>) : {};
+      const r = await rpc(f, supabaseUrl, serviceRoleKey, 'guest_health_form', {
+        p_token: b.t,
+        p_id: b.id,
+        p_code: code,
+        p,
+      });
+      if (!r.ok) return reply({ error: 'server_error' }, 502);
+      const o = (r.data && typeof r.data === 'object' ? r.data : {}) as Record<string, unknown>;
       return reply({ ok: o.ok === true, error: typeof o.error === 'string' ? o.error : null });
     }
     if (b.op === 'hair') {

@@ -86,6 +86,12 @@ Decisions log: @docs/DECISIONS.md
    ideas, not the API names. Their global rules (docs/Knowledge-Index.md bottom) apply here too.
 5. **Admin-controllable things are data, not code constants**: branding, feature flags, audit event types,
    AI provider/model/prompts, notification settings.
+6. **Build everything in the plan now; legal sign-off gates launch, not building** (owner order 2026-11-21). Every function and
+   feature in the plan (all phases) may be built and demonstrated without waiting for the lawyer, accountant or a pilot shop,
+   because the owner shows the working system to them BEFORE go-live. Built things that need a legal opinion keep their code gates
+   (module switched off by default, `legalSignOff` flags, consent ticks) and are listed in the closing report under "must be confirmed
+   before go-live" — never as a reason not to build. This does not relax the safety rules above (never fake payments, no crypto
+   checkout tender, Credit single-entity, secrets never in git).
 
 ## Working conventions
 

@@ -37,6 +37,13 @@ const GOOD: StoreSnapshot = {
   default_printer: 'p1',
   qr_pay_device: null,
   shift_required: false,
+  has_seller_address: true,
+  delivery_platforms: 0,
+  delivery_without_token: 0,
+  order_pages: 0,
+  folio_rooms: 0,
+  folio_rooms_without_rate: 0,
+  karaoke_pay_note: true,
 };
 const find = (rs: CheckResult[], id: string) => rs.find((r) => r.id === id);
 
@@ -136,6 +143,50 @@ describe('checkStore for salon / spa', () => {
   });
   it('a cafe is not asked about stylists', () => {
     expect(find(checkStore({ ...GOOD, providers: 0 }), 'providers')).toBeUndefined();
+  });
+});
+
+describe('checkStore for the newer modules', () => {
+  it('a VAT shop needs a seller address before it can issue a full tax invoice', () => {
+    expect(find(checkStore({ ...GOOD, has_seller_address: false }), 'seller_address')?.level).toBe(
+      'warn',
+    );
+    expect(find(checkStore({ ...GOOD, has_seller_address: true }), 'seller_address')?.level).toBe(
+      'ok',
+    );
+    expect(
+      find(
+        checkStore({ ...GOOD, vat_registered: false, has_seller_address: false }),
+        'seller_address',
+      ),
+    ).toBeUndefined();
+  });
+  it('delivery: no platform and a platform without a token are warnings', () => {
+    const on = { ...GOOD, module_overrides: { delivery: true } };
+    expect(find(checkStore({ ...on, delivery_platforms: 0 }), 'delivery')?.level).toBe('warn');
+    expect(
+      find(checkStore({ ...on, delivery_platforms: 2, delivery_without_token: 1 }), 'delivery')
+        ?.level,
+    ).toBe('warn');
+    expect(find(checkStore({ ...on, delivery_platforms: 1 }), 'delivery')?.level).toBe('ok');
+    expect(find(checkStore(GOOD), 'delivery')).toBeUndefined();
+  });
+  it('kiosk: switched on without any ordering page is only information', () => {
+    const on = { ...GOOD, module_overrides: { kiosk: true } };
+    expect(find(checkStore({ ...on, order_pages: 0 }), 'kiosk')?.level).toBe('info');
+    expect(find(checkStore({ ...on, order_pages: 2 }), 'kiosk')?.level).toBe('ok');
+  });
+  it('resort rooms without a night rate, and karaoke deposits without a payment note', () => {
+    const resort = { ...GOOD, profile: 'resort', folio_rooms: 4, folio_rooms_without_rate: 2 };
+    expect(find(checkStore(resort), 'folio_rate')?.level).toBe('info');
+    expect(
+      find(checkStore({ ...resort, folio_rooms_without_rate: 0 }), 'folio_rate'),
+    ).toBeUndefined();
+    const k = { ...GOOD, module_overrides: { 'karaoke.booking': true } };
+    expect(find(checkStore({ ...k, karaoke_pay_note: false }), 'karaoke_pay_note')?.level).toBe(
+      'warn',
+    );
+    expect(find(checkStore({ ...k, karaoke_pay_note: true }), 'karaoke_pay_note')).toBeUndefined();
   });
 });
 

@@ -55,7 +55,7 @@ begin
       end loop;
     else
       a := coalesce((leg ->> 'a')::bigint, v_left);
-      legs := legs || jsonb_build_object('t', leg ->> 't', 'a', a);
+      legs := legs || (jsonb_build_object('t', leg ->> 't', 'a', a) || case when leg ? 'f' then jsonb_build_object('f', leg ->> 'f') else '{}'::jsonb end);
       v_left := v_left - a;
     end if;
   end loop;
@@ -69,7 +69,8 @@ begin
       if v_tender < a then v_tender := a; end if;
       v_pay := v_pay || jsonb_build_object('id', gen_random_uuid(), 'tender', 'cash', 'amount', a, 'tendered', v_tender, 'change', v_tender - a, 'created_at', v_when);
     else
-      v_pay := v_pay || jsonb_build_object('id', gen_random_uuid(), 'tender', leg ->> 't', 'amount', a, 'created_at', v_when);
+      v_pay := v_pay || (jsonb_build_object('id', gen_random_uuid(), 'tender', leg ->> 't', 'amount', a, 'created_at', v_when)
+        || case when leg ->> 't' = 'room' then jsonb_build_object('folio_id', leg ->> 'f') else '{}'::jsonb end);   -- a room share names the stay
     end if;
   end loop;
 

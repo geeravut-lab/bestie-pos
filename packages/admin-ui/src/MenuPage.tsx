@@ -72,6 +72,23 @@ function MenuEditor({ ctx, stores }: { ctx: PageContext; stores: StoreRow[] }) {
           >
             {t.labelsTitle}
           </button>
+          {(
+            [
+              ['/promotions', t.prLink],
+              ['/upsell', t.upLink],
+              ['/menu/import', t.miLink],
+              ['/menu-profit', t.mpLink],
+            ] as const
+          ).map(([path, text]) => (
+            <button
+              key={path}
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => ctx.navigate(path)}
+            >
+              {text}
+            </button>
+          ))}
           {ctx.isModuleOn?.('kiosk') ? (
             <button
               type="button"

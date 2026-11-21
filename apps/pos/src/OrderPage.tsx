@@ -48,6 +48,7 @@ import { ModifierSheet } from './ModifierSheet';
 import { ManagerVoid } from './ManagerVoid';
 import { OrderCustomer } from './OrderCustomer';
 import { OrderDelivery, useDeliveryBill } from './OrderDelivery';
+import { OrderPromo, useOrderExtras } from './OrderPromo';
 import { PaySheet } from './PaySheet';
 import { useSplitInfo } from './useSplitInfo';
 import {
@@ -99,6 +100,7 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
   const locale = lang === 'th' ? ('th-TH' as const) : ('en-GB' as const);
   const order = useOrder(orderId);
   const remote = usePosData(ctx, order?.storeId ?? null);
+  const extras = useOrderExtras(ctx, order?.storeId ?? '');
   const openOrders = useOpenOrders(order?.storeId ?? null);
   const { pending } = useOutboxCounts();
   const netUp = useOnline();
@@ -306,6 +308,9 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
         {pending > 0 ? ` · ${t.orderWaitingSync}` : ''}
       </p>
       <OrderCustomer ctx={ctx} orderId={order.id} open={open} online={netUp} />
+      {canEdit && extras ? (
+        <OrderPromo order={order} menu={menu} extras={extras} apply={apply} onAdd={addItem} />
+      ) : null}
       {order.channel === 'delivery' &&
       (ctx.isModuleOn?.('delivery') ?? false) &&
       deliveryBill.data ? (

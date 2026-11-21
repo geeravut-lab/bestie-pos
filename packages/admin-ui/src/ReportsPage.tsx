@@ -134,13 +134,23 @@ export function ReportsPage({ ctx }: { ctx: PageContext }) {
   return (
     <div className="admin-page">
       <h1>{t.repTitle}</h1>
-      {(shops.data?.length ?? 0) > 1 ? (
-        <div className="actions">
+      <div className="actions">
+        {(shops.data?.length ?? 0) > 1 ? (
           <button type="button" className="btn btn-secondary" onClick={() => ctx.navigate('/hq')}>
             {t.hqLink}
           </button>
-        </div>
-      ) : null}
+        ) : null}
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => ctx.navigate('/menu-profit')}
+        >
+          {t.mpLink}
+        </button>
+        <button type="button" className="btn btn-secondary" onClick={() => ctx.navigate('/kpi')}>
+          {t.kpLink}
+        </button>
+      </div>
       <section className="card admin-card">
         <div className="filters">
           {(shops.data?.length ?? 0) > 1 ? (

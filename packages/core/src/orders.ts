@@ -32,6 +32,9 @@ export type LineDoc = {
   voidReason: string | null;
   sentAt: string | null;
   createdBy: string | null;
+  /** The price before a promotion lowered it (null = no promotion), and which promotion. Only lines that are not sent yet can carry a promotion. */
+  listPrice?: Satang | null;
+  promoId?: string | null;
 };
 
 export type OrderDoc = {
@@ -351,6 +354,8 @@ export function lineToRow(o: OrderDoc, l: LineDoc): Record<string, unknown> {
     void_reason: l.voidReason,
     seat: l.seat,
     created_by: l.createdBy,
+    list_price: l.listPrice ?? null,
+    promo_id: l.promoId ?? null,
   };
 }
 
@@ -395,6 +400,8 @@ export function rowsToOrder(
       voidReason: str(l.void_reason),
       sentAt: str(l.sent_at),
       createdBy: str(l.created_by),
+      listPrice: int(l.list_price),
+      promoId: str(l.promo_id),
     });
   }
   lines.sort((a, b) => (a.sentAt ?? '9').localeCompare(b.sentAt ?? '9'));

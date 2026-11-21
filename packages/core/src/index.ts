@@ -70,3 +70,8 @@ export * from './shiftFigures';
 export * from './folio';
 export * from './delivery';
 export * from './hq';
+export * from './menuEngineering';
+export * from './promotions';
+export * from './upsell';
+export * from './kpi';
+export * from './menuImport';

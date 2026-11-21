@@ -57,6 +57,8 @@ export type Appointment = {
   /** The member (when known) and the package visit that covers this appointment. */
   customerId: string | null;
   customerPackageId: string | null;
+  /** Appointments booked together (a couple, a party) share this id. */
+  groupId: string | null;
 };
 
 /** What may follow each status (the database enforces the same table). */
@@ -254,6 +256,7 @@ export function parseAppointments(raw: unknown): Appointment[] {
       orderId: str(r.order_id),
       customerId: str(r.customer_id),
       customerPackageId: str(r.customer_package_id),
+      groupId: str(r.group_id),
     });
   }
   return out.sort((a, b) => ms(a.startsAt) - ms(b.startsAt));

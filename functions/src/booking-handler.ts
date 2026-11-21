@@ -3,6 +3,8 @@
 //   GET  /api/guest/booking?t=<token>&service=<id>&date=YYYY-MM-DD[&provider=<id>] → { slots: ["09:00", …] }
 //   POST /api/guest/booking { t, op: 'book', service_id, provider_id?, date, time, name, phone, note?, client_id } → { result }
 //   POST /api/guest/booking { t, op: 'cancel', id, code }                                                          → { result }
+//   GET  /api/guest/booking?t=<token>&op=styles                                                                   → { styles }       (the shop's hair-style catalogue)
+//   POST /api/guest/booking { t, op: 'hair', id, code, request: { style_id?, answers?, photo?: {consent, mime, data}, remove_photo? } } → { ok, error?, photo }
 //   POST /api/guest/booking { t, op: 'contact', id, code, email }                                                  → { ok, error? }  (e-mail for the reminder; '' removes it)
 // Every rule (module on, free time, limits, repeat = same answer) is checked by the database functions; this file only limits the
 // request rate, checks the shapes and talks to them with the service role. The browser never gets a key.
@@ -35,6 +37,7 @@ const allowSlots = createRateLimiter(60, 60_000);
 const allowBook = createRateLimiter(6, 60_000);
 const allowBookShop = createRateLimiter(30, 10 * 60_000);
 const allowCancel = createRateLimiter(10, 60_000);
+const allowHair = createRateLimiter(10, 60_000);
 
 const str = (v: unknown, max: number): string =>
   typeof v === 'string' ? v.trim().slice(0, max) : '';
@@ -52,6 +55,14 @@ export async function guestBookingResponse(
       const token = q.get('t') ?? '';
       if (!TOKEN.test(token)) return reply({ error: 'invalid' }, 422);
       const { supabaseUrl, serviceRoleKey } = readServerEnv(env);
+      if (q.get('op') === 'styles') {
+        if (!allowRead(`booking-styles:${ip}`)) return reply({ error: 'rate_limited' }, 429);
+        const r = await rpc(f, supabaseUrl, serviceRoleKey, 'guest_hair_styles', {
+          p_token: token,
+        });
+        if (!r.ok) return reply({ error: 'server_error' }, 502);
+        return r.data === null ? reply({ error: 'not_found' }, 404) : reply({ styles: r.data });
+      }
       const service = q.get('service');
       if (service !== null) {
         if (!allowSlots(`booking-slots:${ip}`)) return reply({ error: 'rate_limited' }, 429);
@@ -80,8 +91,11 @@ export async function guestBookingResponse(
     }
 
     if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
-    const b = await jsonObject(request, 4000);
+    // the hair photo (a base64 picture of at most 256 KB) needs a bigger body than every other request
+    const b = await jsonObject(request, 420_000);
     if (!b || typeof b.t !== 'string' || !TOKEN.test(b.t)) return reply({ error: 'invalid' }, 422);
+    if (b.op !== 'hair' && JSON.stringify(b).length >= 4000)
+      return reply({ error: 'invalid' }, 422);
     const { supabaseUrl, serviceRoleKey } = readServerEnv(env);
 
     if (b.op === 'book') {
@@ -151,6 +165,27 @@ export async function guestBookingResponse(
         error?: unknown;
       };
       return reply({ ok: o.ok === true, error: typeof o.error === 'string' ? o.error : null });
+    }
+    if (b.op === 'hair') {
+      if (!allowHair(`booking-hair:${ip}`)) return reply({ error: 'rate_limited' }, 429);
+      const code = str(b.code, 20);
+      if (typeof b.id !== 'string' || !UUID.test(b.id) || code.length < 4)
+        return reply({ error: 'invalid' }, 422);
+      const p =
+        b.request && typeof b.request === 'object' ? (b.request as Record<string, unknown>) : {};
+      const r = await rpc(f, supabaseUrl, serviceRoleKey, 'guest_hair_request', {
+        p_token: b.t,
+        p_id: b.id,
+        p_code: code,
+        p,
+      });
+      if (!r.ok) return reply({ error: 'server_error' }, 502);
+      const o = (r.data && typeof r.data === 'object' ? r.data : {}) as Record<string, unknown>;
+      return reply({
+        ok: o.ok === true,
+        error: typeof o.error === 'string' ? o.error : null,
+        photo: o.photo === true,
+      });
     }
     return reply({ error: 'invalid' }, 422);
   } catch {

@@ -57,5 +57,6 @@ export * from './labels';
 export * from './returns';
 export * from './blocks';
 export * from './clientRecords';
+export * from './hairAdvisor';
 export * from './commission';
 export * from './packages';

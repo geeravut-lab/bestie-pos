@@ -3,6 +3,7 @@ import {
   addDays,
   bangkokDayBounds,
   bangkokParts,
+  blockSpan,
   canBill,
   canMove,
   canSettleDeposit,
@@ -44,6 +45,7 @@ import type { PageContext } from '@bestie/auth';
 import { CustomerPicker } from './CustomerPicker';
 import { tx } from './stockInput';
 import { bangkokToday } from './today';
+import { HairRequestPanel } from './HairRequestPanel';
 import { useRemote } from './useRemote';
 
 type Service = {
@@ -62,6 +64,7 @@ type Loaded = {
   people: { id: string; name: string }[];
   packages: CustomerPackage[];
   uses: Record<string, string>; // appointment id → the package use that covers it
+  blocks: { resourceId: string; startsAt: string; endsAt: string; reason: string }[];
 };
 type View = 'provider' | 'place';
 type Draft = {
@@ -137,7 +140,7 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
         ctx.client
           .from('appointments')
           .select(
-            'id, provider_id, place_id, service_name, price, guest_name, guest_phone, starts_at, ends_at, status, source, note, order_id, customer_id, customer_package_id',
+            'id, provider_id, place_id, service_name, price, guest_name, guest_phone, starts_at, ends_at, status, source, note, order_id, customer_id, customer_package_id, group_id',
           )
           .eq('store_id', storeId)
           .gte('starts_at', bounds.from)
@@ -177,6 +180,12 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
       const uses: Record<string, string> = {};
       for (const u of (us.error ? [] : (us.data ?? [])) as { id: string; appointment_id: string }[])
         uses[u.appointment_id] = u.id; // ascending: the last one wins = the latest use
+      const blk = await ctx.client
+        .from('resource_blocks')
+        .select('resource_id, starts_at, ends_at, reason')
+        .eq('store_id', storeId)
+        .lt('starts_at', bounds.to)
+        .gt('ends_at', bounds.from);
       const [dep, dev, ppl] = await Promise.all([
         appts.length > 0
           ? ctx.client
@@ -211,6 +220,14 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
             })),
         packages: pk.error ? [] : parseCustomerPackages(pk.data),
         uses,
+        blocks: blk.error
+          ? []
+          : ((blk.data ?? []) as Record<string, string | null>[]).map((b) => ({
+              resourceId: String(b.resource_id),
+              startsAt: String(b.starts_at),
+              endsAt: String(b.ends_at),
+              reason: b.reason ?? '',
+            })),
         deposits: dep.error ? [] : parseDeposits(dep.data),
         tills: dev.error
           ? []
@@ -360,6 +377,25 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
       p_status: to,
     });
     if (err) return fail(err);
+    reload();
+  };
+  // the people of one couple / party booking that can still be cancelled
+  const groupLive = (a: Appointment) =>
+    all.filter(
+      (x) => x.groupId === a.groupId && (x.status === 'booked' || x.status === 'confirmed'),
+    );
+  const cancelGroup = async (a: Appointment) => {
+    setError(null);
+    for (const x of groupLive(a)) {
+      const { error: err } = await ctx.client.rpc('set_appointment_status', {
+        p_id: x.id,
+        p_status: 'cancelled',
+      });
+      if (err) {
+        reload();
+        return fail(err);
+      }
+    }
     reload();
   };
   const takeTip = async (a: Appointment) => {
@@ -609,6 +645,25 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
                       style={{ top: ((m - startMin) / (endMin - startMin)) * 100 + '%' }}
                     />
                   ))}
+                  {(d.blocks ?? [])
+                    .filter((b) => b.resourceId === c.id)
+                    .map((b, i) => {
+                      const span = bounds ? blockSpan(b, bounds.from, startMin, endMin) : null;
+                      return span ? (
+                        <div
+                          key={`block-${i}`}
+                          className="cal-block"
+                          role="img"
+                          aria-label={`${t.calOff}${b.reason ? `: ${b.reason}` : ''}`}
+                          style={{ top: `${span.topPct}%`, height: `${span.heightPct}%` }}
+                        >
+                          <span>
+                            {t.calOff}
+                            {b.reason ? ` · ${b.reason}` : ''}
+                          </span>
+                        </div>
+                      ) : null;
+                    })}
                   {placed.map((p) => {
                     const a = items.find((x) => x.id === p.id)!;
                     return (
@@ -659,6 +714,19 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
             {sel.guestPhone ? ` · ${sel.guestPhone}` : ''}
             {sel.note ? ` · ${sel.note}` : ''}
           </p>
+          {sel.source === 'online' ? <HairRequestPanel ctx={ctx} appointmentId={sel.id} /> : null}
+          {sel.groupId && groupLive(sel).length > 1 ? (
+            <p className="muted">
+              {fmt(t.calGroupOf, { n: all.filter((a) => a.groupId === sel.groupId).length })}
+            </p>
+          ) : null}
+          {canBook && sel.groupId && groupLive(sel).length > 1 ? (
+            <div className="actions">
+              <AsyncButton variant="secondary" onClick={() => cancelGroup(sel)}>
+                {fmt(t.calCancelGroup, { n: groupLive(sel).length })}
+              </AsyncButton>
+            </div>
+          ) : null}
           {canBook ? (
             <div className="actions">
               {nextStatuses(sel.status).map((s) => (

@@ -5,6 +5,7 @@ import { fmt, useI18n } from '@bestie/i18n';
 import { AsyncButton, LangSwitch, Spinner } from '@bestie/ui';
 import { cancelBooking, loadBooking, loadSlots, saveContact, sendBooking } from './bookingApi';
 import type { BookingLoad } from './bookingApi';
+import { HairAdvisor } from './HairAdvisor';
 
 type Done = { id: string; code: string | null; startsAt: string; provider: string | null };
 const SAVED = (token: string) => `bestie.booking.${token}`;
@@ -179,6 +180,7 @@ function DonePanel({
           {done.code ? (
             <ReminderBox token={token} id={done.id} code={done.code} lineBasicId={lineBasicId} />
           ) : null}
+          {done.code ? <HairAdvisor token={token} id={done.id} code={done.code} /> : null}
           {problem ? <p role="alert">{t.bkCancelClosed}</p> : null}
           {done.code ? (
             <AsyncButton variant="secondary" onClick={cancel}>

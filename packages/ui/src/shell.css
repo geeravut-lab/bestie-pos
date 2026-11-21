@@ -2272,3 +2272,51 @@ a.nav-card[aria-busy='true'] {
   border-radius: var(--bp-radius-card);
   background: var(--bp-ink);
 }
+
+/* ── the booking QR poster (A5) ───────────────────────────────────────── */
+.booking-qr .qr-svg {
+  max-width: 220px;
+}
+.booking-poster {
+  color: var(--bp-ink);
+  text-align: center;
+}
+.booking-poster h1 {
+  font-size: 22pt;
+  margin: 0 0 4mm;
+}
+.booking-poster h2 {
+  font-size: 15pt;
+  margin: 0 0 6mm;
+}
+.booking-poster .qr-svg {
+  width: 90mm;
+  height: 90mm;
+}
+.booking-poster .mono {
+  font-size: 9pt;
+  word-break: break-all;
+}
+
+/* ── a day off / break drawn on the calendar column ───────────────────── */
+.cal-block {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 0;
+  display: flex;
+  align-items: flex-start;
+  padding: 3px 6px;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--bp-muted);
+  background: repeating-linear-gradient(
+    135deg,
+    var(--bp-surface),
+    var(--bp-surface) 6px,
+    var(--bp-field-border) 6px,
+    var(--bp-field-border) 7px
+  );
+  border: 1px dashed var(--bp-field-border);
+  pointer-events: none;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blockRange, groupPayload } from './blocks';
+import { blockRange, blockSpan, groupPayload } from './blocks';
 
 describe('blockRange', () => {
   it('an all-day block runs from the start of the first day to the end of the last (Bangkok time)', () => {
@@ -72,6 +72,38 @@ describe('groupPayload', () => {
     ).toBeNull();
     expect(
       groupPayload({ ...base, parts: Array.from({ length: 9 }, () => part('s', 'p')) }),
+    ).toBeNull();
+  });
+});
+
+describe('blockSpan', () => {
+  const day = '2026-12-01T00:00:00+07:00'; // the Bangkok day starts at 17:00Z the day before
+  it('places a lunch break inside the visible hours', () => {
+    // visible 09:00–21:00 (540–1260), break 12:00–13:00 Bangkok
+    expect(
+      blockSpan(
+        { startsAt: '2026-12-01T05:00:00Z', endsAt: '2026-12-01T06:00:00Z' },
+        day,
+        540,
+        1260,
+      ),
+    ).toEqual({ topPct: 25, heightPct: (60 / 720) * 100 });
+  });
+  it('clips a block that starts before / ends after the visible hours, and ignores one outside', () => {
+    const all = blockSpan(
+      { startsAt: '2026-11-30T17:00:00Z', endsAt: '2026-12-01T17:00:00Z' },
+      day,
+      540,
+      1260,
+    );
+    expect(all).toEqual({ topPct: 0, heightPct: 100 });
+    expect(
+      blockSpan(
+        { startsAt: '2026-12-01T20:00:00Z', endsAt: '2026-12-01T21:00:00Z' },
+        day,
+        540,
+        1260,
+      ),
     ).toBeNull();
   });
 });

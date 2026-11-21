@@ -62,3 +62,24 @@ export function groupPayload(input: {
     })),
   };
 }
+
+/**
+ * Where a day off / break is drawn in a calendar column: percentages of the visible hours (`startMin`..`endMin`, minutes after Bangkok
+ * midnight), for the day that starts at `dayFromIso`. Null when it does not touch the visible hours.
+ */
+export function blockSpan(
+  block: { startsAt: string; endsAt: string },
+  dayFromIso: string,
+  startMin: number,
+  endMin: number,
+): { topPct: number; heightPct: number } | null {
+  const day = Date.parse(dayFromIso);
+  const a = (Date.parse(block.startsAt) - day) / 60_000;
+  const b = (Date.parse(block.endsAt) - day) / 60_000;
+  if (!Number.isFinite(a) || !Number.isFinite(b) || endMin <= startMin) return null;
+  const from = Math.max(a, startMin);
+  const to = Math.min(b, endMin);
+  if (to <= from) return null;
+  const span = endMin - startMin;
+  return { topPct: ((from - startMin) / span) * 100, heightPct: ((to - from) / span) * 100 };
+}

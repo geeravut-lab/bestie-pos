@@ -89,6 +89,10 @@ export async function notifyTickResponse(
     const contactsErased = tidyNow
       ? await callRpc(supabaseUrl, serviceRoleKey, 'guest_contacts_cleanup', {}, f).catch(() => 0)
       : 0;
+    // hair photos past their time (or of cancelled bookings) are erased; hourly, so no photo outlives its time by more than an hour
+    const photosErased = tidyNow
+      ? await callRpc(supabaseUrl, serviceRoleKey, 'hair_photos_cleanup', {}, f).catch(() => 0)
+      : 0;
     // audit rows older than the retention (default 5 years) are removed in bulk; nothing else can delete audit rows
     const purged = tidyNow
       ? await callRpc(supabaseUrl, serviceRoleKey, 'audit_purge', {}, f)
@@ -97,6 +101,7 @@ export async function notifyTickResponse(
       summaries,
       reminders: typeof reminded === 'number' ? reminded : 0,
       guestReminders: guests,
+      hairPhotosErased: typeof photosErased === 'number' ? photosErased : 0,
       guestContactsErased: typeof contactsErased === 'number' ? contactsErased : 0,
       line: cfg ? 'configured' : 'not_configured',
       delivery,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   bookingLink,
   bookingSettingsPayload,
@@ -8,12 +8,13 @@ import {
 import type { BookingSettings } from '@bestie/core';
 import { errorText, useI18n } from '@bestie/i18n';
 import type { ErrorKey } from '@bestie/i18n';
-import { AsyncButton, Spinner } from '@bestie/ui';
+import { AsyncButton, QrSvg, Spinner } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
+import { PrintPortal } from './PrintPortal';
 import { useRemote } from './useRemote';
 
-type Loaded = { token: string | null; settings: BookingSettings };
+type Loaded = { token: string | null; settings: BookingSettings; shop: string };
 
 /** The shop's online booking link and hours (module `booking.online`): show / copy the link, make a new one, set the bookable hours. */
 export function BookingLinkPanel({ ctx, storeId }: { ctx: PageContext; storeId: string }) {
@@ -24,17 +25,31 @@ export function BookingLinkPanel({ ctx, storeId }: { ctx: PageContext; storeId: 
   const [token, setToken] = useState<string | null | undefined>(undefined);
   const [note, setNote] = useState<'saved' | 'copied' | 'new' | 'bad' | null>(null);
   const [error, setError] = useState<ErrorKey | null>(null);
+  const [printing, setPrinting] = useState(false);
+  useEffect(() => {
+    if (!printing) return;
+    const id = window.setTimeout(() => {
+      window.print();
+      setPrinting(false);
+    }, 60);
+    return () => window.clearTimeout(id);
+  }, [printing]);
   const data = useRemote<Loaded>(async () => {
     const r = await ctx.client
       .from('stores')
-      .select('booking_token, booking_settings')
+      .select('name, booking_token, booking_settings')
       .eq('id', storeId)
       .maybeSingle();
     if (r.error) throw new Error('load');
-    const row = (r.data ?? {}) as { booking_token?: string | null; booking_settings?: unknown };
+    const row = (r.data ?? {}) as {
+      name?: string;
+      booking_token?: string | null;
+      booking_settings?: unknown;
+    };
     return {
       token: typeof row.booking_token === 'string' ? row.booking_token : null,
       settings: parseBookingSettings(row.booking_settings),
+      shop: typeof row.name === 'string' ? row.name : '',
     };
   }, storeId);
 
@@ -96,7 +111,24 @@ export function BookingLinkPanel({ ctx, storeId }: { ctx: PageContext; storeId: 
             value={link}
             onFocus={(e) => e.currentTarget.select()}
           />
+          <div className="qr-print booking-qr">
+            <QrSvg value={link} label={t.bkQrScan} />
+            <p className="muted">{t.bkQrHint}</p>
+          </div>
+          {printing ? (
+            <PrintPortal pageCss="@page { size: A5; margin: 10mm; }">
+              <div className="booking-poster">
+                <h1>{data.data.shop}</h1>
+                <h2>{t.bkQrScan}</h2>
+                <QrSvg value={link} label={t.bkQrScan} />
+                <p className="mono">{link}</p>
+              </div>
+            </PrintPortal>
+          ) : null}
           <div className="actions">
+            <AsyncButton variant="secondary" onClick={() => setPrinting(true)}>
+              {t.bkQrPrint}
+            </AsyncButton>
             <AsyncButton variant="secondary" onClick={copy}>
               {t.bkSetCopy}
             </AsyncButton>

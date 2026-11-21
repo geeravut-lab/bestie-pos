@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PageContext } from '@bestie/auth';
 import { I18nProvider } from '@bestie/i18n';
 import { BookingLinkPanel } from './BookingLinkPanel';
@@ -41,6 +41,18 @@ describe('<BookingLinkPanel>', () => {
     expect((screen.getByLabelText('Shortest notice (minutes)') as HTMLInputElement).value).toBe(
       '120',
     );
+  });
+
+  it('shows a QR of the link for guests to scan and prints the poster with the shop name', async () => {
+    const print = vi.fn();
+    vi.stubGlobal('print', print);
+    mount(ctx(fakeDb({ stores: [{ name: 'Lotus Spa', booking_token: TOKEN }] }).client));
+    await screen.findByLabelText('The shop booking link');
+    expect(screen.getByRole('img', { name: 'Scan to book online' })).toBeTruthy();
+    expect(document.getElementById('print-root')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Print the QR poster' }));
+    await waitFor(() => expect(print).toHaveBeenCalled());
+    vi.unstubAllGlobals();
   });
 
   it('says the module is off when it is', async () => {

@@ -1,5 +1,17 @@
-import { parseBookingInfo, parseBookingResult, parseCancelResult, parseSlots } from '@bestie/core';
-import type { BookingInfo, BookingResult, CancelResult } from '@bestie/core';
+import {
+  parseBookingInfo,
+  parseBookingResult,
+  parseCancelResult,
+  parseHairStyles,
+  parseSlots,
+} from '@bestie/core';
+import type {
+  BookingInfo,
+  BookingResult,
+  CancelResult,
+  HairAnswers,
+  HairStyle,
+} from '@bestie/core';
 
 export type BookingLoad =
   | { ok: true; info: BookingInfo; lineBasicId: string | null }
@@ -128,6 +140,77 @@ export async function saveContact(
         o.error === 'bad_email' || o.error === 'closed' || o.error === 'invalid'
           ? o.error
           : 'failed',
+    };
+  } catch {
+    return { ok: false, error: 'failed' };
+  }
+}
+
+/** The shop's hair-style catalogue (empty when the shop has none, or on any failure). */
+export async function loadStyles(
+  token: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<HairStyle[]> {
+  try {
+    const res = await fetchImpl(`/api/guest/booking?t=${encodeURIComponent(token)}&op=styles`);
+    if (!res.ok) return [];
+    return parseHairStyles(obj(await res.json().catch(() => null)).styles);
+  } catch {
+    return [];
+  }
+}
+
+export type HairSend = {
+  styleId: string;
+  answers: HairAnswers;
+  /** Only with the guest's consent tick. */
+  photo?: { consent: true; mime: string; data: string };
+  removePhoto?: boolean;
+};
+export type HairResult =
+  | { ok: true; photo: boolean }
+  | {
+      ok: false;
+      error: 'consent_needed' | 'photo_too_early' | 'bad_photo' | 'closed' | 'invalid' | 'failed';
+    };
+
+/** Send the guest's answers, chosen style and (optionally) photo for ONE booking; the booking code is the proof. */
+export async function sendHair(
+  token: string,
+  id: string,
+  code: string,
+  r: HairSend,
+  fetchImpl: typeof fetch = fetch,
+): Promise<HairResult> {
+  try {
+    const res = await fetchImpl('/api/guest/booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        t: token,
+        op: 'hair',
+        id,
+        code,
+        request: {
+          style_id: r.styleId || undefined,
+          answers: r.answers,
+          photo: r.photo,
+          remove_photo: r.removePhoto || undefined,
+        },
+      }),
+    });
+    if (!res.ok) return { ok: false, error: 'failed' };
+    const o = obj(await res.json().catch(() => null));
+    if (o.ok === true) return { ok: true, photo: o.photo === true };
+    const e = o.error;
+    return {
+      ok: false,
+      error:
+        e === 'consent_needed' || e === 'photo_too_early' || e === 'bad_photo' || e === 'closed'
+          ? e
+          : e === 'invalid' || e === 'bad_style' || e === 'bad_answers'
+            ? 'invalid'
+            : 'failed',
     };
   } catch {
     return { ok: false, error: 'failed' };

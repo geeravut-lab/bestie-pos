@@ -197,6 +197,64 @@ const openDay = async () => {
   fireEvent.change(await screen.findByLabelText('Date'), { target: { value: '2030-01-15' } });
 };
 
+describe('<AppointmentsPage> days off and groups', () => {
+  it("draws a stylist's day off / break on her column", async () => {
+    const t = {
+      ...tables(),
+      resource_blocks: [
+        {
+          resource_id: 'nok',
+          starts_at: '2030-01-15T12:00:00+07:00',
+          ends_at: '2030-01-15T13:00:00+07:00',
+          reason: 'lunch',
+        },
+      ],
+    };
+    mount(ctx(fakeDb(t).client));
+    await openDay();
+    const nok = await screen.findByRole('region', { name: 'Nok' });
+    expect(within(nok).getByRole('img', { name: 'Off: lunch' })).toBeTruthy();
+    expect(
+      within(screen.getByRole('region', { name: 'Mai' })).queryByRole('img', { name: /Off/ }),
+    ).toBeNull();
+  });
+
+  it('cancels a whole couple booking in one click', async () => {
+    const group = 'g-1';
+    const t = tables();
+    t.appointments = [
+      ...t.appointments.map((a) => (a.id === 'a1' ? { ...a, group_id: group } : a)),
+      {
+        ...t.appointments[0]!,
+        id: 'a1b',
+        provider_id: 'mai',
+        place_id: null,
+        guest_name: 'Anna B',
+        group_id: group,
+      },
+    ] as never;
+    const db = fakeDb(t);
+    mount(ctx(db.client));
+    await openDay();
+    await userEvent.click(
+      within(await screen.findByRole('region', { name: 'Nok' })).getByRole('button', {
+        name: /10:00 Anna/,
+      }),
+    );
+    expect(await screen.findByText('Group booking, 2 people')).toBeTruthy();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Cancel the whole group (2 bookings)' }),
+    );
+    await waitFor(() =>
+      expect(db.rpcs.filter((r) => r.fn === 'set_appointment_status').length).toBe(2),
+    );
+    expect(db.rpcs.map((r) => (r.args as { p_status: string }).p_status)).toEqual([
+      'cancelled',
+      'cancelled',
+    ]);
+  });
+});
+
 describe('<AppointmentsPage>', () => {
   it('says so when the module is off in this shop', async () => {
     mount(ctx(fakeDb(tables()).client, { isModuleOn: () => false }));

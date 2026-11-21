@@ -11,11 +11,19 @@
 
 import { DEFAULT_BRAND_NAME, applyBrandNames, brandName } from '@bestie/core';
 import type { Brand } from '@bestie/core';
+import { guestOverlays } from './guest-langs';
 
-export type Lang = 'th' | 'en';
-export const LANGS: readonly Lang[] = ['th', 'en'];
+/** Guest pages speak six languages; the staff screens speak Thai and English (CLAUDE.md rule 8). */
+export type Lang = 'th' | 'en' | 'ru' | 'he' | 'de' | 'zh';
+export type StaffLang = 'th' | 'en';
+export const LANGS: readonly StaffLang[] = ['th', 'en'];
+export const GUEST_LANGS: readonly Lang[] = ['th', 'en', 'ru', 'he', 'de', 'zh'];
+/** Languages written right to left (the page flips its direction). */
+export const RTL_LANGS: readonly Lang[] = ['he'];
 export const DEFAULT_LANG: Lang = 'th';
 export const LANG_STORAGE_KEY = 'bestie-lang';
+/** Guests keep their own choice, so a tourist reading Hebrew never switches the staff app on the same phone. */
+export const GUEST_LANG_STORAGE_KEY = 'bestie-guest-lang';
 
 const th = {
   // ── brand ────────────────────────────────────────────────────────────────
@@ -576,6 +584,10 @@ const th = {
   langGroup: 'ภาษา',
   langTh: 'ไทย',
   langEn: 'English',
+  langRu: 'Русский',
+  langHe: 'עברית',
+  langDe: 'Deutsch',
+  langZh: '中文',
   skipToContent: 'ข้ามไปที่เนื้อหา',
   logoAlt: 'โลโก้ {name}',
 
@@ -2175,6 +2187,107 @@ const th = {
   queueFullscreen: 'เต็มจอ',
   queueCollect: 'เชิญรับของที่เคาน์เตอร์',
   err_kds_failed: 'อัปเดตสถานะไม่สำเร็จ กรุณาลองใหม่',
+
+  // ── Phase 3: island network (guest pages) ──
+  npTitle: 'บัตรนักท่องเที่ยว',
+  npNotFound: 'ไม่พบบัตรนี้ ตรวจสอบลิงก์อีกครั้ง หรือถามพนักงานที่ร้าน',
+  npFailed: 'โหลดบัตรไม่สำเร็จ ลองใหม่อีกครั้ง',
+  npHello: 'สวัสดี {name}',
+  npCodeLabel: 'รหัสบัตร',
+  npQrAlt: 'QR ของบัตรนักท่องเที่ยว',
+  npShowCashier: 'ยื่นหน้านี้ให้แคชเชียร์ หรือบอกรหัสบัตร',
+  npPoints: 'แต้มของคุณ',
+  npPointsNote: 'ใช้ได้ทุกร้านในเครือข่ายเป็นส่วนลดค่าบริการ ไม่ใช่เงินสด',
+  npHistory: 'ความเคลื่อนไหวล่าสุด',
+  npNoHistory: 'ยังไม่มีแต้ม ลองใช้บัตรที่ร้านแรกได้เลย',
+  npEarn: 'ได้รับแต้ม',
+  npRedeem: 'ใช้แต้ม',
+  npOther: 'ปรับแต้ม',
+  npShops: 'ร้านในเครือข่าย',
+  npKeepPrivate: 'เก็บลิงก์นี้เป็นความลับ ใครมีลิงก์ก็เห็นแต้มของคุณ',
+  njTitle: 'สมัครบัตรนักท่องเที่ยว',
+  njIntro: 'สะสมแต้มที่ร้านหนึ่ง ใช้เป็นส่วนลดอีกร้านได้ ไม่ต้องโหลดแอป',
+  njName: 'ชื่อ',
+  njPhone: 'เบอร์โทรศัพท์',
+  njConsent: 'ฉันยินยอมให้เก็บชื่อและเบอร์โทรเพื่อทำบัตรนี้ และให้ร้านในเครือข่ายเห็นชื่อกับเบอร์เมื่อฉันแสดงบัตร',
+  njSubmit: 'สร้างบัตร',
+  njExists: 'เบอร์นี้มีบัตรอยู่แล้ว ให้พนักงานที่ร้านช่วยเปิดบัตรให้',
+  njInvalid: 'กรุณากรอกชื่อและเบอร์โทรให้ถูกต้อง',
+  njConsentNeeded: 'ต้องติ๊กยินยอมก่อน',
+  njFailed: 'สร้างบัตรไม่สำเร็จ ลองใหม่อีกครั้ง',
+  njNotFound: 'ไม่พบเครือข่ายนี้',
+  njRate: 'ส่งบ่อยเกินไป รอสักครู่แล้วลองใหม่',
+  njDone: 'บัตรของคุณพร้อมแล้ว',
+  njOpen: 'เปิดบัตร',
+  njBookmark: 'บันทึกลิงก์ของบัตรไว้ในมือถือ หรือแคปหน้าจอเก็บไว้',
+  niNotFound: 'ไม่พบหน้านี้',
+  niFailed: 'โหลดรายการร้านไม่สำเร็จ ลองใหม่อีกครั้ง',
+  niAll: 'ทั้งหมด',
+  niEmpty: 'ยังไม่มีร้านในรายการนี้',
+  niBook: 'จองออนไลน์',
+  niGetPass: 'สมัครบัตรนักท่องเที่ยว สะสมแต้มทุกร้าน',
+  niCatFood: 'อาหาร',
+  niCatCafe: 'คาเฟ่',
+  niCatBeauty: 'ความงาม',
+  niCatSpa: 'สปา',
+  niCatStay: 'ที่พัก',
+  niCatShop: 'ร้านค้า',
+  niCatTour: 'ทัวร์และกิจกรรม',
+  niCatOther: 'อื่น ๆ',
+
+  // ── Phase 3: island network (staff) ──
+  nwTitle: 'เครือข่ายเกาะ',
+  nwIntro: 'เข้าร่วมเครือข่าย ให้ลูกค้าสะสมแต้มข้ามร้าน ออกบัตรนักท่องเที่ยว และขึ้นหน้าตลาดของเกาะ ไม่มีค่าคอมมิชชัน',
+  nwNoNetworks: 'ยังไม่มีเครือข่ายให้เข้าร่วม ผู้ดูแลแพลตฟอร์มต้องสร้างก่อน',
+  nwMembership: 'การเป็นสมาชิก',
+  nwJoin: 'เข้าร่วม',
+  nwLeave: 'ออกจากเครือข่าย',
+  nwJoined: 'เป็นสมาชิกแล้ว',
+  nwOwnerOnly: 'เฉพาะเจ้าของธุรกิจเท่านั้นที่เข้าร่วมหรือออกได้',
+  nwLegal: 'แต้มข้ามร้านและการหักบัญชีระหว่างบริษัท ต้องให้ทนายยืนยันก่อนเปิดใช้จริง',
+  nwNeedJoin: 'เข้าร่วมเครือข่ายก่อน จึงจะตั้งรายการร้านและออกบัตรได้',
+  nwListing: 'รายการร้านบนหน้าเกาะ',
+  nwCategory: 'หมวด',
+  nwTitleTh: 'ชื่อร้าน (ไทย)',
+  nwTitleEn: 'ชื่อร้าน (อังกฤษ)',
+  nwAboutTh: 'คำอธิบายสั้น ๆ (ไทย)',
+  nwAboutEn: 'คำอธิบายสั้น ๆ (อังกฤษ)',
+  nwVisible: 'แสดงบนหน้าเกาะ',
+  nwSave: 'บันทึก',
+  nwSaved: 'บันทึกแล้ว',
+  nwSaveFailed: 'บันทึกไม่สำเร็จ',
+  nwLinks: 'ลิงก์และ QR สำหรับลูกค้า',
+  nwJoinLink: 'ลิงก์สมัครบัตรนักท่องเที่ยว',
+  nwIslandLink: 'ลิงก์หน้าเกาะ (ตลาด)',
+  nwCopy: 'คัดลอก',
+  nwCopied: 'คัดลอกแล้ว',
+  nwQrJoin: 'สแกนเพื่อสมัครบัตรนักท่องเที่ยว',
+  nwQrIsland: 'สแกนเพื่อดูร้านบนเกาะ',
+  nwIssue: 'ออกบัตรให้ลูกค้าที่เคาน์เตอร์',
+  nwIssueName: 'ชื่อลูกค้า',
+  nwIssuePhone: 'เบอร์โทรศัพท์',
+  nwIssueGo: 'ออกบัตร',
+  nwIssueBad: 'กรอกชื่อและเบอร์โทรให้ถูกต้อง',
+  nwIssued: 'ออกบัตรแล้ว ให้ลูกค้าสแกน QR นี้เพื่อเก็บบัตรไว้ในมือถือ',
+  nwIssuedCode: 'รหัสบัตร',
+  nwClearing: 'งบหักบัญชีแต้มระหว่างร้าน',
+  nwClearingIntro:
+    'แต้มที่ลูกค้าได้จากธุรกิจหนึ่งแล้วนำไปใช้เป็นส่วนลดที่อีกธุรกิจ ใช้แต้มที่ได้ก่อนตัดก่อน (FIFO) คำนวณจากบัญชีแต้มทุกครั้ง',
+  nwFrom: 'ตั้งแต่วันที่',
+  nwTo: 'ถึงวันที่',
+  nwShow: 'แสดงงบ',
+  nwClearingNone: 'ไม่มีรายการข้ามธุรกิจในช่วงนี้',
+  nwColIssuer: 'ธุรกิจที่ให้แต้ม',
+  nwColRedeemer: 'ธุรกิจที่รับแต้มเป็นส่วนลด',
+  nwColPoints: 'แต้ม',
+  nwColAmount: 'มูลค่า (บาท)',
+  nwOwedToMe: 'ธุรกิจอื่นต้องจ่ายเรา',
+  nwIWe: 'เราต้องจ่ายธุรกิจอื่น',
+  nwClearingNote: 'ตัวเลขนี้เป็นงบแสดงยอด ระบบไม่โอนเงินระหว่างบริษัทให้ การชำระกันเองต้องให้ทนายและนักบัญชีรับรอง',
+  nwPassScan: 'สแกนหรือพิมพ์รหัสบัตรนักท่องเที่ยว',
+  nwPassAttached: 'ผูกบัตรกับบิลแล้ว',
+  nwPassUnknown: 'ไม่พบบัตรนี้ในเครือข่าย',
+  nwPassLinkFailed: 'ผูกบัตรไม่สำเร็จ ต้องออนไลน์',
 };
 
 export type Dict = { [K in keyof typeof th]: string };
@@ -2741,6 +2854,10 @@ const en = {
   langGroup: 'Language',
   langTh: 'ไทย',
   langEn: 'English',
+  langRu: 'Русский',
+  langHe: 'עברית',
+  langDe: 'Deutsch',
+  langZh: '中文',
   skipToContent: 'Skip to content',
   logoAlt: '{name} logo',
 
@@ -4393,9 +4510,123 @@ const en = {
   queueFullscreen: 'Full screen',
   queueCollect: 'Please collect at the counter',
   err_kds_failed: "The status couldn't be updated. Please try again.",
+
+  // ── Phase 3: island network (guest pages) ──
+  npTitle: 'Tourist Pass',
+  npNotFound: 'This pass was not found. Check the link or ask a shop.',
+  npFailed: 'Could not load the pass. Please try again.',
+  npHello: 'Hello {name}',
+  npCodeLabel: 'Pass code',
+  npQrAlt: 'QR code of the Tourist Pass',
+  npShowCashier: 'Show this to the cashier, or read out the code.',
+  npPoints: 'Your points',
+  npPointsNote: 'Usable at every shop in the network as a discount on your bill. Not cash.',
+  npHistory: 'Recent activity',
+  npNoHistory: 'No points yet. Show your pass at the first shop.',
+  npEarn: 'Earned',
+  npRedeem: 'Used',
+  npOther: 'Adjustment',
+  npShops: 'Shops in the network',
+  npKeepPrivate: 'Keep this link private — anyone who has it can see your points.',
+  njTitle: 'Get your Tourist Pass',
+  njIntro: 'Earn points at one shop and spend them at another. No app needed.',
+  njName: 'Name',
+  njPhone: 'Phone number',
+  njConsent:
+    'I agree that my name and phone number are stored for this pass and shown to shops in the network when I show my pass.',
+  njSubmit: 'Create my pass',
+  njExists: 'This number already has a pass. Ask a cashier at any shop to open it.',
+  njInvalid: 'Please enter your name and a valid phone number.',
+  njConsentNeeded: 'Please tick the consent box first.',
+  njFailed: 'Could not create the pass. Please try again.',
+  njNotFound: 'This network was not found.',
+  njRate: 'Too many tries. Wait a moment and try again.',
+  njDone: 'Your pass is ready.',
+  njOpen: 'Open my pass',
+  njBookmark: 'Save the link of your pass on your phone, or take a screenshot.',
+  niNotFound: 'This page was not found.',
+  niFailed: 'Could not load the shops. Please try again.',
+  niAll: 'All',
+  niEmpty: 'No shops listed here yet.',
+  niBook: 'Book online',
+  niGetPass: 'Get the Tourist Pass — earn points at every shop',
+  niCatFood: 'Food',
+  niCatCafe: 'Cafés',
+  niCatBeauty: 'Beauty',
+  niCatSpa: 'Spa',
+  niCatStay: 'Stay',
+  niCatShop: 'Shops',
+  niCatTour: 'Tours & activities',
+  niCatOther: 'Other',
+
+  // ── Phase 3: island network (staff) ──
+  nwTitle: 'Island network',
+  nwIntro:
+    'Join a network to let guests earn points across shops, issue Tourist Passes and appear on the island page. No commission.',
+  nwNoNetworks: 'There is no network to join yet. The platform administrator creates one first.',
+  nwMembership: 'Membership',
+  nwJoin: 'Join',
+  nwLeave: 'Leave',
+  nwJoined: 'Member',
+  nwOwnerOnly: 'Only the business owner can join or leave.',
+  nwLegal:
+    'Points across independent companies and the settlement between them need the lawyer’s confirmation before real use.',
+  nwNeedJoin: 'Join a network first to list your shop and issue passes.',
+  nwListing: 'Your shop on the island page',
+  nwCategory: 'Category',
+  nwTitleTh: 'Shop name (Thai)',
+  nwTitleEn: 'Shop name (English)',
+  nwAboutTh: 'Short description (Thai)',
+  nwAboutEn: 'Short description (English)',
+  nwVisible: 'Show on the island page',
+  nwSave: 'Save',
+  nwSaved: 'Saved.',
+  nwSaveFailed: 'Could not save.',
+  nwLinks: 'Guest links and QR codes',
+  nwJoinLink: 'Tourist Pass sign-up link',
+  nwIslandLink: 'Island page link',
+  nwCopy: 'Copy',
+  nwCopied: 'Copied.',
+  nwQrJoin: 'Scan to get your Tourist Pass',
+  nwQrIsland: 'Scan to browse the island’s shops',
+  nwIssue: 'Issue a pass at the counter',
+  nwIssueName: 'Guest name',
+  nwIssuePhone: 'Phone number',
+  nwIssueGo: 'Issue the pass',
+  nwIssueBad: 'Enter a name and a valid phone number.',
+  nwIssued: 'Pass issued. The guest scans this QR to keep the pass on their phone.',
+  nwIssuedCode: 'Pass code',
+  nwClearing: 'Points clearing statement',
+  nwClearingIntro:
+    'Points a guest earned at one business and spent as a discount at another. The oldest points are used first (FIFO). Recomputed from the ledgers every time.',
+  nwFrom: 'From',
+  nwTo: 'To',
+  nwShow: 'Show statement',
+  nwClearingNone: 'No cross-business redemptions in this period.',
+  nwColIssuer: 'Issued by',
+  nwColRedeemer: 'Redeemed at',
+  nwColPoints: 'Points',
+  nwColAmount: 'Value (THB)',
+  nwOwedToMe: 'Owed to us',
+  nwIWe: 'We owe',
+  nwClearingNote:
+    'This is a statement only. The system moves no money between companies; settling it needs the lawyer and accountant.',
+  nwPassScan: 'Scan or type a Tourist Pass code',
+  nwPassAttached: 'Pass attached to the bill.',
+  nwPassUnknown: 'This pass is not in your network.',
+  nwPassLinkFailed: 'Could not attach the pass. You need to be online.',
 } satisfies Dict;
 
-export const dict: Record<Lang, Dict> = { th, en };
+/** A guest language only overrides what it translates; every other key falls back to English (never to a blank). */
+const overlay = (o: Readonly<Record<string, string>>): Dict => ({ ...en, ...o }) as Dict;
+export const dict: Record<Lang, Dict> = {
+  th,
+  en,
+  ru: overlay(guestOverlays.ru),
+  he: overlay(guestOverlays.he),
+  de: overlay(guestOverlays.de),
+  zh: overlay(guestOverlays.zh),
+};
 
 /**
  * The dictionary with the admin's product name swapped in (BRANDING-KNOWLEDGE §3.4). Strings are WRITTEN with the default
@@ -4403,21 +4634,24 @@ export const dict: Record<Lang, Dict> = { th, en };
  */
 const brandedCache = new Map<string, Dict>();
 export function brandedDict(lang: Lang, brand: Brand | undefined): Dict {
-  const names = brandName(lang, brand ?? {});
+  const nameLang = lang === 'th' ? 'th' : 'en';
+  const names = brandName(nameLang, brand ?? {});
   if (names === DEFAULT_BRAND_NAME) return dict[lang];
   const key = `${lang}|${names}`;
   const hit = brandedCache.get(key);
   if (hit) return hit;
   const out = Object.fromEntries(
-    Object.entries(dict[lang]).map(([k, v]) => [k, applyBrandNames(v, lang, brand ?? {})]),
+    Object.entries(dict[lang]).map(([k, v]) => [k, applyBrandNames(v, nameLang, brand ?? {})]),
   ) as Dict;
   if (brandedCache.size >= 8) brandedCache.clear();
   brandedCache.set(key, out);
   return out;
 }
 
-export const isLang = (v: unknown): v is Lang =>
+export const isLang = (v: unknown): v is StaffLang =>
   typeof v === 'string' && (LANGS as readonly string[]).includes(v);
+export const isGuestLang = (v: unknown): v is Lang =>
+  typeof v === 'string' && (GUEST_LANGS as readonly string[]).includes(v);
 
 /** Fill `{placeholder}`s; unknown placeholders are kept so a typo is visible instead of silent. */
 export function fmt(template: string, vars: Record<string, string | number>): string {

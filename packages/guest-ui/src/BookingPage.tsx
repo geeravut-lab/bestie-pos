@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { addDays, bangkokParts, formatTHB, guestName } from '@bestie/core';
 import type { BookingInfo, BookingResult } from '@bestie/core';
-import { fmt, useI18n } from '@bestie/i18n';
+import { GUEST_LANGS, fmt, useI18n } from '@bestie/i18n';
 import { AsyncButton, LangSwitch, Spinner } from '@bestie/ui';
 import { cancelBooking, loadBooking, loadSlots, saveContact, sendBooking } from './bookingApi';
 import type { BookingLoad } from './bookingApi';
@@ -54,7 +54,7 @@ export function BookingPage({ token }: { token: string }) {
   const head = (
     <div className="guest-head">
       <h1>{load?.ok ? load.info.storeName : t.bkTitle}</h1>
-      <LangSwitch />
+      <LangSwitch langs={GUEST_LANGS} />
     </div>
   );
   if (!load)
@@ -118,7 +118,7 @@ export function BookingPage({ token }: { token: string }) {
   );
 }
 
-function whenLabel(iso: string, lang: 'th' | 'en'): string {
+function whenLabel(iso: string, lang: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return new Intl.DateTimeFormat(lang === 'th' ? 'th-TH' : 'en-GB', {
@@ -140,7 +140,7 @@ function DonePanel({
   token: string;
   done: Done;
   cancelled: boolean;
-  lang: 'th' | 'en';
+  lang: string;
   lineBasicId: string | null;
   onCancelled: () => void;
   onAgain: () => void;

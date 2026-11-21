@@ -26,6 +26,15 @@ export function CustomersPage({ ctx }: { ctx: PageContext }) {
   return (
     <div className="admin-page">
       <h1>{t.custTitle}</h1>
+      <div className="actions">
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => ctx.navigate('/network')}
+        >
+          {t.nwTitle}
+        </button>
+      </div>
       <Notice kind="info">{t.custRule}</Notice>
       <section className="card admin-card">
         <CustomerPicker ctx={ctx} onPick={setPicked} />

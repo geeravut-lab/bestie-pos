@@ -202,7 +202,8 @@ export const statusStep = (status: string): StatusStep =>
         ? 'ready'
         : 'served';
 
-export const guestName = (n: LocalizedText, lang: 'th' | 'en'): string => localizedName(n, lang);
+export const guestName = (n: LocalizedText, lang: string): string =>
+  localizedName(n, lang === 'th' ? 'th' : 'en');
 
 // ── remembering the basket on the guest's own phone ─────────────────────────
 /** How long an unsent basket is kept on the phone (a meal, not a week). */

@@ -58,5 +58,6 @@ export * from './returns';
 export * from './blocks';
 export * from './clientRecords';
 export * from './hairAdvisor';
+export * from './network';
 export * from './commission';
 export * from './packages';

@@ -18,7 +18,7 @@ import {
   unitPrice,
 } from '@bestie/core';
 import type { CartLine, DietFilter, GuestGroup, GuestItem } from '@bestie/core';
-import { fmt, useI18n } from '@bestie/i18n';
+import { GUEST_LANGS, fmt, useI18n } from '@bestie/i18n';
 import type { Dict } from '@bestie/i18n';
 import { AsyncButton, LangSwitch, Spinner } from '@bestie/ui';
 import { FeedbackForm, ShopInfo } from './ShopInfo';
@@ -94,7 +94,7 @@ function GuestHead({ store, table }: { store?: string; table?: string }) {
         <h1>{store || t.appName}</h1>
         {table ? <p className="muted">{fmt(t.gsTable, { table })}</p> : null}
       </div>
-      <LangSwitch />
+      <LangSwitch langs={GUEST_LANGS} />
     </header>
   );
 }
@@ -611,7 +611,7 @@ function ItemButton({
   onOpen,
 }: {
   item: GuestItem;
-  lang: 'th' | 'en';
+  lang: string;
   money: (n: number) => string;
   onOpen: () => void;
 }) {

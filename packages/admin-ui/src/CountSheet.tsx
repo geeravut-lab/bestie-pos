@@ -17,7 +17,7 @@ export function CountSheet({ items, shop }: { items: StockItem[]; shop: string }
       quantity: i.quantity,
       barcode: i.barcode,
     })),
-    { blind, lang },
+    { blind, lang: lang === 'th' ? 'th' : 'en' },
   );
   const byId = new Map(items.map((i) => [i.id, i]));
   const today = new Date().toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-GB');

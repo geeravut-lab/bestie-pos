@@ -152,12 +152,12 @@ test.describe('shell layout', () => {
 
   test('module-off cards stay visible but are grey and cannot be opened', async ({ page }) => {
     await open(page); // cashier + restaurant: no queue module
-    const queue = page.locator('.nav-card', { hasText: 'คิว' });
+    const queue = page.locator('.nav-card', { hasText: 'เรียกคิวลูกค้า' });
     await expect(queue).toHaveAttribute('aria-disabled', 'true');
     await queue.click({ force: true });
     expect(new URL(page.url()).pathname).toBe('/');
     await page.getByRole('button', { name: 'คาเฟ่' }).click();
-    await expect(page.locator('.nav-card', { hasText: 'คิว' })).not.toHaveAttribute(
+    await expect(page.locator('.nav-card', { hasText: 'เรียกคิวลูกค้า' })).not.toHaveAttribute(
       'aria-disabled',
       'true',
     );

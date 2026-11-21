@@ -30,6 +30,9 @@ export const MODULE_IDS = [
   'booking.online',
   'advisor.spa',
   'slots.booking',
+  // karaoke
+  'karaoke.rooms',
+  'karaoke.songs',
   // resort
   'folio',
   'pms',
@@ -46,6 +49,8 @@ export const MODULE_IDS = [
   // platform
   'ai.assistant',
   'ai.guest',
+  'ai.hair',
+  'ai.translate',
   'line.notify',
 ] as const;
 
@@ -72,6 +77,7 @@ const ALL: readonly BusinessProfile[] = [
   'resort',
   'retail',
   'tours',
+  'karaoke',
 ];
 
 export const MODULES: readonly ModuleDef[] = [
@@ -135,6 +141,14 @@ export const MODULES: readonly ModuleDef[] = [
   { id: 'booking.online', dependsOn: ['appointments'], defaultProfiles: [], plan: 'pro', phase: 2 },
   { id: 'advisor.spa', dependsOn: ['booking.online'], defaultProfiles: [], plan: 'pro', phase: 2 },
   { id: 'slots.booking', dependsOn: [], defaultProfiles: ['tours'], plan: 'pro', phase: 2 },
+  { id: 'karaoke.rooms', dependsOn: [], defaultProfiles: ['karaoke'], plan: 'basic', phase: 3 },
+  {
+    id: 'karaoke.songs',
+    dependsOn: ['karaoke.rooms'],
+    defaultProfiles: ['karaoke'],
+    plan: 'pro',
+    phase: 3,
+  },
 
   { id: 'folio', dependsOn: [], defaultProfiles: ['resort'], plan: 'resort', phase: 4 },
   { id: 'pms', dependsOn: ['folio'], defaultProfiles: [], plan: 'resort', phase: 4 },
@@ -171,6 +185,8 @@ export const MODULES: readonly ModuleDef[] = [
 
   { id: 'ai.assistant', dependsOn: [], defaultProfiles: [], plan: 'pro', phase: 1 },
   { id: 'ai.guest', dependsOn: ['order.qr'], defaultProfiles: [], plan: 'pro', phase: 1 },
+  { id: 'ai.hair', dependsOn: ['booking.online'], defaultProfiles: [], plan: 'pro', phase: 3 },
+  { id: 'ai.translate', dependsOn: [], defaultProfiles: [], plan: 'pro', phase: 3 },
   { id: 'line.notify', dependsOn: [], defaultProfiles: [], plan: 'basic', phase: 1 },
 ];
 

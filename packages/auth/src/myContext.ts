@@ -87,6 +87,7 @@ const PROFILES: readonly string[] = [
   'resort',
   'retail',
   'tours',
+  'karaoke',
 ];
 const PLANS: readonly string[] = ['basic', 'pro', 'resort'];
 

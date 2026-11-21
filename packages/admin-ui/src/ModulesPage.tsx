@@ -290,6 +290,7 @@ function AddShopCard({ ctx, onAdded }: { ctx: PageContext; onAdded: () => void }
     salon: t.profileSalon,
     spa: t.profileSpa,
     retail: t.profileRetail,
+    karaoke: t.profileKaraoke,
   };
 
   const add = async () => {

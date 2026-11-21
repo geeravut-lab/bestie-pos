@@ -214,6 +214,7 @@ const PROFILE_CHOICES = [
   { id: 'resort', live: false },
   { id: 'retail', live: true },
   { id: 'tours', live: false },
+  { id: 'karaoke', live: true },
 ] as const;
 
 export function OnboardingPage({ onCreated }: { onCreated: () => Promise<void> }) {
@@ -230,6 +231,7 @@ export function OnboardingPage({ onCreated }: { onCreated: () => Promise<void> }
     spa: t.profileSpa,
     resort: t.profileResort,
     retail: t.profileRetail,
+    karaoke: t.profileKaraoke,
     tours: t.profileTours,
   };
 

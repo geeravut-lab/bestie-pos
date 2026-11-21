@@ -397,6 +397,35 @@ const SCENES: Record<ArtId, { tone: Tone; art: ReactNode }> = {
       </>
     ),
   },
+  translate: {
+    tone: 'mint',
+    art: (
+      <>
+        <rect className="il-white il-edge" x="22" y="22" width="62" height="46" rx="10" />
+        <path
+          className="il-edge-line"
+          d="M40 38h28M54 31v7M44 38c2 8 8 13 14 15M64 38c-2 8-8 13-14 15"
+        />
+        <rect className="il-brand il-edge" x="78" y="40" width="62" height="46" rx="10" />
+        <path className="il-edge-line" d="M96 74l12-24 12 24M100 67h16" />
+        <circle className="il-sun il-edge" cx="136" cy="26" r="9" />
+      </>
+    ),
+  },
+  karaoke: {
+    tone: 'sky',
+    art: (
+      <>
+        <rect className="il-white il-edge" x="30" y="46" width="62" height="40" rx="9" />
+        <circle className="il-accent il-edge" cx="61" cy="66" r="12" />
+        <path className="il-edge-line" d="M52 66h18M61 57v18" />
+        <rect className="il-brand il-edge" x="104" y="12" width="26" height="40" rx="13" />
+        <path className="il-edge-line" d="M98 40a19 19 0 0 0 38 0M117 59v14M107 73h20" />
+        <circle className="il-sun il-edge" cx="40" cy="26" r="8" />
+        <path className="il-edge-line" d="M62 24l22-6v14" />
+      </>
+    ),
+  },
   pay: {
     tone: 'mint',
     art: (

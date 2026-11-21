@@ -64,7 +64,7 @@ async function rpc(
 }
 
 /** The latest admin addition for a task (empty = none). Unreadable = none: the base rules always apply. */
-async function loadAddition(
+export async function loadAddition(
   task: string,
   url: string,
   key: string,
@@ -94,7 +94,7 @@ export function firstJson(text: string): unknown {
 }
 
 /** One row per AI call: tokens only, never content. Best effort — a failing log must not break the answer. */
-async function logUsage(
+export async function logUsage(
   f: typeof fetch,
   url: string,
   key: string,
@@ -115,7 +115,7 @@ async function logUsage(
   }
 }
 
-const adaptersFor = (f: typeof fetch, deps: FoodAiDeps) =>
+export const adaptersFor = (f: typeof fetch, deps: FoodAiDeps) =>
   deps.adapters ?? { anthropic: createAnthropicAdapter(f), google: createGoogleAdapter(f) };
 
 /** POST /api/guest/ai */

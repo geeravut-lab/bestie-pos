@@ -7,10 +7,13 @@
 //   POST /api/guest/booking { t, op: 'hair', id, code, request: { style_id?, answers?, photo?: {consent, mime, data}, remove_photo? } } → { ok, error?, photo }
 //   GET  /api/guest/booking?t=<token>&op=health_form                                                              → { enabled }     (the spa health form is offered)
 //   POST /api/guest/booking { t, op: 'health', id, code, form: { consent, signed_name, answers } }               → { ok, error? }
+//   POST /api/guest/booking { t, op: 'hair_ai', id, code, action: 'state' | 'consent' | 'read', on? }              → see hair-ai-handler.ts (module `ai.hair`, separate consent)
 //   POST /api/guest/booking { t, op: 'contact', id, code, email }                                                  → { ok, error? }  (e-mail for the reminder; '' removes it)
 // Every rule (module on, free time, limits, repeat = same answer) is checked by the database functions; this file only limits the
 // request rate, checks the shapes and talks to them with the service role. The browser never gets a key.
 import { createRateLimiter } from './line.js';
+import { hairAiAction } from './hair-ai-handler.js';
+import type { HairAiDeps } from './hair-ai-handler.js';
 import { readServerEnv } from './env.js';
 import { clientKey, jsonObject, rpc } from './guest-extras-handler.js';
 import {
@@ -32,7 +35,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 
-export type BookingDeps = { fetchImpl?: typeof fetch };
+export type BookingDeps = HairAiDeps;
 
 const allowRead = createRateLimiter(60, 60_000);
 const allowSlots = createRateLimiter(60, 60_000);
@@ -200,6 +203,13 @@ export async function guestBookingResponse(
       if (!r.ok) return reply({ error: 'server_error' }, 502);
       const o = (r.data && typeof r.data === 'object' ? r.data : {}) as Record<string, unknown>;
       return reply({ ok: o.ok === true, error: typeof o.error === 'string' ? o.error : null });
+    }
+    if (b.op === 'hair_ai') {
+      const code = str(b.code, 20);
+      if (typeof b.id !== 'string' || !UUID.test(b.id) || code.length < 4)
+        return reply({ error: 'invalid' }, 422);
+      const out = await hairAiAction({ ...b, code }, ip, env, supabaseUrl, serviceRoleKey, deps);
+      return reply(out.body, out.status);
     }
     if (b.op === 'hair') {
       if (!allowHair(`booking-hair:${ip}`)) return reply({ error: 'rate_limited' }, 429);

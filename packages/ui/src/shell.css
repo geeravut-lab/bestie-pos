@@ -2407,3 +2407,9 @@ a.nav-card[aria-busy='true'] {
   border-bottom: 1px solid var(--bp-line);
   text-align: start;
 }
+.translate-result {
+  white-space: pre-wrap;
+  font-size: 1.15rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+}

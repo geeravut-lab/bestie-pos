@@ -16,7 +16,7 @@ Reference frame: Thailand's Personal Data Protection Act B.E. 2562 (PDPA) as the
 | Colour formula / notes | client | no | `client_notes` | service quality |
 | Crypto KYC (passport data, wallet) | Credit top-up payer | yes ⚖ | KYC tables (module off by default) | AML duty |
 
-Nothing is sent to an AI provider: the hair advisor is a fixed rule in code, photos and health forms are never given to a model.
+Health forms and before / after photos are never given to a model. The hair advisor is a fixed rule in code. **One exception, off by default (module `ai.hair`, owner order 2026-11-21):** a guest who ticks a SEPARATE consent (`hairAiConsent`, after her photo is saved) lets the photo be sent once, each time she presses *Let AI read my hair*, to an outside AI provider (Anthropic or Google, whichever the platform administrator chose for the task `hair_photo`), which returns closed labels only (length, wave, thickness, coloured, condition). The provider gets only the picture (no name, phone, booking or shop); Bestie keeps only the labels, erased with the photo; withdrawal erases the labels at once. ⚖ Cross-border transfer to the provider (s.28), the provider's data-processing terms (API data is not used for training under the providers' standard API terms: confirm in the contract in force), and whether a hair photo needs the sensitive-data treatment.
 
 ## 2. Consent wording used by the screens (Thai is the source; English / ru / he / de / zh follow it)
 
@@ -26,6 +26,7 @@ Principles: explicit and separate (a tick, never pre-ticked), says WHAT, WHY, FO
 |---|---|---|
 | Health form (guest's phone and front desk) | `hfConsent`, `crConsent` | I confirm this is correct, and I give my explicit consent for the shop to keep this health information (sensitive data) only to keep my service safe. It is kept for 24 months and then erased automatically. I may withdraw my consent or ask the shop to erase it at any time. |
 | Hair photo | `hairConsent` + note `hairPhotoNote` | I agree that the shop keeps my hair photo for this booking only and that it is deleted automatically after the appointment. I may remove it at any time. No automatic system or outside party analyses it. |
+| Hair photo read by AI (separate tick, module `ai.hair` only) | `hairAiConsent` | I give a separate consent for this photo to be sent once, each time I press read, to an outside AI service to read my hair as short labels (length, wave, thickness, colour, condition). That service does not receive my name, phone or booking details. The shop keeps only these labels and deletes them together with the photo. I may withdraw this consent at any time. |
 | Before / after photo (front desk) | `crPhotoConsent` | The client agrees that this photo is kept in their record for 12 months. |
 | Tourist Pass sign-up | `njConsent` | I agree that my name and phone number are stored for this pass and shown to shops in the network when I show my pass. They are erased if the pass is unused for 36 months, and I may ask any shop in the network to erase them or withdraw my consent at any time. |
 | Booking reminder | `bkRemindNote` | Used only for this reminder, and deleted after the appointment or if you cancel. |

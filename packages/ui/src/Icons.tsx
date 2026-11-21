@@ -61,6 +61,12 @@ const PATHS: Record<ArtId | 'more' | 'close' | 'back' | 'bell', string[]> = {
     'M8 3v4M16 3v4',
     'M8 14h3M13 14h3M8 17.5h3',
   ],
+  translate: ['M4 5h9M8.5 3v2M6 5c0 4 3 7 6 8M11 5c0 3-2 6-6 8', 'M13 21l4-10 4 10M14.5 18h5'],
+  karaoke: [
+    'M9 3h6a3 3 0 0 1 3 3v3a6 6 0 0 1-12 0V6a3 3 0 0 1 3-3z',
+    'M5 12a7 7 0 0 0 14 0',
+    'M12 19v3M8 22h8',
+  ],
   book: [
     'M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z',
     'M4 10h16',

@@ -21,7 +21,7 @@ describe('<RoleHome>', () => {
   it('renders one illustrated card per role card and greys out modules that are off', () => {
     wrap(<RoleHome role="cashier" ctx={{ store: store('restaurant') }} onNavigate={() => {}} />);
     const cards = screen.getAllByRole('link');
-    expect(cards).toHaveLength(7);
+    expect(cards).toHaveLength(9);
     const queue = cards.find((c) => within(c).queryByText('Queue'))!;
     expect(queue.getAttribute('aria-disabled')).toBe('true'); // restaurant has no queue module
     const sell = cards.find((c) => within(c).queryByText('Sell'))!;

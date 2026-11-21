@@ -33,6 +33,7 @@ export const MODULE_IDS = [
   // karaoke
   'karaoke.rooms',
   'karaoke.songs',
+  'karaoke.booking',
   // resort
   'folio',
   'pms',
@@ -148,6 +149,13 @@ export const MODULES: readonly ModuleDef[] = [
     defaultProfiles: ['karaoke'],
     plan: 'pro',
     phase: 3,
+  },
+  {
+    id: 'karaoke.booking',
+    dependsOn: ['karaoke.rooms'],
+    defaultProfiles: [],
+    plan: 'pro',
+    phase: 4,
   },
 
   { id: 'folio', dependsOn: [], defaultProfiles: ['resort'], plan: 'resort', phase: 4 },

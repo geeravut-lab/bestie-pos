@@ -4,15 +4,25 @@ import {
   bangkokDate,
   bangkokParts,
   bookingClash,
+  formatTHB,
+  KARAOKE_DEPOSIT_METHODS,
+  karaokeDepositPaid,
   parseKaraokeBookings,
+  parseKaraokeDeposits,
   parseKaraokeRooms,
   timeLabel,
 } from '@bestie/core';
-import type { KaraokeBooking, KaraokeRoom } from '@bestie/core';
+import type {
+  KaraokeBooking,
+  KaraokeDeposit,
+  KaraokeDepositMethod,
+  KaraokeRoom,
+} from '@bestie/core';
 import { fmt, useI18n } from '@bestie/i18n';
 import { AsyncButton, Spinner } from '@bestie/ui';
 import { Notice, useLiveSync } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
+import { KaraokeBookingLinkPanel } from './KaraokeBookingLinkPanel';
 import { tx } from './stockInput';
 import { useRemote } from './useRemote';
 
@@ -34,13 +44,24 @@ export function KaraokeBookingsPage({ ctx }: { ctx: PageContext }) {
   const [day, setDay] = useState(() => bangkokDate(Date.now()));
   const [draft, setDraft] = useState<Draft | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [dep, setDep] = useState<{
+    bookingId: string;
+    amount: string;
+    method: KaraokeDepositMethod;
+    device: string;
+  } | null>(null);
 
-  const data = useRemote<{ rooms: KaraokeRoom[]; bookings: KaraokeBooking[] }>(async () => {
+  const data = useRemote<{
+    rooms: KaraokeRoom[];
+    bookings: KaraokeBooking[];
+    deposits: KaraokeDeposit[];
+    devices: { id: string; name: string }[];
+  }>(async () => {
     if (!storeId) throw new Error('shop');
     // the day, and the day before / after so a reservation across midnight still shows and still blocks
     const from = `${addDays(day, -1)}T00:00:00+07:00`;
     const to = `${addDays(day, 2)}T00:00:00+07:00`;
-    const [rooms, bookings] = await Promise.all([
+    const [rooms, bookings, deposits, devices] = await Promise.all([
       ctx.client
         .from('karaoke_rooms')
         .select('id, name, rate_per_hour, min_minutes, step_minutes, active, sort')
@@ -48,14 +69,37 @@ export function KaraokeBookingsPage({ ctx }: { ctx: PageContext }) {
         .order('sort'),
       ctx.client
         .from('karaoke_bookings')
-        .select('id, room_id, guest_name, phone, guests, starts_at, ends_at, status, note')
+        .select(
+          'id, room_id, guest_name, phone, guests, starts_at, ends_at, status, note, source, deposit_due, hold_until',
+        )
         .eq('store_id', storeId)
         .gte('starts_at', from)
         .lt('starts_at', to)
         .order('starts_at'),
+      ctx.client
+        .from('karaoke_deposits')
+        .select('id, booking_id, amount, method, status')
+        .eq('store_id', storeId)
+        .order('created_at'),
+      ctx.client
+        .from('devices')
+        .select('id, name')
+        .eq('store_id', storeId)
+        .eq('active', true)
+        .eq('role', 'cashier')
+        .order('name'),
     ]);
     if (rooms.error || bookings.error) throw new Error('load');
-    return { rooms: parseKaraokeRooms(rooms.data), bookings: parseKaraokeBookings(bookings.data) };
+    return {
+      rooms: parseKaraokeRooms(rooms.data),
+      bookings: parseKaraokeBookings(bookings.data),
+      deposits: deposits.error ? [] : parseKaraokeDeposits(deposits.data),
+      devices: devices.error
+        ? []
+        : ((devices.data ?? []) as { id: string; name: string }[]).filter(
+            (x) => typeof x.id === 'string',
+          ),
+    };
   }, `${storeId}:${day}`);
   const { reload } = data;
   useLiveSync(ctx.client, storeId ? [`store:${storeId}`] : [], reload);
@@ -90,6 +134,50 @@ export function KaraokeBookingsPage({ ctx }: { ctx: PageContext }) {
     });
     if (r.error) return fail(r.error.code);
     ctx.navigate('/karaoke');
+  };
+  const canMoney = ctx.isOwner || ctx.permissions.includes('payment.take');
+  const canRefund = ctx.isOwner || ctx.permissions.includes('refund.create');
+  const tills = d?.devices ?? [];
+  const takeDeposit = async () => {
+    if (!dep) return;
+    const baht = Number(dep.amount.replace(',', '.'));
+    const satang = Math.round(baht * 100);
+    if (!Number.isFinite(baht) || satang < 1) return setMsg(t.kbdBad);
+    if (dep.method === 'cash' && !dep.device) return setMsg(t.kbdNeedTill);
+    setMsg(null);
+    const r = await ctx.client.rpc('record_karaoke_deposit', {
+      p: {
+        booking_id: dep.bookingId,
+        amount: satang,
+        method: dep.method,
+        device_id: dep.method === 'cash' ? dep.device : null,
+      },
+    });
+    if (r.error)
+      return setMsg(
+        r.error.code === '22023'
+          ? t.kbdBad
+          : r.error.code === '42501'
+            ? t.err_forbidden
+            : t.err_save_failed,
+      );
+    setDep(null);
+    reload();
+  };
+  const settle = (x: KaraokeDeposit, action: 'forfeit' | 'refund') => async () => {
+    if (action === 'refund' && x.method === 'cash' && tills.length === 0)
+      return setMsg(t.kbdNeedTill);
+    setMsg(null);
+    const r = await ctx.client.rpc('resolve_karaoke_deposit', {
+      p: {
+        deposit_id: x.id,
+        action,
+        device_id: action === 'refund' && x.method === 'cash' ? tills[0]?.id : null,
+      },
+    });
+    if (r.error) return setMsg(r.error.code === '42501' ? t.err_forbidden : t.err_save_failed);
+    setMsg(t.kbdSettled);
+    reload();
   };
   const save = async () => {
     if (!draft) return;
@@ -166,6 +254,148 @@ export function KaraokeBookingsPage({ ctx }: { ctx: PageContext }) {
                   {b.phone || b.note ? (
                     <p className="muted">{[b.phone, b.note].filter(Boolean).join(' · ')}</p>
                   ) : null}
+                  {b.source === 'online' ? <p className="muted">{t.kbdOnline}</p> : null}
+                  {(() => {
+                    const mine = (d?.deposits ?? []).filter((x) => x.bookingId === b.id);
+                    const paid = karaokeDepositPaid(d?.deposits ?? [], b.id);
+                    if (
+                      mine.length === 0 &&
+                      b.depositDue === 0 &&
+                      !(canMoney && b.status === 'booked')
+                    )
+                      return null;
+                    return (
+                      <div className="card" aria-label={t.kbdDeposit}>
+                        <strong>{t.kbdDeposit}</strong>{' '}
+                        {b.depositDue > 0 ? (
+                          <span className="muted">
+                            {fmt(t.kbdDue, { amount: formatTHB(b.depositDue) })} ·{' '}
+                          </span>
+                        ) : null}
+                        <span>{fmt(t.kbdPaid, { amount: formatTHB(paid) })}</span>
+                        {b.status === 'booked' && b.holdUntil && paid < b.depositDue ? (
+                          <p className="muted">
+                            {fmt(t.kbdHold, { when: timeLabel(bangkokParts(b.holdUntil).minutes) })}
+                          </p>
+                        ) : null}
+                        <ul className="member-list">
+                          {mine.map((x) => (
+                            <li key={x.id} className="member-row">
+                              <span className="tabular">{formatTHB(x.amount)}</span>{' '}
+                              <span className="muted">
+                                {tx(t, `kbdMethod_${x.method}`)} · {tx(t, `kbdStatus_${x.status}`)}
+                              </span>
+                              {canRefund &&
+                              x.status === 'held' &&
+                              (b.status === 'cancelled' ||
+                                b.status === 'no_show' ||
+                                b.status === 'done') ? (
+                                <div className="actions">
+                                  <AsyncButton variant="secondary" onClick={settle(x, 'forfeit')}>
+                                    {t.kbdKeep}
+                                  </AsyncButton>
+                                  <AsyncButton variant="secondary" onClick={settle(x, 'refund')}>
+                                    {t.kbdRefund}
+                                  </AsyncButton>
+                                </div>
+                              ) : null}
+                            </li>
+                          ))}
+                        </ul>
+                        {canMoney && b.status === 'booked' ? (
+                          dep?.bookingId === b.id ? (
+                            <form className="auth-form" onSubmit={(e) => e.preventDefault()}>
+                              <div className="form-row">
+                                <label className="label" htmlFor={`kbd-amount-${b.id}`}>
+                                  {t.kbdAmount}
+                                </label>
+                                <input
+                                  id={`kbd-amount-${b.id}`}
+                                  className="field"
+                                  inputMode="decimal"
+                                  value={dep.amount}
+                                  onChange={(e) => setDep({ ...dep, amount: e.target.value })}
+                                />
+                              </div>
+                              <div className="form-row">
+                                <label className="label" htmlFor={`kbd-method-${b.id}`}>
+                                  {t.kbdMethod}
+                                </label>
+                                <select
+                                  id={`kbd-method-${b.id}`}
+                                  className="field"
+                                  value={dep.method}
+                                  onChange={(e) =>
+                                    setDep({
+                                      ...dep,
+                                      method: e.target.value as KaraokeDepositMethod,
+                                    })
+                                  }
+                                >
+                                  {KARAOKE_DEPOSIT_METHODS.map((m) => (
+                                    <option key={m} value={m}>
+                                      {tx(t, `kbdMethod_${m}`)}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              {dep.method === 'cash' ? (
+                                <div className="form-row">
+                                  <label className="label" htmlFor={`kbd-till-${b.id}`}>
+                                    {t.kbdTill}
+                                  </label>
+                                  <select
+                                    id={`kbd-till-${b.id}`}
+                                    className="field"
+                                    value={dep.device}
+                                    onChange={(e) => setDep({ ...dep, device: e.target.value })}
+                                  >
+                                    <option value="" />
+                                    {tills.map((x) => (
+                                      <option key={x.id} value={x.id}>
+                                        {x.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              ) : null}
+                              <div className="actions">
+                                <AsyncButton type="submit" onClick={takeDeposit}>
+                                  {t.kbdSave}
+                                </AsyncButton>
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  onClick={() => setDep(null)}
+                                >
+                                  {t.menuCancel}
+                                </button>
+                              </div>
+                            </form>
+                          ) : (
+                            <div className="actions">
+                              <AsyncButton
+                                variant="secondary"
+                                onClick={async () =>
+                                  setDep({
+                                    bookingId: b.id,
+                                    amount:
+                                      b.depositDue > paid
+                                        ? String((b.depositDue - paid) / 100)
+                                        : '',
+                                    method: 'promptpay',
+                                    device: tills[0]?.id ?? '',
+                                  })
+                                }
+                              >
+                                {t.kbdTake}
+                              </AsyncButton>
+                            </div>
+                          )
+                        ) : null}
+                      </div>
+                    );
+                  })()}
                   {canRun && b.status === 'booked' ? (
                     <div className="actions">
                       <AsyncButton onClick={startRoom(b)}>{t.kbStartRoom}</AsyncButton>
@@ -312,6 +542,9 @@ export function KaraokeBookingsPage({ ctx }: { ctx: PageContext }) {
             {t.kbAdd}
           </AsyncButton>
         </div>
+      ) : null}
+      {ctx.isOwner || ctx.permissions.includes('menu.edit') ? (
+        <KaraokeBookingLinkPanel ctx={ctx} storeId={storeId} />
       ) : null}
     </div>
   );

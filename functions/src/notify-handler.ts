@@ -64,6 +64,14 @@ export async function notifyTickResponse(
       { p_minutes: 90 },
       f,
     ).catch(() => 0);
+    // an online karaoke booking whose deposit did not arrive in time is released (the room is free again)
+    const released = await callRpc(
+      supabaseUrl,
+      serviceRoleKey,
+      'karaoke_release_unpaid',
+      {},
+      f,
+    ).catch(() => 0);
     const cfg = lineConfig(env);
     // guests who booked online and left a LINE / e-mail contact get one reminder shortly before the appointment
     const guests = await sendGuestReminders({
@@ -111,6 +119,7 @@ export async function notifyTickResponse(
     return reply({
       summaries,
       reminders: typeof reminded === 'number' ? reminded : 0,
+      karaokeReleased: typeof released === 'number' ? released : 0,
       guestReminders: guests,
       clientPhotosErased: typeof clientPhotosErased === 'number' ? clientPhotosErased : 0,
       hairPhotosErased: typeof photosErased === 'number' ? photosErased : 0,

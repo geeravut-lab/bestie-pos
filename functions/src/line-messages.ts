@@ -17,6 +17,18 @@ export const LINE_MESSAGES = {
     th: 'หากต้องการเชื่อมต่อบัญชี ให้ส่งรหัส 8 ตัวที่แสดงในหน้าบัญชีของแอปมาที่นี่',
     en: 'To connect your account, send the 8-character code shown on the Account page of the app.',
   },
+  guestLinked: {
+    th: 'ตั้งค่าเตือนนัดเรียบร้อยแล้ว เราจะส่งข้อความเตือนที่นี่ก่อนถึงเวลานัด',
+    en: 'Your appointment reminder is set. We will message you here shortly before your appointment.',
+  },
+  guestReminder: {
+    th: 'เตือนนัด',
+    en: 'Appointment reminder',
+  },
+  guestReminderCancel: {
+    th: 'ถ้าต้องการยกเลิก ใช้หน้าจองเดิมพร้อมรหัสจอง',
+    en: 'To cancel, use your booking page with your booking code.',
+  },
   testTitle: { th: 'ทดสอบการแจ้งเตือน', en: 'Test notification' },
   testSummary: { th: 'การแจ้งเตือนทาง LINE ใช้งานได้ปกติ', en: 'Your LINE notifications are working.' },
   openApp: { th: 'เปิดแอป', en: 'Open the app' },

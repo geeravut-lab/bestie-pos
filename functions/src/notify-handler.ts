@@ -3,6 +3,7 @@
 // Safe to call as often as every minute: everything it does is idempotent (dedupe keys, claim guard).
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { readServerEnv } from './env.js';
+import { sendGuestReminders } from './guest-reminders.js';
 import { lineConfig } from './line-handler.js';
 import { callRpc, createSupabaseNotifyStore, deliverQueue } from './notify-deliver.js';
 import type { NotifyStore } from './notify-deliver.js';
@@ -64,6 +65,14 @@ export async function notifyTickResponse(
       f,
     ).catch(() => 0);
     const cfg = lineConfig(env);
+    // guests who booked online and left a LINE / e-mail contact get one reminder shortly before the appointment
+    const guests = await sendGuestReminders({
+      supabaseUrl,
+      serviceRoleKey,
+      env,
+      line: cfg,
+      fetchImpl: f,
+    }).catch(() => ({ due: 0, sent: 0 }));
     const delivery = cfg
       ? await deliverQueue({
           store: deps.store ?? createSupabaseNotifyStore(supabaseUrl, serviceRoleKey, f),
@@ -76,6 +85,10 @@ export async function notifyTickResponse(
     const tidied = tidyNow
       ? await callRpc(supabaseUrl, serviceRoleKey, 'notify_housekeeping', {}, f)
       : null;
+    // contacts of finished / cancelled bookings are erased (they exist for the reminder only)
+    const contactsErased = tidyNow
+      ? await callRpc(supabaseUrl, serviceRoleKey, 'guest_contacts_cleanup', {}, f).catch(() => 0)
+      : 0;
     // audit rows older than the retention (default 5 years) are removed in bulk; nothing else can delete audit rows
     const purged = tidyNow
       ? await callRpc(supabaseUrl, serviceRoleKey, 'audit_purge', {}, f)
@@ -83,6 +96,8 @@ export async function notifyTickResponse(
     return reply({
       summaries,
       reminders: typeof reminded === 'number' ? reminded : 0,
+      guestReminders: guests,
+      guestContactsErased: typeof contactsErased === 'number' ? contactsErased : 0,
       line: cfg ? 'configured' : 'not_configured',
       delivery,
       tidied: typeof tidied === 'number' ? tidied : 0,

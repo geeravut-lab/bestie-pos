@@ -949,7 +949,7 @@ const th = {
   hfTitle: 'แบบสอบถามสุขภาพก่อนใช้บริการ',
   hfIntro: 'กรอกก่อนมาที่ร้านเพื่อความปลอดภัยของคุณ ข้อมูลนี้ผู้ให้บริการของร้านเท่านั้นที่เห็น',
   hfConsent:
-    'ข้าพเจ้ายืนยันว่าข้อมูลถูกต้อง และยินยอมให้ร้านเก็บข้อมูลสุขภาพนี้ไว้เพื่อความปลอดภัยในการให้บริการเท่านั้น ขอให้ลบได้ทุกเมื่อโดยแจ้งร้าน',
+    'ข้าพเจ้ายืนยันว่าข้อมูลถูกต้อง และให้ความยินยอมโดยชัดแจ้งให้ร้านเก็บข้อมูลสุขภาพนี้ (ข้อมูลอ่อนไหว) เพื่อความปลอดภัยในการให้บริการเท่านั้น เก็บไว้ 24 เดือนแล้วลบอัตโนมัติ ข้าพเจ้าถอนความยินยอมหรือขอให้ลบได้ทุกเมื่อโดยแจ้งร้าน',
   hfSend: 'ส่งแบบสอบถามพร้อมลายมือชื่อ',
   hfSaved: 'ส่งแล้ว ขอบคุณค่ะ',
   crPhotos: 'รูปก่อน/หลัง',
@@ -992,7 +992,8 @@ const th = {
   crHealth_injuries: 'อาการบาดเจ็บ / ผ่าตัดที่ผ่านมา',
   crHealth_medications: 'ยาที่ใช้อยู่',
   crHealth_other: 'อื่น ๆ ที่ควรทราบ',
-  crConsent: 'ข้าพเจ้ายินยอมให้ร้านเก็บข้อมูลสุขภาพนี้ไว้เพื่อความปลอดภัยในการให้บริการเท่านั้น และขอให้ลบได้ทุกเมื่อ',
+  crConsent:
+    'ข้าพเจ้ายินยอมโดยชัดแจ้งให้ร้านเก็บข้อมูลสุขภาพนี้ไว้เพื่อความปลอดภัยในการให้บริการเท่านั้น เก็บ 24 เดือนแล้วลบอัตโนมัติ และขอให้ลบหรือถอนความยินยอมได้ทุกเมื่อ',
   crSignName: 'ลงชื่อ (พิมพ์ชื่อ-นามสกุล)',
   crHealthSave: 'บันทึกแบบสอบถามพร้อมลายมือชื่อ',
   crHealthBad: 'ต้องติ๊กยินยอมและพิมพ์ชื่อ-นามสกุลของลูกค้า',
@@ -1890,7 +1891,8 @@ const th = {
   hairPhotoTitle: 'ส่งรูปผมปัจจุบัน (ไม่บังคับ)',
   hairPhotoNote:
     'รูปนี้ช่างของร้านจะเห็นเท่านั้น ใช้กับคิวนี้คิวเดียว ระบบลบอัตโนมัติหลังนัดเสร็จ และคุณลบเองได้ทุกเมื่อ ไม่มีระบบอัตโนมัติหรือบุคคลภายนอกวิเคราะห์รูป',
-  hairConsent: 'ฉันยินยอมให้ร้านเก็บรูปผมของฉันไว้ใช้กับคิวนี้เท่านั้น',
+  hairConsent:
+    'ฉันยินยอมให้ร้านเก็บรูปผมของฉันไว้ใช้กับคิวนี้เท่านั้น และลบอัตโนมัติหลังนัดเสร็จ ฉันขอลบได้ทุกเมื่อ ไม่มีระบบอัตโนมัติหรือบุคคลภายนอกวิเคราะห์รูปนี้',
   hairPhotoFile: 'เลือกรูป (JPG / PNG / WebP)',
   hairSend: 'ส่งให้ช่าง',
   hairRemovePhoto: 'ลบรูปของฉัน',
@@ -2209,7 +2211,8 @@ const th = {
   njIntro: 'สะสมแต้มที่ร้านหนึ่ง ใช้เป็นส่วนลดอีกร้านได้ ไม่ต้องโหลดแอป',
   njName: 'ชื่อ',
   njPhone: 'เบอร์โทรศัพท์',
-  njConsent: 'ฉันยินยอมให้เก็บชื่อและเบอร์โทรเพื่อทำบัตรนี้ และให้ร้านในเครือข่ายเห็นชื่อกับเบอร์เมื่อฉันแสดงบัตร',
+  njConsent:
+    'ฉันยินยอมให้เก็บชื่อและเบอร์โทรเพื่อทำบัตรนี้ และให้ร้านในเครือข่ายเห็นชื่อกับเบอร์เมื่อฉันแสดงบัตร ข้อมูลจะถูกลบหากไม่ได้ใช้บัตรนาน 36 เดือน และฉันขอลบหรือถอนความยินยอมได้ทุกเมื่อโดยแจ้งร้านใดก็ได้ในเครือข่าย',
   njSubmit: 'สร้างบัตร',
   njExists: 'เบอร์นี้มีบัตรอยู่แล้ว ให้พนักงานที่ร้านช่วยเปิดบัตรให้',
   njInvalid: 'กรุณากรอกชื่อและเบอร์โทรให้ถูกต้อง',
@@ -3233,7 +3236,7 @@ const en = {
   hfTitle: 'Health form before your visit',
   hfIntro: "Fill this in before you come, for your safety. Only the shop's therapists can see it.",
   hfConsent:
-    'I confirm this is correct, and I agree that the shop keeps this health information only to keep my service safe. I may ask the shop to erase it at any time.',
+    'I confirm this is correct, and I give my explicit consent for the shop to keep this health information (sensitive data) only to keep my service safe. It is kept for 24 months and then erased automatically. I may withdraw my consent or ask the shop to erase it at any time.',
   hfSend: 'Send the form with my signature',
   hfSaved: 'Sent. Thank you.',
   crPhotos: 'Before / after photos',
@@ -3278,7 +3281,7 @@ const en = {
   crHealth_medications: 'Medicines taken now',
   crHealth_other: 'Anything else we should know',
   crConsent:
-    'I agree that the shop keeps this health information only to keep my service safe, and I may ask for it to be erased at any time.',
+    'I give explicit consent for the shop to keep this health information only to keep my service safe, for 24 months and then erased automatically, and I may ask for it to be erased or withdraw consent at any time.',
   crSignName: 'Signature (type the full name)',
   crHealthSave: 'Save the form with the signature',
   crHealthBad: 'The client must agree (tick) and type their full name.',
@@ -4198,7 +4201,8 @@ const en = {
   hairPhotoTitle: 'Send a photo of your hair now (optional)',
   hairPhotoNote:
     "Only the shop's stylists can see this photo. It is used for this one booking only, deleted automatically after the appointment, and you can remove it at any time. No automatic system or outside party analyses it.",
-  hairConsent: 'I agree that the shop keeps my hair photo for this booking only.',
+  hairConsent:
+    'I agree that the shop keeps my hair photo for this booking only and that it is deleted automatically after the appointment. I may remove it at any time. No automatic system or outside party analyses it.',
   hairPhotoFile: 'Choose a photo (JPG / PNG / WebP)',
   hairSend: 'Send to the stylist',
   hairRemovePhoto: 'Remove my photo',
@@ -4533,7 +4537,7 @@ const en = {
   njName: 'Name',
   njPhone: 'Phone number',
   njConsent:
-    'I agree that my name and phone number are stored for this pass and shown to shops in the network when I show my pass.',
+    'I agree that my name and phone number are stored for this pass and shown to shops in the network when I show my pass. They are erased if the pass is unused for 36 months, and I may ask any shop in the network to erase them or withdraw my consent at any time.',
   njSubmit: 'Create my pass',
   njExists: 'This number already has a pass. Ask a cashier at any shop to open it.',
   njInvalid: 'Please enter your name and a valid phone number.',

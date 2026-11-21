@@ -89,7 +89,7 @@ describe('<ClientRecordPanel>', () => {
     expect(await screen.findByText(/must agree/)).toBeTruthy();
     expect(db.rpcs.length).toBe(0);
     await userEvent.click(screen.getByLabelText('High blood pressure'));
-    await userEvent.click(screen.getByLabelText(/I agree that the shop keeps/));
+    await userEvent.click(screen.getByLabelText(/give explicit consent for the shop to keep/));
     await userEvent.type(screen.getByLabelText('Signature (type the full name)'), 'Mali Sue');
     await userEvent.click(screen.getByRole('button', { name: 'Save the form with the signature' }));
     await waitFor(() => expect(db.rpcs.some((r) => r.fn === 'save_health_intake')).toBe(true));

@@ -24,7 +24,7 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     njName: 'Имя',
     njPhone: 'Номер телефона',
     njConsent:
-      'Я согласен(на), что имя и телефон хранятся для этой карты и показываются магазинам сети, когда я предъявляю карту.',
+      'Я согласен(на), что имя и телефон хранятся для этой карты и показываются магазинам сети, когда я предъявляю карту. Данные удаляются, если картой не пользуются 36 месяцев; я могу попросить любой магазин сети удалить их или отозвать согласие в любой момент.',
     njSubmit: 'Создать карту',
     njExists: 'На этот номер уже оформлена карта. Попросите кассира открыть её.',
     njInvalid: 'Введите имя и корректный номер телефона.',
@@ -170,7 +170,8 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     gsTable: 'Стол {table}',
     gsTotalNote: 'Итого (окончательный счёт — в магазине)',
     hairBadPhoto: 'Не удалось отправить фото. Выберите файл JPG, PNG или WebP.',
-    hairConsent: 'Я согласен(на), что магазин хранит фото моих волос только для этой записи.',
+    hairConsent:
+      'Я согласен(на), что магазин хранит фото моих волос только для этой записи и автоматически удаляет его после визита. Я могу удалить его в любой момент. Автоматические системы и третьи лица его не анализируют.',
     hairFace: 'Форма лица',
     hairLength: 'Текущая длина волос',
     hairNeedConsent: 'Поставьте галочку согласия перед отправкой фото.',
@@ -207,7 +208,7 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     hairPhotoNote:
       'Это фото видят только мастера магазина. Оно используется только для этой записи, автоматически удаляется после визита, и вы можете удалить его в любой момент. Автоматические системы и третьи лица его не анализируют.',
     hfConsent:
-      'Я подтверждаю, что данные верны, и согласен(на), что магазин хранит эти сведения о здоровье только для безопасности услуги. Я могу в любой момент попросить удалить их.',
+      'Я подтверждаю, что данные верны, и даю явное согласие на хранение магазином этих сведений о здоровье (чувствительные данные) только для безопасности услуги. Они хранятся 24 месяца и затем автоматически удаляются. Я могу отозвать согласие или попросить удалить их в любой момент.',
     gsErr_unavailable: 'Что-то закончилось или изменилось. Проверьте корзину и повторите.',
     gsErr_too_many: 'Слишком много заказов за короткое время. Обратитесь к персоналу.',
     gsErr_invalid: 'Заказ недействителен. Проверьте корзину и повторите.',
@@ -279,7 +280,8 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     njIntro: 'צברו נקודות בחנות אחת ומשו בחנות אחרת. בלי אפליקציה.',
     njName: 'שם',
     njPhone: 'מספר טלפון',
-    njConsent: 'אני מסכים/ה ששמי ומספר הטלפון יישמרו עבור הכרטיס ויוצגו לחנויות ברשת כשאציג אותו.',
+    njConsent:
+      'אני מסכים/ה ששמי ומספר הטלפון יישמרו עבור הכרטיס ויוצגו לחנויות ברשת כשאציג אותו. הם יימחקו אם הכרטיס לא ישמש 36 חודשים, ואוכל לבקש מכל חנות ברשת למחוק אותם או לבטל את ההסכמה בכל עת.',
     njSubmit: 'צרו את הכרטיס שלי',
     njExists: 'למספר זה כבר יש כרטיס. בקשו מקופאי בחנות לפתוח אותו.',
     njInvalid: 'הזינו שם ומספר טלפון תקין.',
@@ -424,7 +426,8 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     gsTable: 'שולחן {table}',
     gsTotalNote: 'סה״כ (החשבון הסופי הוא של החנות)',
     hairBadPhoto: 'לא ניתן לשלוח את התמונה. בחרו קובץ JPG, PNG או WebP.',
-    hairConsent: 'אני מסכים/ה שהחנות תשמור את תמונת השיער שלי עבור הזמנה זו בלבד.',
+    hairConsent:
+      'אני מסכים/ה שהחנות תשמור את תמונת השיער שלי עבור הזמנה זו בלבד ושהיא תימחק אוטומטית לאחר התור. אפשר להסיר אותה בכל עת. אף מערכת אוטומטית או גורם חיצוני אינם מנתחים אותה.',
     hairFace: 'צורת הפנים',
     hairLength: 'אורך השיער כעת',
     hairNeedConsent: 'סמנו את תיבת ההסכמה לפני שליחת תמונה.',
@@ -456,7 +459,7 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     hairPhotoNote:
       'רק הספרים/ות של החנות יראו את התמונה. היא משמשת להזמנה זו בלבד, נמחקת אוטומטית לאחר התור, וניתן להסיר אותה בכל עת. אף מערכת אוטומטית או גורם חיצוני אינם מנתחים אותה.',
     hfConsent:
-      'אני מאשר/ת שהפרטים נכונים ומסכים/ה שהחנות תשמור מידע בריאותי זה רק לצורך בטיחות השירות. אני יכול/ה לבקש למחוק אותו בכל עת.',
+      'אני מאשר/ת שהפרטים נכונים ונותן/ת הסכמה מפורשת שהחנות תשמור מידע בריאותי זה (מידע רגיש) רק לצורך בטיחות השירות. המידע נשמר 24 חודשים ואז נמחק אוטומטית. אני יכול/ה לבטל את ההסכמה או לבקש מחיקה בכל עת.',
     gsErr_unavailable: 'משהו אזל או השתנה. בדקו את הסל ונסו שוב.',
     gsErr_too_many: 'יותר מדי הזמנות בזמן קצר. פנו לצוות.',
     gsErr_invalid: 'ההזמנה אינה תקינה. בדקו את הסל ונסו שוב.',
@@ -531,7 +534,7 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     njName: 'Name',
     njPhone: 'Telefonnummer',
     njConsent:
-      'Ich stimme zu, dass Name und Telefonnummer für diesen Pass gespeichert und Shops im Netzwerk gezeigt werden, wenn ich den Pass vorzeige.',
+      'Ich stimme zu, dass Name und Telefonnummer für diesen Pass gespeichert und Shops im Netzwerk gezeigt werden, wenn ich den Pass vorzeige. Sie werden gelöscht, wenn der Pass 36 Monate nicht genutzt wird; ich kann jeden Shop im Netzwerk um Löschung bitten oder die Einwilligung jederzeit widerrufen.',
     njSubmit: 'Pass erstellen',
     njExists: 'Für diese Nummer gibt es bereits einen Pass. Fragen Sie an einer Kasse.',
     njInvalid: 'Bitte Name und gültige Telefonnummer eingeben.',
@@ -680,7 +683,8 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     gsTable: 'Tisch {table}',
     gsTotalNote: 'Summe (maßgeblich ist die Rechnung des Shops)',
     hairBadPhoto: 'Das Foto konnte nicht gesendet werden. Bitte JPG, PNG oder WebP wählen.',
-    hairConsent: 'Ich stimme zu, dass der Shop mein Haarfoto nur für diese Buchung speichert.',
+    hairConsent:
+      'Ich stimme zu, dass der Shop mein Haarfoto nur für diese Buchung speichert und es nach dem Termin automatisch löscht. Ich kann es jederzeit entfernen. Kein automatisches System und keine Dritten analysieren es.',
     hairFace: 'Gesichtsform',
     hairLength: 'Aktuelle Haarlänge',
     hairNeedConsent: 'Bitte vor dem Senden eines Fotos die Zustimmung ankreuzen.',
@@ -718,7 +722,7 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     hairPhotoNote:
       'Nur die Stylisten des Shops sehen dieses Foto. Es wird nur für diese Buchung verwendet, nach dem Termin automatisch gelöscht, und Sie können es jederzeit entfernen. Kein automatisches System und keine Dritten analysieren es.',
     hfConsent:
-      'Ich bestätige die Richtigkeit und stimme zu, dass der Shop diese Gesundheitsangaben nur zur Sicherheit der Behandlung speichert. Ich kann jederzeit die Löschung verlangen.',
+      'Ich bestätige die Richtigkeit und erteile meine ausdrückliche Einwilligung, dass der Shop diese Gesundheitsangaben (sensible Daten) nur zur Sicherheit der Behandlung speichert. Sie werden 24 Monate aufbewahrt und dann automatisch gelöscht. Ich kann die Einwilligung jederzeit widerrufen oder die Löschung verlangen.',
     gsErr_unavailable:
       'Etwas ist ausverkauft oder hat sich geändert. Warenkorb prüfen und erneut versuchen.',
     gsErr_too_many: 'Zu viele Bestellungen in kurzer Zeit. Bitte das Personal fragen.',
@@ -795,7 +799,8 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     njIntro: '在一家店积分，在另一家店抵扣。无需下载应用。',
     njName: '姓名',
     njPhone: '手机号码',
-    njConsent: '我同意为此卡保存我的姓名和电话，并在出示通行卡时向网络内店铺显示。',
+    njConsent:
+      '我同意为此卡保存我的姓名和电话，并在出示通行卡时向网络内店铺显示。通行卡闲置 36 个月后将删除；我可随时要求网络内任一店铺删除或撤回同意。',
     njSubmit: '创建通行卡',
     njExists: '此号码已有通行卡，请让店员帮您打开。',
     njInvalid: '请填写姓名和有效的电话号码。',
@@ -940,7 +945,8 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     gsTable: '桌号 {table}',
     gsTotalNote: '合计（以店家账单为准）',
     hairBadPhoto: '无法发送照片，请选择 JPG、PNG 或 WebP 文件。',
-    hairConsent: '我同意店家仅为本次预约保存我的头发照片。',
+    hairConsent:
+      '我同意店家仅为本次预约保存我的头发照片，并在预约结束后自动删除。我可随时删除。不会被任何自动系统或第三方分析。',
     hairFace: '脸型',
     hairLength: '目前头发长度',
     hairNeedConsent: '发送照片前请先勾选同意。',
@@ -968,7 +974,8 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     hairIntro: '回答四个简单问题，我们将根据店家的发型列表为您推荐。发型师会在预约前看到您的选择。',
     hairPhotoNote:
       '该照片仅店内发型师可见，仅用于本次预约，预约结束后自动删除，您可随时删除。不会被任何自动系统或第三方分析。',
-    hfConsent: '我确认信息属实，并同意店家仅为保障服务安全而保存这些健康信息。我可随时要求删除。',
+    hfConsent:
+      '我确认信息属实，并明确同意店家仅为保障服务安全而保存这些健康信息（敏感数据）。信息保存 24 个月后自动删除。我可随时撤回同意或要求删除。',
     gsErr_unavailable: '有商品售罄或已变更，请检查购物篮后重试。',
     gsErr_too_many: '短时间内订单过多，请联系服务员。',
     gsErr_invalid: '订单无效，请检查购物篮后重试。',

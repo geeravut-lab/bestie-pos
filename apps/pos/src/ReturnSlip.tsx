@@ -95,7 +95,9 @@ export function ReturnSlipButton({
       ? d.returnMethodCash
       : m === 'credit'
         ? d.returnMethodCredit
-        : d.returnMethodManual;
+        : m === 'room'
+          ? d.returnMethodRoom
+          : d.returnMethodManual;
   const reason = (x: string) =>
     x === 'wrong_item'
       ? d.returnReasonWrong

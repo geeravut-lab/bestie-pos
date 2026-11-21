@@ -3,6 +3,8 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { MODULE_BY_ID, PLAN_RANK } from './modules/registry';
 import { KARAOKE_GUEST_QUEUE_MAX, KARAOKE_REPEAT_MINUTES, KARAOKE_STEPS } from './karaoke';
+import { DEFAULT_KARAOKE_BOOKING } from './karaokeBooking';
+import { DELIVERY_CODES, MAX_COMMISSION_BPS } from './delivery';
 import { SPA_RULES_VERSION, SPA_TAGS } from './spaAdvisor';
 
 /**
@@ -333,5 +335,73 @@ describe('spa advisor SQL mirror', () => {
     expect(sql).toContain(`'guest', ${KARAOKE_GUEST_QUEUE_MAX})`);
     // the database accepts exactly the steps the screen offers
     expect(sql).toContain(`step_minutes in (${KARAOKE_STEPS.join(', ')})`);
+  });
+
+  it('karaoke online booking: the module mirror, the defaults and the deposit rule live in migration 75', () => {
+    const dir = new URL('../../../supabase/migrations/', import.meta.url);
+    const sql = readFileSync(
+      new URL(readdirSync(dir).find((f) => f.endsWith('_karaoke_online_booking.sql')) ?? '', dir),
+      'utf8',
+    );
+    expect(MODULE_BY_ID['karaoke.booking'].dependsOn).toEqual(['karaoke.rooms']);
+    expect(MODULE_BY_ID['karaoke.booking'].defaultProfiles).toEqual([]);
+    expect(MODULE_BY_ID['karaoke.booking'].plan).toBe('pro');
+    expect(sql).toContain("'karaoke.booking'");
+    expect(sql).toContain("s.plan in ('pro', 'resort')");
+    const d = DEFAULT_KARAOKE_BOOKING;
+    expect(sql).toContain(`'${d.open}'`);
+    expect(sql).toContain(`'${d.close}'`);
+    expect(sql).toContain(
+      `'step_min',    coalesce((p_settings ->> 'step_min')::integer, ${d.stepMin})`,
+    );
+    expect(sql).toContain(
+      `'lead_min',    coalesce((p_settings ->> 'lead_min')::integer, ${d.leadMin})`,
+    );
+    expect(sql).toContain(
+      `'max_days',    coalesce((p_settings ->> 'max_days')::integer, ${d.maxDays})`,
+    );
+    expect(sql).toContain(
+      `'deposit_pct', coalesce((p_settings ->> 'deposit_pct')::integer, ${d.depositPct})`,
+    );
+    expect(sql).toContain(
+      `'hold_min',    coalesce((p_settings ->> 'hold_min')::integer, ${d.holdMin})`,
+    );
+    // the deposit is the same half-up percentage on both sides
+    expect(sql).toContain('(p_price::bigint * greatest(least(p_pct, 100), 0) + 50) / 100');
+  });
+
+  it('delivery: the module mirror, the commission arithmetic and the tender live in migration 77', () => {
+    const dir = new URL('../../../supabase/migrations/', import.meta.url);
+    const sql = readFileSync(
+      new URL(readdirSync(dir).find((f) => f.endsWith('_delivery.sql')) ?? '', dir),
+      'utf8',
+    );
+    expect(MODULE_BY_ID.delivery.plan).toBe('pro');
+    expect(MODULE_BY_ID.delivery.defaultProfiles).toEqual([]);
+    expect(sql).toContain("s.plan in ('pro', 'resort')");
+    expect(sql).toContain("(s.module_overrides ->> 'delivery')::boolean");
+    // the commission is half up on the payable, the same as deliveryCommission()
+    expect(sql).toContain('v_comm := (v_payable * d.commission_bps + 5000) / 10000;');
+    expect(sql).toContain(`commission_bps between 0 and ${MAX_COMMISSION_BPS}`);
+    for (const c of DELIVERY_CODES) expect(sql).toContain(`'${c}'`);
+    expect(sql).toContain("'room', 'platform'");
+  });
+
+  it('kiosk: the module mirror and the rules that make a kiosk differ from a table live in migration 78', () => {
+    const dir = new URL('../../../supabase/migrations/', import.meta.url);
+    const sql = readFileSync(
+      new URL(readdirSync(dir).find((f) => f.endsWith('_kiosk.sql')) ?? '', dir),
+      'utf8',
+    );
+    expect(MODULE_BY_ID.kiosk.plan).toBe('pro');
+    expect(MODULE_BY_ID.kiosk.defaultProfiles).toEqual([]);
+    expect(sql).toContain("s.plan in ('pro', 'resort')");
+    expect(sql).toContain("(s.module_overrides ->> 'kiosk')::boolean");
+    // a kiosk order is its own takeaway bill KS001…, at the takeaway prices, never auto-sent
+    expect(sql).toContain("'takeaway'");
+    expect(sql).toContain("'KS'");
+    // kiosk and online-order pages never auto-send and never join an earlier bill (the flag `v_k`)
+    expect(sql).toContain('(s.qr_auto_send and not v_k)');
+    expect(sql).toContain('not v_k and ord.table_id = t.id');
   });
 });

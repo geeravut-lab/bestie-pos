@@ -14,6 +14,7 @@ const MENU = {
   store: { name: 'Acme' },
   table: { name: 'T1' },
   autoSend: false,
+  kiosk: false,
   ai: false,
   menu: { categories: [], items: [], groups: [] },
   bill: { order_id: null, lines: [] },

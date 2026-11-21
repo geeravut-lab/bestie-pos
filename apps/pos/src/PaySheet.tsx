@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   cashSettlement,
+  deliveryCommission,
   formatTHB,
   parsePriceInput,
   priceInputValue,
@@ -15,7 +16,7 @@ import type { OnlinePay } from './onlinePay';
 import { OnlinePane } from './OnlinePane';
 import { SplitPane } from './SplitPane';
 
-type Tab = 'cash' | 'split' | 'room' | OnlineTender;
+type Tab = 'cash' | 'split' | 'room' | 'platform' | OnlineTender;
 
 /** Choose how the guest pays: cash (works offline), PromptPay QR or the card reader (both need the network). */
 export function PaySheet({
@@ -32,6 +33,8 @@ export function PaySheet({
   onRelease,
   roomStays,
   onRoomCharge,
+  platform,
+  onPlatformClose,
   methods = { promptpay: true, gateway: true },
   onClose,
 }: {
@@ -55,7 +58,11 @@ export function PaySheet({
   splitCredit?: { name: string; balance: Satang } | null;
   /** Guests in the house the bill may be charged to (module `folio`); empty / absent = no Room tab. */
   roomStays?: { id: string; label: string }[];
-  onRoomCharge?: (folioId: string) => Promise<ErrorKey | null>;
+  /** `amount` is the room's share in satang; below the total means the rest is paid in cash (exact). */
+  onRoomCharge?: (folioId: string, amount: Satang) => Promise<ErrorKey | null>;
+  /** A delivery bill the platform pays later (module `delivery`); null / absent = no Platform tab. `name` is null until the cashier picks the platform. */
+  platform?: { name: string | null; commissionBps: number } | null;
+  onPlatformClose?: () => Promise<ErrorKey | null>;
   /** The owner's payment-method switches for this shop (cash is always on). */
   methods?: { promptpay: boolean; gateway: boolean };
   onClose: () => void;
@@ -82,6 +89,9 @@ export function PaySheet({
           ...(methods.gateway ? [{ id: 'gateway' as const, label: t.payTabCard }] : []),
           ...(roomStays && roomStays.length > 0 && onRoomCharge
             ? [{ id: 'room' as const, label: t.payTabRoom }]
+            : []),
+          ...(platform && onPlatformClose
+            ? [{ id: 'platform' as const, label: t.payTabPlatform }]
             : []),
         ];
 
@@ -160,7 +170,14 @@ export function PaySheet({
               />
             ) : tab === 'room' && roomStays && onRoomCharge ? (
               <RoomPane stays={roomStays} total={total} locale={locale} onCharge={onRoomCharge} />
-            ) : tab === 'split' || tab === 'room' ? null : (
+            ) : tab === 'platform' && platform && onPlatformClose ? (
+              <PlatformPane
+                platform={platform}
+                total={total}
+                locale={locale}
+                onClose={onPlatformClose}
+              />
+            ) : tab === 'split' || tab === 'room' || tab === 'platform' ? null : (
               <OnlinePane
                 key={tab}
                 tender={tab}
@@ -285,14 +302,18 @@ function RoomPane({
   stays: { id: string; label: string }[];
   total: Satang;
   locale: 'th-TH' | 'en-GB';
-  onCharge: (folioId: string) => Promise<ErrorKey | null>;
+  onCharge: (folioId: string, amount: Satang) => Promise<ErrorKey | null>;
 }) {
   const { t } = useI18n();
   const [folio, setFolio] = useState(stays[0]?.id ?? '');
+  const [part, setPart] = useState(priceInputValue(total));
   const [error, setError] = useState<ErrorKey | null>(null);
+  const typed = parsePriceInput(part);
+  const share = typed !== null && typed > 0 && typed <= total ? typed : null;
   const go = async () => {
     setError(null);
-    const err = await onCharge(folio);
+    if (share === null) return setError('err_pay_failed');
+    const err = await onCharge(folio, share);
     if (err) setError(err);
   };
   return (
@@ -321,10 +342,80 @@ function RoomPane({
           ))}
         </select>
       </div>
+      <div className="form-row">
+        <label className="label" htmlFor="pay-room-part">
+          {t.payRoomPart}
+        </label>
+        <input
+          id="pay-room-part"
+          className="field"
+          inputMode="decimal"
+          value={part}
+          onChange={(e) => setPart(e.target.value)}
+        />
+        {share !== null && share < total ? (
+          <p className="muted">
+            {fmt(t.payRoomRest, { amount: formatTHB(total - share, locale) })}
+          </p>
+        ) : null}
+      </div>
       {error ? <Notice kind="error">{errorText(error, t)}</Notice> : null}
       <div className="actions">
-        <AsyncButton onClick={go}>{t.payRoomCharge}</AsyncButton>
+        <AsyncButton onClick={go} disabled={share === null}>
+          {t.payRoomCharge}
+        </AsyncButton>
       </div>
+    </>
+  );
+}
+
+/** Close a delivery bill the platform pays later (module `delivery`): full receipt, no cash in the drawer, the commission is worked out by the server. */
+function PlatformPane({
+  platform,
+  total,
+  locale,
+  onClose,
+}: {
+  platform: { name: string | null; commissionBps: number };
+  total: Satang;
+  locale: 'th-TH' | 'en-GB';
+  onClose: () => Promise<ErrorKey | null>;
+}) {
+  const { t } = useI18n();
+  const [error, setError] = useState<ErrorKey | null>(null);
+  const go = async () => {
+    setError(null);
+    const err = await onClose();
+    if (err) setError(err);
+  };
+  const commission = deliveryCommission(total, platform.commissionBps);
+  return (
+    <>
+      <p className="muted">{t.payPlatformNote}</p>
+      <dl className="preview-list tabular">
+        <div>
+          <dt>{t.previewTotal}</dt>
+          <dd>{formatTHB(total, locale)}</dd>
+        </div>
+      </dl>
+      {platform.name ? (
+        <>
+          <p className="muted">
+            {fmt(t.payPlatformCommission, {
+              amount: formatTHB(commission, locale),
+              net: formatTHB(total - commission, locale),
+            })}
+          </p>
+          {error ? <Notice kind="error">{errorText(error, t)}</Notice> : null}
+          <div className="actions">
+            <AsyncButton onClick={go}>
+              {fmt(t.payPlatformClose, { name: platform.name })}
+            </AsyncButton>
+          </div>
+        </>
+      ) : (
+        <Notice kind="info">{t.payPlatformNone}</Notice>
+      )}
     </>
   );
 }

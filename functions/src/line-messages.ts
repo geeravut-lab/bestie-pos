@@ -14,9 +14,14 @@ export const LINE_MESSAGES = {
     en: 'That code is not valid or has expired. Please request a new one from the Account page in the app.',
   },
   help: {
-    th: 'หากต้องการเชื่อมต่อบัญชี ให้ส่งรหัส 8 ตัวที่แสดงในหน้าบัญชีของแอปมาที่นี่',
-    en: 'To connect your account, send the 8-character code shown on the Account page of the app.',
+    th: 'หากต้องการเชื่อมต่อบัญชี ให้ส่งรหัส 8 ตัวที่แสดงในหน้าบัญชีของแอปมาที่นี่ หรือพิมพ์ "เกาะ" เพื่อดูร้านบนเกาะ',
+    en: 'To connect your account, send the 8-character code shown on the Account page of the app. Or type "island" to browse the shops on the island.',
   },
+  islandTitle: { th: 'ร้านบนเกาะ', en: 'Shops on the island' },
+  islandBook: { th: 'จอง', en: 'Book' },
+  islandOrder: { th: 'สั่งอาหาร', en: 'Order food' },
+  islandMore: { th: 'ดูทั้งหมดและค้นหา', en: 'See all and search' },
+  islandNone: { th: 'ยังไม่มีร้านในรายการ', en: 'No shops are listed yet.' },
   guestLinked: {
     th: 'ตั้งค่าเตือนนัดเรียบร้อยแล้ว เราจะส่งข้อความเตือนที่นี่ก่อนถึงเวลานัด',
     en: 'Your appointment reminder is set. We will message you here shortly before your appointment.',
@@ -37,3 +42,7 @@ export const LINE_MESSAGES = {
 /** The help text is sent to people we cannot identify yet, so it goes out in BOTH languages. */
 export const helpBothLanguages = (): string =>
   `${LINE_MESSAGES.help.th}\n\n${LINE_MESSAGES.help.en}`;
+
+/** `island`, `เกาะ`, `shops`, `market`, `ตลาด…` (any case) → the guest wants the island's shops. */
+export const isIslandCommand = (text: string): boolean =>
+  /^(island|shops|market|เกาะ|ร้านค้า|ร้านบนเกาะ|ตลาดเกาะ|ตลาด)$/i.test(text.trim());

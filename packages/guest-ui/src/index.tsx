@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import {
   bookingTokenFromPath,
   islandSlugFromPath,
+  karaokeBookingTokenFromPath,
   karaokeTokenFromPath,
   joinSlugFromPath,
   passTokenFromPath,
@@ -12,6 +13,7 @@ import { BookingPage } from './BookingPage';
 import { GuestTablePage } from './GuestTablePage';
 import { IslandPage } from './IslandPage';
 import { JoinPage } from './JoinPage';
+import { KaraokeBookPage } from './KaraokeBookPage';
 import { KaraokePage } from './KaraokePage';
 import { PassPage } from './PassPage';
 
@@ -19,6 +21,7 @@ export { BookingPage } from './BookingPage';
 export { GuestTablePage } from './GuestTablePage';
 export { IslandPage } from './IslandPage';
 export { JoinPage } from './JoinPage';
+export { KaraokeBookPage } from './KaraokeBookPage';
 export { KaraokePage } from './KaraokePage';
 export { PassPage } from './PassPage';
 export { loadGuestTable, placeGuestOrder } from './guestApi';
@@ -98,6 +101,17 @@ export function KaraokeRoot({ token }: { token: string }) {
   );
 }
 
+/** Whole guest screen for a karaoke shop's room booking link (`/kb/<token>`). */
+export function KaraokeBookRoot({ token }: { token: string }) {
+  return (
+    <I18nProvider guest initialLang={startLang()}>
+      <main className="guest-root">
+        <KaraokeBookPage token={token} />
+      </main>
+    </I18nProvider>
+  );
+}
+
 /** Whole guest screen for the island marketplace (`/island/<network>`). */
 export function IslandRoot({ slug }: { slug: string }) {
   return (
@@ -119,6 +133,8 @@ export function guestEntry(pathname: string): ReactElement | null {
   if (pass) return <PassRoot token={pass} />;
   const join = joinSlugFromPath(pathname);
   if (join) return <JoinRoot slug={join} />;
+  const kbook = karaokeBookingTokenFromPath(pathname);
+  if (kbook) return <KaraokeBookRoot token={kbook} />;
   const room = karaokeTokenFromPath(pathname);
   if (room) return <KaraokeRoot token={room} />;
   const island = islandSlugFromPath(pathname);

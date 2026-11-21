@@ -361,6 +361,12 @@ export type KaraokeBooking = {
   endsAt: string;
   status: KaraokeBookingStatus;
   note: string | null;
+  /** Made by the guest on the booking link (`online`) or at the counter. */
+  source: 'counter' | 'online';
+  /** Deposit asked for, satang (online bookings; 0 = none). */
+  depositDue: number;
+  /** An online booking is released at this time when the deposit has not arrived. */
+  holdUntil: string | null;
 };
 export function parseKaraokeBookings(v: unknown): KaraokeBooking[] {
   if (!Array.isArray(v)) return [];
@@ -381,6 +387,9 @@ export function parseKaraokeBookings(v: unknown): KaraokeBooking[] {
       endsAt: str(o.ends_at),
       status,
       note: str(o.note) || null,
+      source: o.source === 'online' ? 'online' : 'counter',
+      depositDue: typeof o.deposit_due === 'number' && o.deposit_due > 0 ? o.deposit_due : 0,
+      holdUntil: str(o.hold_until) || null,
     });
   }
   return out.sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));

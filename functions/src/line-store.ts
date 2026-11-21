@@ -6,6 +6,7 @@ export function createSupabaseLineStore(
   supabaseUrl: string,
   serviceRoleKey: string,
   fetchImpl: typeof fetch = fetch,
+  islandSlug = 'koh-phangan',
 ): LineStore {
   const base = {
     apikey: serviceRoleKey,
@@ -23,6 +24,42 @@ export function createSupabaseLineStore(
   };
 
   return {
+    async islandShops() {
+      const res = await fetchImpl(`${supabaseUrl}/rest/v1/rpc/guest_island`, {
+        method: 'POST',
+        headers: base,
+        body: JSON.stringify({ p_slug: islandSlug }),
+      });
+      if (!res.ok) return null;
+      const out = (await res.json().catch(() => null)) as {
+        shops?: {
+          category?: unknown;
+          title?: { th?: unknown; en?: unknown };
+          booking_token?: unknown;
+          order_token?: unknown;
+        }[];
+      } | null;
+      if (!out || !Array.isArray(out.shops)) return null;
+      const tok = (v: unknown) => (typeof v === 'string' && /^[0-9a-f]{32}$/.test(v) ? v : null);
+      return {
+        slug: islandSlug,
+        shops: out.shops.flatMap((s) =>
+          typeof s.title?.th === 'string' && s.title.th
+            ? [
+                {
+                  category: String(s.category ?? 'other'),
+                  title: {
+                    th: s.title.th,
+                    ...(typeof s.title.en === 'string' && s.title.en ? { en: s.title.en } : {}),
+                  },
+                  bookingToken: tok(s.booking_token),
+                  orderToken: tok(s.order_token),
+                },
+              ]
+            : [],
+        ),
+      };
+    },
     async bindGuest(code, lineUserId) {
       const res = await fetchImpl(`${supabaseUrl}/rest/v1/rpc/guest_bind_line`, {
         method: 'POST',

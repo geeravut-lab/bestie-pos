@@ -8,7 +8,15 @@ const int = (v: unknown): number | null => {
   const n = typeof v === 'string' && /^-?\d+$/.test(v) ? Number(v) : v;
   return typeof n === 'number' && Number.isSafeInteger(n) ? n : null;
 };
-const TENDERS: readonly string[] = ['cash', 'promptpay', 'gateway', 'credit', 'points', 'room'];
+const TENDERS: readonly string[] = [
+  'cash',
+  'promptpay',
+  'gateway',
+  'credit',
+  'points',
+  'room',
+  'platform',
+];
 
 /** Lenient read of a receipt + its payments as the server stores them (so any tablet can show / reprint it). */
 export function receiptFromRows(r: Row, payments: readonly Row[]): ReceiptDoc | null {

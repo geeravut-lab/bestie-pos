@@ -31,6 +31,7 @@ const body = (ai: boolean) => ({
   store: { name: 'Acme' },
   table: { name: 'T1' },
   autoSend: false,
+  kiosk: false,
   ai,
   menu: {
     categories: [{ id: 'c1', name: { th: 'จาน', en: 'Mains' } }],

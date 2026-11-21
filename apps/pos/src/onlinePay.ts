@@ -330,3 +330,128 @@ export async function chargeOrderToRoom(p: {
   await pullOrderNow(p.client as never, p.orderId);
   return null;
 }
+
+/**
+ * Put PART of a bill on a guest's room and take the rest in cash (`close_order_tenders` with a room leg, module `folio`): one receipt, one payment of the tender `room` for the
+ * room's share and one cash payment for the rest (exact: no cash rounding), and the room's share goes on the stay. Online only; exact amount (no cash rounding); everything unsent goes to the kitchen first.
+ */
+export async function chargePartToRoom(p: {
+  client: Client;
+  orderId: string;
+  binding: DeviceBinding;
+  billConfig: BillConfig;
+  folioId: string;
+  /** The room's share, satang (above 0 and below the bill total); the rest is paid in cash. */
+  roomAmount: number;
+  staffId?: string;
+  lang: Lang;
+}): Promise<ErrorKey | null> {
+  if (globalThis.navigator?.onLine === false) return 'err_pay_offline';
+  const first = await getOrder(p.orderId);
+  if (!first) return 'err_order_failed';
+  if (payBlockers(first).some((b) => b !== 'unsent'))
+    return first.status === 'paid' ? 'err_order_closed' : 'err_pay_failed';
+  if (hasUnsent(first)) {
+    const err = await changeOrder(p.orderId, (o) => sendNew(o, Date.now()).order);
+    if (err) return err;
+  }
+  await flush(p.client as never);
+  if ((await outboxCounts()).pending > 0) return 'err_pay_sync';
+  const order = await getOrder(p.orderId);
+  if (!order) return 'err_order_failed';
+  const bill = orderBill(order, p.billConfig);
+  if (!(p.roomAmount > 0 && p.roomAmount < bill.total)) return 'err_pay_failed';
+  const { error } = await p.client.rpc('close_order_tenders', {
+    p: {
+      order_id: order.id,
+      device_id: p.binding.deviceId,
+      staff_id: p.staffId ?? null,
+      issued_at: new Date().toISOString(),
+      lang: p.lang,
+      subtotal: bill.subtotal,
+      points_discount: bill.pointsDiscount,
+      service_charge: bill.serviceCharge,
+      vat: bill.vat,
+      net_before_vat: bill.netBeforeVat,
+      total: bill.total,
+      rounding: 0,
+      payable: bill.total,
+      payments: [
+        { id: crypto.randomUUID(), tender: 'room', amount: p.roomAmount, folio_id: p.folioId },
+        {
+          id: crypto.randomUUID(),
+          tender: 'cash',
+          amount: bill.total - p.roomAmount,
+          tendered: bill.total - p.roomAmount,
+          change: 0,
+        },
+      ],
+      vat_bps: p.billConfig.vatBps,
+      service_bps: p.billConfig.serviceChargeBps,
+      price_mode: p.billConfig.priceMode,
+    },
+  });
+  if (error) {
+    if (error.code === '42501') return 'err_forbidden';
+    if (error.code === '55000') return 'err_pay_sync';
+    return 'err_pay_failed';
+  }
+  await pullOrderNow(p.client as never, p.orderId);
+  return null;
+}
+
+/**
+ * Close a delivery bill the platform pays later (`close_delivery_order`, module `delivery`): the server closes the bill with one payment of the tender `platform`, numbers
+ * the receipt and keeps the commission. Online only; exact amount (no cash rounding); everything unsent goes to the kitchen first.
+ */
+export async function closeDeliveryOrder(p: {
+  client: Client;
+  orderId: string;
+  binding: DeviceBinding;
+  billConfig: BillConfig;
+  staffId?: string;
+  lang: Lang;
+}): Promise<ErrorKey | null> {
+  if (globalThis.navigator?.onLine === false) return 'err_pay_offline';
+  const first = await getOrder(p.orderId);
+  if (!first) return 'err_order_failed';
+  if (payBlockers(first).some((b) => b !== 'unsent'))
+    return first.status === 'paid' ? 'err_order_closed' : 'err_pay_failed';
+  if (hasUnsent(first)) {
+    const err = await changeOrder(p.orderId, (o) => sendNew(o, Date.now()).order);
+    if (err) return err;
+  }
+  await flush(p.client as never);
+  if ((await outboxCounts()).pending > 0) return 'err_pay_sync';
+  const order = await getOrder(p.orderId);
+  if (!order) return 'err_order_failed';
+  const bill = orderBill(order, p.billConfig);
+  const { error } = await p.client.rpc('close_delivery_order', {
+    p: {
+      order_id: order.id,
+      payment_id: crypto.randomUUID(),
+      device_id: p.binding.deviceId,
+      staff_id: p.staffId ?? null,
+      issued_at: new Date().toISOString(),
+      lang: p.lang,
+      subtotal: bill.subtotal,
+      points_discount: bill.pointsDiscount,
+      service_charge: bill.serviceCharge,
+      vat: bill.vat,
+      net_before_vat: bill.netBeforeVat,
+      total: bill.total,
+      rounding: 0,
+      payable: bill.total,
+      vat_bps: p.billConfig.vatBps,
+      service_bps: p.billConfig.serviceChargeBps,
+      price_mode: p.billConfig.priceMode,
+    },
+  });
+  if (error) {
+    if (error.code === '42501') return 'err_forbidden';
+    if (error.code === '55000') return 'err_pay_sync';
+    return 'err_pay_failed';
+  }
+  await pullOrderNow(p.client as never, p.orderId);
+  return null;
+}

@@ -47,11 +47,14 @@ import { CameraScan } from './CameraScan';
 import { ModifierSheet } from './ModifierSheet';
 import { ManagerVoid } from './ManagerVoid';
 import { OrderCustomer } from './OrderCustomer';
+import { OrderDelivery, useDeliveryBill } from './OrderDelivery';
 import { PaySheet } from './PaySheet';
 import { useSplitInfo } from './useSplitInfo';
 import {
   cancelOnlinePayment,
   chargeOrderToRoom,
+  chargePartToRoom,
+  closeDeliveryOrder,
   closeSplitPayment,
   findLiveAttempt,
   finishOnlinePayment,
@@ -138,6 +141,9 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
   }, [paying, ctx.client, orderId]);
   const splitInfo = useSplitInfo(ctx, orderId, netUp, paying);
   const roomStays = useOpenStays(ctx, paying && netUp);
+  const deliveryOn =
+    order?.channel === 'delivery' && (ctx.isModuleOn?.('delivery') ?? false) && netUp;
+  const deliveryBill = useDeliveryBill(ctx, orderId, deliveryOn);
   const [splitting, setSplitting] = useState(false);
   const [mergeInto, setMergeInto] = useState('');
   const { binding } = usePosStore(ctx);
@@ -300,6 +306,18 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
         {pending > 0 ? ` · ${t.orderWaitingSync}` : ''}
       </p>
       <OrderCustomer ctx={ctx} orderId={order.id} open={open} online={netUp} />
+      {order.channel === 'delivery' &&
+      (ctx.isModuleOn?.('delivery') ?? false) &&
+      deliveryBill.data ? (
+        <OrderDelivery
+          key={`${deliveryBill.data.info.platformId}|${deliveryBill.data.info.ref}`}
+          ctx={ctx}
+          orderId={order.id}
+          bill={deliveryBill.data}
+          reload={deliveryBill.reload}
+          online={netUp}
+        />
+      ) : null}
       {siblings.length > 0 ? (
         <div className="chips" role="group" aria-label={t.splitSiblings}>
           {siblings.map((o) => (
@@ -624,9 +642,32 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
                 }
               : undefined
           }
+          platform={
+            deliveryBill.data && deliveryOn
+              ? (() => {
+                  const pl = deliveryBill.data.platforms.find(
+                    (x) => x.id === deliveryBill.data?.info.platformId,
+                  );
+                  return { name: pl?.name ?? null, commissionBps: pl?.commissionBps ?? 0 };
+                })()
+              : null
+          }
+          onPlatformClose={async () => {
+            const err = await closeDeliveryOrder({
+              client: ctx.client,
+              orderId: order.id,
+              binding,
+              billConfig: billConfigFor(config, order.channel),
+              staffId: ctx.staffId,
+              lang: config.defaultLang,
+            });
+            if (!err) ctx.navigate(`/receipt/${order.id}`);
+            return err;
+          }}
           roomStays={roomStays}
-          onRoomCharge={async (folioId) => {
-            const err = await chargeOrderToRoom({
+          onRoomCharge={async (folioId, amount) => {
+            const billTotal = orderBill(order, billConfigFor(config, order.channel)).total;
+            const common = {
               client: ctx.client,
               orderId: order.id,
               binding,
@@ -634,7 +675,12 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
               folioId,
               staffId: ctx.staffId,
               lang: config.defaultLang,
-            });
+            };
+            // the whole bill on the room, or part on the room and the rest in cash
+            const err =
+              amount >= billTotal
+                ? await chargeOrderToRoom(common)
+                : await chargePartToRoom({ ...common, roomAmount: amount });
             if (!err) ctx.navigate(`/receipt/${order.id}`);
             return err;
           }}

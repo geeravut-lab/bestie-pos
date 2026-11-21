@@ -91,6 +91,7 @@ need appointments); enabling one auto-enables its dependencies. Disabling hides 
 | Network points + CRM | ● | ● | ● | ● | ● | ● | Basic |
 | Karaoke rooms: timer + time billing (profile Karaoke only; ○ elsewhere) | ○ | ○ | – | – | ○ | – | Basic |
 | Karaoke song queue from guests' phones (needs rooms) | – | – | – | – | – | – | Pro |
+| Karaoke room booking online with a deposit (needs rooms; off by default) | – | – | – | – | – | – | Pro |
 
 ## 6. Core features (benchmark-derived)
 

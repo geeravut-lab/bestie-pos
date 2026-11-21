@@ -209,7 +209,7 @@ export async function cryptoRequestResponse(
 // ── the watcher ─────────────────────────────────────────────────────────────
 type WalletRow = { id: string; network: CryptoNetwork; address: string; poll_cursor_ms: number };
 
-function chainFor(
+export function chainFor(
   env: Env,
   deps: CryptoDeps,
   network: CryptoNetwork,
@@ -217,9 +217,19 @@ function chainFor(
 ): ChainClient | null {
   const given = deps.chain?.[network];
   if (given) return given;
-  if (network === 'tron') return tronClient({ apiKey: env.TRONGRID_API_KEY?.trim(), f });
+  // an optional base address lets the SAME code run against a test network (Tron Shasta / Ethereum Sepolia); https only
+  const https = (v?: string) =>
+    v && /^https:\/\/[a-z0-9.-]+(\/[A-Za-z0-9._/-]*)?$/i.test(v.trim())
+      ? v.trim().replace(/\/+$/, '')
+      : undefined;
+  if (network === 'tron')
+    return tronClient({
+      apiKey: env.TRONGRID_API_KEY?.trim(),
+      baseUrl: https(env.TRONGRID_BASE_URL),
+      f,
+    });
   const key = env.ETHERSCAN_API_KEY?.trim();
-  return key ? ethereumClient({ apiKey: key, f }) : null;
+  return key ? ethereumClient({ apiKey: key, baseUrl: https(env.ETHERSCAN_BASE_URL), f }) : null;
 }
 
 /** Reads one wallet's incoming transfers and reports each to the database; returns what happened. */

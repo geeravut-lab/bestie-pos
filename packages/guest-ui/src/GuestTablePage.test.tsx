@@ -15,6 +15,7 @@ const MENU = {
   store: { name: 'Acme Kitchen' },
   table: { name: 'T1' },
   autoSend: false,
+  kiosk: false,
   menu: {
     categories: [
       { id: 'c1', name: { th: 'จานหลัก', en: 'Mains' } },

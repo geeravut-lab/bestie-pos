@@ -6,6 +6,7 @@ import { AsyncButton } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
 import { useOrder, useOutboxCounts, usePaidOrders } from '@bestie/offline';
+import { TaxInvoicePanel } from '@bestie/admin-ui';
 import { usePosData, usePosStore } from './posData';
 import { Loading, Page } from './PosBits';
 import { PrintButton } from './printing/PrintButton';
@@ -61,6 +62,7 @@ export function ReceiptPage({ ctx, orderId }: { ctx: PageContext; orderId: strin
         </AsyncButton>
       </div>
       <ReceiptView order={order} receipt={order.receipt} lang={lang} />
+      <TaxInvoicePanel ctx={ctx} orderId={order.id} />
     </Page>
   );
 }

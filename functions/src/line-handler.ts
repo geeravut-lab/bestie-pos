@@ -55,7 +55,13 @@ export async function lineWebhookResponse(
   try {
     const { supabaseUrl, serviceRoleKey } = readServerEnv(env);
     const store =
-      deps.store ?? createSupabaseLineStore(supabaseUrl, serviceRoleKey, deps.fetchImpl);
+      deps.store ??
+      createSupabaseLineStore(
+        supabaseUrl,
+        serviceRoleKey,
+        deps.fetchImpl,
+        env.LINE_ISLAND_NETWORK?.trim() || 'koh-phangan',
+      );
     let replyFailed: number | null = null; // LINE refused our answer (a bad access token shows up here): the user would see nothing
     const send: Reply = async (replyToken, text) => {
       const res = await fetchImpl('https://api.line.me/v2/bot/message/reply', {

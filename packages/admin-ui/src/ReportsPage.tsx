@@ -134,6 +134,13 @@ export function ReportsPage({ ctx }: { ctx: PageContext }) {
   return (
     <div className="admin-page">
       <h1>{t.repTitle}</h1>
+      {(shops.data?.length ?? 0) > 1 ? (
+        <div className="actions">
+          <button type="button" className="btn btn-secondary" onClick={() => ctx.navigate('/hq')}>
+            {t.hqLink}
+          </button>
+        </div>
+      ) : null}
       <section className="card admin-card">
         <div className="filters">
           {(shops.data?.length ?? 0) > 1 ? (
@@ -372,7 +379,9 @@ function ReturnsBlock({
       ? t.returnMethodCash
       : m === 'credit'
         ? t.returnMethodCredit
-        : t.returnMethodManual;
+        : m === 'room'
+          ? t.returnMethodRoom
+          : t.returnMethodManual;
   const reason = (x: string) =>
     x === 'wrong_item'
       ? t.returnReasonWrong

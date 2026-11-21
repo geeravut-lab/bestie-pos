@@ -19,6 +19,7 @@ import { AsyncButton, QrSvg, Spinner } from '@bestie/ui';
 import { Notice, useLiveSync } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
 import { PrintPortal } from './PrintPortal';
+import { KaraokeBridgePanel } from './KaraokeBridgePanel';
 import { useRemote } from './useRemote';
 
 type Loaded = {
@@ -495,6 +496,9 @@ export function KaraokePage({ ctx }: { ctx: PageContext }) {
                     </AsyncButton>
                   ) : null}
                 </div>
+              ) : null}
+              {canEdit && songsOn ? (
+                <KaraokeBridgePanel ctx={ctx} storeId={storeId} roomId={room.id} />
               ) : null}
               {links[room.id] ? (
                 <div className="card admin-card">

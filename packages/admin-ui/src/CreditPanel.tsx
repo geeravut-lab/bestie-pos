@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { formatTHB, parsePriceInput } from '@bestie/core';
+import { CREDIT_TERMS_VERSION, formatTHB, parsePriceInput } from '@bestie/core';
 import type { CustomerCard } from '@bestie/core';
 import { errorText, fmt, formatDateTime, useI18n } from '@bestie/i18n';
 import type { ErrorKey } from '@bestie/i18n';
@@ -26,9 +26,10 @@ export function CreditPanel({ ctx, card }: { ctx: PageContext; card: CustomerCar
   const [adj, setAdj] = useState('');
   const [reason, setReason] = useState('');
   const [note, setNote] = useState<
-    'topupBad' | 'tooMuch' | 'adjBad' | 'topped' | 'adjusted' | null
+    'topupBad' | 'tooMuch' | 'adjBad' | 'topped' | 'adjusted' | 'accepted' | null
   >(null);
   const [error, setError] = useState<ErrorKey | null>(null);
+  const [agreed, setAgreed] = useState(false);
 
   const { status, data, reload } = useRemote(
     async () => {
@@ -57,6 +58,30 @@ export function CreditPanel({ ctx, card }: { ctx: PageContext; card: CustomerCar
           .limit(20),
       ]);
       if (bal.error || hist.error) throw new Error('load');
+      // which company's Credit this is, which shops share it, and whether this customer accepted the current terms
+      const [ent, shops, acc] = await Promise.all([
+        ctx.client
+          .from('legal_entities')
+          .select('name')
+          .eq('id', row.legal_entity_id)
+          .maybeSingle(),
+        ctx.client
+          .from('stores')
+          .select('name, module_overrides, deleted_at')
+          .eq('legal_entity_id', row.legal_entity_id),
+        ctx.client
+          .from('credit_terms_acceptances')
+          .select('id')
+          .eq('customer_id', card.id)
+          .eq('legal_entity_id', row.legal_entity_id)
+          .eq('version', CREDIT_TERMS_VERSION),
+      ]);
+      const company = ((ent.data ?? {}) as { name?: string }).name ?? '';
+      const sharing = (
+        (shops.data ?? []) as { name: string; module_overrides: Record<string, unknown> }[]
+      )
+        .filter((x) => x.module_overrides?.['tender.credit'] === true)
+        .map((x) => x.name);
       const bound = getDeviceBinding()?.deviceId;
       const dev = bound
         ? await ctx.client.from('devices').select('stripe_reader_id').eq('id', bound).maybeSingle()
@@ -68,6 +93,9 @@ export function CreditPanel({ ctx, card }: { ctx: PageContext; card: CustomerCar
           'string',
         balance: Number(bal.data ?? 0),
         history: (hist.data ?? []) as Row[],
+        company,
+        shops: sharing,
+        accepted: !acc.error && (acc.data ?? []).length > 0,
       };
     },
     `${card.id}:${storeId ?? ''}`,
@@ -107,6 +135,19 @@ export function CreditPanel({ ctx, card }: { ctx: PageContext; card: CustomerCar
     reload();
   };
 
+  const accept = async () => {
+    setError(null);
+    setNote(null);
+    const { error: err } = await ctx.client.rpc('accept_credit_terms', {
+      p_customer: card.id,
+      p_store: data.storeId,
+    });
+    if (err) return setError(err.code === '42501' ? 'err_forbidden' : 'err_save_failed');
+    setAgreed(false);
+    setNote('accepted');
+    reload();
+  };
+
   const adjust = async () => {
     setError(null);
     setNote(null);
@@ -135,6 +176,11 @@ export function CreditPanel({ ctx, card }: { ctx: PageContext; card: CustomerCar
     <section className="card admin-card" aria-label={t.creditTitle}>
       <h3>{t.creditTitle}</h3>
       <p className="muted">{t.creditRule}</p>
+      {data.company ? (
+        <p className="muted">
+          {fmt(t.creditTermsEntity, { company: data.company, shops: data.shops.join(', ') })}
+        </p>
+      ) : null}
       <p className="guest-total">
         <span>{t.creditBalance}</span>
         <strong className="tabular">{formatTHB(data.balance, locale)}</strong>
@@ -145,7 +191,23 @@ export function CreditPanel({ ctx, card }: { ctx: PageContext; card: CustomerCar
       {note === 'tooMuch' ? <Notice kind="error">{t.creditTooMuch}</Notice> : null}
       {note === 'adjBad' ? <Notice kind="error">{t.creditAdjustBad}</Notice> : null}
       {error ? <Notice kind="error">{errorText(error, t)}</Notice> : null}
-      {canTopup ? (
+      {note === 'accepted' ? <Notice kind="success">{t.creditTermsRecorded}</Notice> : null}
+      {canTopup && !data.accepted ? (
+        <div className="card" aria-label={t.creditTermsTitle}>
+          <h4>{t.creditTermsTitle}</h4>
+          <p className="muted">{fmt(t.creditTermsVersion, { v: CREDIT_TERMS_VERSION })}</p>
+          <p>{t.creditTermsBody}</p>
+          <Notice kind="info">{t.creditTermsNeeded}</Notice>
+          <label className="check-row">
+            <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+            <span>{t.creditTermsAccept}</span>
+          </label>
+          <AsyncButton disabled={!agreed} onClick={accept}>
+            {t.creditTermsRecord}
+          </AsyncButton>
+        </div>
+      ) : null}
+      {canTopup && data.accepted ? (
         <form className="auth-form" onSubmit={(e) => e.preventDefault()}>
           <div className="form-row">
             <label className="label" htmlFor="credit-topup">

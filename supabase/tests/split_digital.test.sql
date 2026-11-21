@@ -1,6 +1,7 @@
 -- PromptPay / card as ONE leg of a split bill: legs ride in the attempt, nothing is booked until the signed webhook, Credit re-checked, mismatches parked.
 \set ON_ERROR_STOP on
 \set QUIET on
+alter table public.orgs alter column credit_terms_required set default false;   -- these tests are about the ledger, not the terms (credit_terms.test.sql covers them)
 
 create or replace function t_exec(uid uuid, role_name text, q text) returns bigint language plpgsql as $$
 declare n bigint;

@@ -1,6 +1,7 @@
 -- Several PromptPay / card shares on one bill: held on the bill, bill locked, last share closes, manager can release, refunds marked.
 \set ON_ERROR_STOP on
 \set QUIET on
+alter table public.orgs alter column credit_terms_required set default false;   -- these tests are about the ledger, not the terms (credit_terms.test.sql covers them)
 
 create or replace function t_exec(uid uuid, role_name text, q text) returns bigint language plpgsql as $$
 declare n bigint;

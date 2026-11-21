@@ -2468,6 +2468,30 @@ const th = {
   calRemCode: 'แสดงรหัสสำหรับ LINE',
   calRemCodeShown: 'ให้ลูกค้าเพิ่มเพื่อน LINE ของร้าน แล้วพิมพ์รหัสนี้ส่งในแชต: {code}',
   calRemCodeOnce: 'รหัสนี้แสดงครั้งเดียว ถ้ากดอีกครั้งจะได้รหัสใหม่และรหัสเดิมใช้ไม่ได้',
+
+  // ── Bestie Credit for real customers ──
+  creditTermsTitle: 'ข้อกำหนดของ Bestie Credit',
+  creditTermsVersion: 'ข้อกำหนดเวอร์ชัน {v}',
+  creditTermsEntity: 'Credit นี้ใช้ได้เฉพาะที่ร้านของ {company}: {shops}',
+  creditTermsBody:
+    'มูลค่า 1 : 1 บาท ไม่ใช่เงินสด ถอนเป็นเงินสดหรือโอนให้ผู้อื่นไม่ได้ ไม่มีดอกเบี้ย โบนัสเติมเงินเป็นส่วนลด ไม่ใช่มูลค่าเงินสด เติมครั้งละ 100–50,000 บาท ยอดคงเหลือไม่เกิน 200,000 บาท การคืนยอดที่ไม่ได้ใช้เป็นไปตามนโยบายของร้าน และเป็นเส้นทางเดียวกับที่ลูกค้าเติมเข้ามา',
+  creditTermsAccept: 'ลูกค้าอ่านและยอมรับข้อกำหนดนี้แล้ว (ต่อหน้าพนักงาน)',
+  creditTermsRecord: 'บันทึกการยอมรับ',
+  creditTermsNeeded: 'ต้องให้ลูกค้ายอมรับข้อกำหนดก่อนเติมเงิน',
+  creditTermsRecorded: 'บันทึกการยอมรับแล้ว',
+  repCreditDetail: 'Bestie Credit ที่ค้างอยู่ ณ วันที่',
+  repCreditAsOf: 'ณ วันที่',
+  repCreditShow: 'แสดง',
+  repCreditCash: 'เติมเงินสด',
+  repCreditPsp: 'เติมผ่าน PromptPay / บัตร',
+  repCreditCrypto: 'เติมด้วยคริปโต',
+  repCreditSpent: 'ใช้ไปแล้ว',
+  repCreditAdjusted: 'ปรับยอด',
+  repCreditOwed: 'ค้างจ่ายลูกค้า (หนี้สิน)',
+  repCreditExport: 'ดาวน์โหลด CSV',
+  repCreditEntities: 'ร้านที่ขาย Credit ของแต่ละบริษัท',
+  repCreditOneEntity: 'Credit ใช้ได้เฉพาะที่ร้านของบริษัทเดียวกัน ร้านต่างบริษัทใช้ Credit ของกันและกันไม่ได้',
+  repCreditNoTax: 'บริษัทนี้ยังไม่มีเลขผู้เสียภาษี 13 หลัก',
 };
 
 export type Dict = { [K in keyof typeof th]: string };
@@ -4978,6 +5002,31 @@ const en = {
   calRemCodeShown: 'Ask the guest to add the shop’s LINE and send this code in the chat: {code}',
   calRemCodeOnce:
     'This code is shown once; pressing again makes a new code and the old one stops working.',
+
+  // ── Bestie Credit for real customers ──
+  creditTermsTitle: 'Bestie Credit terms',
+  creditTermsVersion: 'Terms version {v}',
+  creditTermsEntity: 'This Credit can be used only at the shops of {company}: {shops}',
+  creditTermsBody:
+    'Value is THB 1 : 1 and is not cash. It cannot be cashed out or transferred and earns no interest. A top-up bonus is a discount, not cash value. Each top-up is THB 100–50,000 and the balance may not exceed THB 200,000. Refunds of unused value follow the shop’s policy and go back by the route they came in.',
+  creditTermsAccept: 'The customer has read and accepts these terms (in front of the staff).',
+  creditTermsRecord: 'Record the acceptance',
+  creditTermsNeeded: 'The customer must accept the terms before a top-up.',
+  creditTermsRecorded: 'Acceptance recorded.',
+  repCreditDetail: 'Bestie Credit still owed, as of a date',
+  repCreditAsOf: 'As of',
+  repCreditShow: 'Show',
+  repCreditCash: 'Topped up (cash)',
+  repCreditPsp: 'Topped up (PromptPay / card)',
+  repCreditCrypto: 'Topped up (crypto)',
+  repCreditSpent: 'Spent',
+  repCreditAdjusted: 'Corrections',
+  repCreditOwed: 'Owed to customers (a liability)',
+  repCreditExport: 'Download CSV',
+  repCreditEntities: 'Which company’s Credit each shop sells',
+  repCreditOneEntity:
+    'Credit works only at the shops of one company; shops of different companies do not share it.',
+  repCreditNoTax: 'This company has no 13-digit tax ID yet.',
 } satisfies Dict;
 
 /** A guest language only overrides what it translates; every other key falls back to English (never to a blank). */

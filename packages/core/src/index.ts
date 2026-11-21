@@ -61,5 +61,6 @@ export * from './hairAdvisor';
 export * from './network';
 export * from './servicePolicy';
 export * from './spaAdvisor';
+export * from './creditTerms';
 export * from './commission';
 export * from './packages';

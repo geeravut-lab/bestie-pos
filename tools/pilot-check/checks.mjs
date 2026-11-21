@@ -15,6 +15,7 @@ select coalesce(jsonb_agg(x order by x.name), '[]'::jsonb) as stores from (
          s.shift_required, s.qr_auto_send, s.qr_pay_device, s.printers, s.default_printer,
          le.name as legal_name, le.tax_id,
          (o.legal_sign_off ->> 'cryptoTopup') = 'true' as crypto_signed_off,
+         coalesce((to_jsonb(o) ->> 'credit_terms_required')::boolean, false) as credit_terms_required,
          (select count(*) from public.menu_categories c where c.store_id = s.id and c.deleted_at is null) as categories,
          (select count(*) from public.menu_items i where i.store_id = s.id and i.deleted_at is null) as items,
          (select count(*) from public.menu_items i where i.store_id = s.id and i.deleted_at is null and i.station is null) as items_without_station,
@@ -29,7 +30,7 @@ select coalesce(jsonb_agg(x order by x.name), '[]'::jsonb) as stores from (
          (select count(*) from public.devices d where d.store_id = s.id and d.active and d.role = 'cashier') as cashier_devices,
          (select count(*) from public.devices d where d.store_id = s.id and d.active and d.role = 'kds') as kds_devices,
          (select count(*) from public.devices d where d.store_id = s.id and d.active and d.role <> 'kds' and d.revenue_pos_id is null) as devices_without_pos_id,
-         (select count(*) from public.devices d where d.store_id = s.id and d.active and d.stripe_reader_id is not null) as devices_with_reader,
+         (select count(*) from public.devices d where d.store_id = s.id and d.active and d.reader_id is not null) as devices_with_reader,
          (select count(*) from public.staff f where f.org_id = s.org_id and f.active and (f.store_id is null or f.store_id = s.id)) as staff,
          (select count(*) from public.staff f join public.roles r on r.id = f.role_id
             where f.org_id = s.org_id and f.active and r.built_in = 'owner') as owners,
@@ -167,15 +168,35 @@ export function checkStore(snap) {
     out.push(info('payments', 'qr_pay', 'ลูกค้าจ่ายที่โต๊ะผ่าน QR ได้ (ให้นักบัญชียืนยันเครื่องที่ใช้ออกใบเสร็จ)'));
   if (mod['tender.gateway'] === true && n(snap.devices_with_reader) === 0)
     out.push(warn('payments', 'reader', 'เปิดรับบัตรแล้ว แต่ไม่มีเครื่องไหนผูกเครื่องอ่านบัตร Stripe (tmr_…)'));
-  if (mod['tender.credit'] === true)
+  if (mod['tender.credit'] === true) {
     out.push(
       warn(
         'payments',
         'credit',
-        'เปิด Bestie Credit แล้ว — ต้องได้รับความเห็นทนายเรื่องเครดิตเติมล่วงหน้าก่อนมีลูกค้าจริง',
+        'เปิด Bestie Credit แล้ว — ทนายอนุญาตให้ใช้ภายในนิติบุคคลเดียว (21 พ.ย. 2026); ให้ทนายอ่านข้อกำหนดใน docs/LEGAL-DRAFTS.md §7 ก่อนมีลูกค้าจริง',
       ),
     );
-  else out.push(ok('payments', 'credit', 'Bestie Credit ปิดอยู่ (ถูกต้องจนกว่าทนายยืนยัน)'));
+    if (snap.credit_terms_required === true)
+      out.push(
+        ok('payments', 'credit_terms', 'ต้องให้ลูกค้ายอมรับข้อกำหนด Credit ก่อนเติมเงินทุกครั้ง (เปิดอยู่)'),
+      );
+    else
+      out.push(
+        warn(
+          'payments',
+          'credit_terms',
+          'ยังไม่บังคับให้ลูกค้ายอมรับข้อกำหนด Credit ก่อนเติมเงิน (คอลัมน์ credit_terms_required ปิดหรือยังไม่ได้รัน migration 68)',
+        ),
+      );
+    if (!/^[0-9]{13}$/.test(snap.tax_id ?? ''))
+      out.push(
+        warn(
+          'payments',
+          'credit_entity',
+          'นิติบุคคลที่ออก Credit ยังไม่มีเลขผู้เสียภาษี 13 หลัก — Credit ใช้ได้เฉพาะร้านของนิติบุคคลนี้',
+        ),
+      );
+  } else out.push(ok('payments', 'credit', 'Bestie Credit ปิดอยู่ (ถูกต้องจนกว่าทนายยืนยัน)'));
   if (mod['credit.topup.crypto'] === true) {
     if (snap.crypto_signed_off)
       out.push(warn('payments', 'crypto', 'เปิดเติมเครดิตด้วยคริปโต (มี sign-off ของทนายแล้ว)'));
@@ -294,7 +315,7 @@ export const MANUAL_STEPS = [
   'ทดสอบ Stripe ใน test mode ครบ (PromptPay, บัตร, แยกจ่ายหลายคน, เติมเครดิต) — docs/ENVIRONMENT.md §6',
   'ทดลองพิมพ์ใบเสร็จ/ใบสั่งครัว/เปิดลิ้นชักกับเครื่องจริงรุ่นที่ร้านใช้ — docs/PILOT-CHECKLIST.md §1',
   'นักบัญชียืนยันค่า Billing (VAT, ค่าบริการ, ปัดเศษ) และใบเสร็จ 2 ชุดเลขต่อเครื่อง',
-  'ทนายยืนยันโครงสร้าง Bestie Credit ก่อนเปิด tender.credit',
+  'ทนายอ่านข้อกำหนด Bestie Credit (docs/LEGAL-DRAFTS.md §7) ก่อนมีลูกค้าจริง — ใช้ได้ภายในนิติบุคคลเดียว',
   'ล็อกอินจริงด้วย Google และด้วย LINE (Aivora) จากมือถือ 1 ครั้ง — สคริปต์ตรวจได้แค่การตั้งค่า ไม่ได้ลองล็อกอินแทนคน',
   'ตั้ง scheduler (cron-job.org) เรียก /api/notify/tick แล้วได้ 200',
 ];

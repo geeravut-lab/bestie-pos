@@ -15,6 +15,7 @@ import {
   setCovers,
   setNote,
   setQuantity,
+  parsePassScan,
   resolveScan,
   validateSelection,
   voidSentLine,
@@ -243,6 +244,12 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
     const code = typed ?? scan;
     setScan('');
     setScanNote(null);
+    // A Tourist Pass QR / code is not a product: hand it to the customer panel (online; it finds or makes the member and puts it on the bill).
+    if (parsePassScan(code)) {
+      window.dispatchEvent(new CustomEvent('bestie:pass-code', { detail: parsePassScan(code) }));
+      scanBox.current?.focus();
+      return;
+    }
     const r = resolveScan(menu, code);
     if (r.kind === 'not_found') setScanNote({ kind: 'info', text: t.scanNotFound });
     else if (r.kind === 'sold_out') setScanNote({ kind: 'info', text: t.scanSoldOut });

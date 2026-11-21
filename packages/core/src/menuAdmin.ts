@@ -74,8 +74,8 @@ export function parseLocalizedText(raw: unknown): LocalizedText {
 }
 
 /** The name to show for a language, falling back to Thai when there is no translation yet. */
-export const localizedName = (n: LocalizedText, lang: 'th' | 'en'): string =>
-  (lang === 'en' ? n.en : n.th)?.trim() || n.th;
+export const localizedName = (n: LocalizedText, lang: string): string =>
+  (lang === 'th' ? n.th : n.en)?.trim() || n.th;
 
 // ── channel prices ──────────────────────────────────────────────────────────
 /** Lenient read: only known channels with whole non-negative satang survive; base is required. */

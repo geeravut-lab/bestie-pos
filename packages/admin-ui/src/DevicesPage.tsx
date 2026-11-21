@@ -17,7 +17,7 @@ type DeviceRow = {
   role: DeviceRole;
   station: KdsStation | null;
   revenue_pos_id: string | null;
-  stripe_reader_id: string | null;
+  reader_id: string | null;
   active: boolean;
 };
 type StoreRow = { id: string; name: string; vat_registered: boolean };
@@ -35,7 +35,7 @@ export function DevicesPage({ ctx }: { ctx: PageContext }) {
     const [devices, stores] = await Promise.all([
       ctx.client
         .from('devices')
-        .select('id, store_id, name, code, role, station, revenue_pos_id, stripe_reader_id, active')
+        .select('id, store_id, name, code, role, station, revenue_pos_id, reader_id, active')
         .eq('org_id', ctx.orgId)
         .order('created_at'),
       ctx.client
@@ -111,7 +111,7 @@ function DeviceItem({
 }) {
   const { t } = useI18n();
   const [posId, setPosId] = useState(device.revenue_pos_id ?? '');
-  const [readerId, setReaderId] = useState(device.stripe_reader_id ?? '');
+  const [readerId, setReaderId] = useState(device.reader_id ?? '');
   const here = useDeviceBinding();
   const isHere = here?.deviceId === device.id;
   const [error, setError] = useState<ErrorKey | null>(null);
@@ -119,7 +119,7 @@ function DeviceItem({
 
   const save = async (values: {
     revenue_pos_id?: string | null;
-    stripe_reader_id?: string | null;
+    reader_id?: string | null;
     active?: boolean;
   }) => {
     setError(null);
@@ -151,7 +151,7 @@ function DeviceItem({
   const saveReader = () => {
     const v = readerId.trim();
     if (v !== '' && !/^tmr_[A-Za-z0-9]{6,60}$/.test(v)) return setError('err_device_invalid');
-    return save({ stripe_reader_id: v === '' ? null : v });
+    return save({ reader_id: v === '' ? null : v });
   };
 
   return (
@@ -231,7 +231,7 @@ function DeviceItem({
                           role: device.role,
                           station: device.station,
                           posId: device.revenue_pos_id,
-                          reader: device.stripe_reader_id !== null,
+                          reader: device.reader_id !== null,
                         },
                   )
                 }

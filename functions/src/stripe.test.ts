@@ -250,9 +250,7 @@ function backend(
         },
       ]);
     if (url.includes('/rest/v1/devices'))
-      return json(200, [
-        { stripe_reader_id: over.reader === undefined ? 'tmr_ABC123xyz' : over.reader },
-      ]);
+      return json(200, [{ reader_id: over.reader === undefined ? 'tmr_ABC123xyz' : over.reader }]);
     return json(404, {});
   }) as unknown as typeof fetch;
   return {
@@ -604,7 +602,7 @@ describe('POST /api/stripe/webhook', () => {
     expect(be.rpcCalls('confirm_payment_attempt')[0]!.headers.Authorization).toBe(
       'Bearer service-key',
     );
-    expect(be.rpcCalls('record_stripe_event')[0]!.body).toEqual({
+    expect(be.rpcCalls('record_payment_event')[0]!.body).toEqual({
       p_id: 'evt_1',
       p_type: 'payment_intent.succeeded',
     });
@@ -618,7 +616,7 @@ describe('POST /api/stripe/webhook', () => {
       fetchImpl: be.fetchImpl,
     });
     expect(r.status).toBe(500);
-    expect(be.rpcCalls('record_stripe_event')).toHaveLength(0);
+    expect(be.rpcCalls('record_payment_event')).toHaveLength(0);
   });
 
   it('a payment that needs review still answers 200 (Stripe must not retry it forever)', async () => {

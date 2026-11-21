@@ -221,3 +221,24 @@ describe('POST cancel', () => {
     expect(res.status).toBe(405);
   });
 });
+
+describe('GET ?op=spa', () => {
+  it('relays the advisor switch and the service tags, and 404 for an unknown link', async () => {
+    const res = await guestBookingResponse(get(`t=${TOKEN}&op=spa`), env, {
+      fetchImpl: fakeFetch({
+        guest_spa_info: { enabled: true, services: [{ id: 's1', tags: ['facial'] }] },
+      }),
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      spa: { enabled: true, services: [{ id: 's1', tags: ['facial'] }] },
+    });
+    expect(
+      (
+        await guestBookingResponse(get(`t=${TOKEN}&op=spa`), env, {
+          fetchImpl: fakeFetch({ guest_spa_info: null }),
+        })
+      ).status,
+    ).toBe(404);
+  });
+});

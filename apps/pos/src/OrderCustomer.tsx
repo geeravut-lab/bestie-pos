@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { formatTHB, parseCustomerCard } from '@bestie/core';
+import { useEffect, useState } from 'react';
+import { formatTHB, parsePassScan, parseCustomerCard } from '@bestie/core';
 import { CustomerPicker, useRemote } from '@bestie/admin-ui';
 import { flush, outboxCounts, pullOrderNow } from '@bestie/offline';
 import { errorText, fmt, useI18n } from '@bestie/i18n';
@@ -24,6 +24,8 @@ export function OrderCustomer({
   const [picking, setPicking] = useState(false);
   const [error, setError] = useState<ErrorKey | null>(null);
   const canSee = ctx.isOwner || ctx.permissions.includes('customer.view');
+  const [passText, setPassText] = useState('');
+  const [passNote, setPassNote] = useState<'attached' | 'unknown' | 'failed' | null>(null);
 
   const { data, reload } = useRemote(async () => {
     if (!online || !canSee) return null;
@@ -52,8 +54,6 @@ export function OrderCustomer({
     return card ? { card, used: row?.points_used ?? 0, discount: row?.points_discount ?? 0 } : null;
   }, `${orderId}:${online}:${canSee}`);
 
-  if (!online || !canSee) return null;
-
   const attach = async (customerId: string | null) => {
     setError(null);
     const { error: err } = await ctx.client.rpc('set_order_customer', {
@@ -64,6 +64,33 @@ export function OrderCustomer({
     setPicking(false);
     reload();
   };
+
+  // A Tourist Pass code (BP-…) typed or scanned: the shop's own member record for that guest is found or made, then put on this bill.
+  const attachPass = async (raw: string) => {
+    setError(null);
+    setPassNote(null);
+    const code = parsePassScan(raw);
+    const store = ctx.storeId ?? ctx.homeStoreId ?? null;
+    if (!code || !store) return setPassNote('unknown');
+    const r = await ctx.client.rpc('link_pass', { p_store: store, p_code: code });
+    if (r.error) return setPassNote('failed');
+    const o = (r.data ?? {}) as { ok?: boolean; customer_id?: string };
+    if (o.ok !== true || typeof o.customer_id !== 'string') return setPassNote('unknown');
+    await attach(o.customer_id);
+    setPassText('');
+    setPassNote('attached');
+  };
+  useEffect(() => {
+    const onCode = (e: Event) => {
+      const code = (e as CustomEvent<string>).detail;
+      if (open && online && canSee && typeof code === 'string') void attachPass(code);
+    };
+    window.addEventListener('bestie:pass-code', onCode);
+    return () => window.removeEventListener('bestie:pass-code', onCode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, online, canSee, orderId]);
+
+  if (!online || !canSee) return null;
 
   return (
     <div className="order-customer">
@@ -92,8 +119,34 @@ export function OrderCustomer({
         />
       ) : null}
       {error ? <Notice kind="error">{errorText(error, t)}</Notice> : null}
+      {passNote === 'attached' ? <Notice kind="success">{t.nwPassAttached}</Notice> : null}
+      {passNote === 'unknown' ? <Notice kind="info">{t.nwPassUnknown}</Notice> : null}
+      {passNote === 'failed' ? <Notice kind="error">{t.nwPassLinkFailed}</Notice> : null}
       {picking && open && !data ? (
         <section className="card admin-card">
+          <div className="form-row">
+            <label className="label" htmlFor="order-pass">
+              {t.nwPassScan}
+            </label>
+            <input
+              id="order-pass"
+              className="field mono"
+              autoComplete="off"
+              maxLength={120}
+              value={passText}
+              onChange={(e) => setPassText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void attachPass(passText);
+              }}
+            />
+            <AsyncButton
+              variant="secondary"
+              disabled={passText.trim() === ''}
+              onClick={() => attachPass(passText)}
+            >
+              {t.custAttach}
+            </AsyncButton>
+          </div>
           <CustomerPicker ctx={ctx} idPrefix="order-cust" onPick={(c) => attach(c.id)} />
           <button type="button" className="btn btn-secondary" onClick={() => setPicking(false)}>
             {t.custClose}

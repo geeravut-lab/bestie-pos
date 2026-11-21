@@ -97,6 +97,13 @@ export async function notifyTickResponse(
     const clientPhotosErased = tidyNow
       ? await callRpc(supabaseUrl, serviceRoleKey, 'client_photos_cleanup', {}, f).catch(() => 0)
       : 0;
+    // health forms older than 24 months and passes unused for 36 months are erased (the retention in docs/LEGAL-DRAFTS.md §3)
+    const healthErased = tidyNow
+      ? await callRpc(supabaseUrl, serviceRoleKey, 'health_intakes_cleanup', {}, f).catch(() => 0)
+      : 0;
+    const passesErased = tidyNow
+      ? await callRpc(supabaseUrl, serviceRoleKey, 'network_passes_cleanup', {}, f).catch(() => 0)
+      : 0;
     // audit rows older than the retention (default 5 years) are removed in bulk; nothing else can delete audit rows
     const purged = tidyNow
       ? await callRpc(supabaseUrl, serviceRoleKey, 'audit_purge', {}, f)
@@ -108,6 +115,8 @@ export async function notifyTickResponse(
       clientPhotosErased: typeof clientPhotosErased === 'number' ? clientPhotosErased : 0,
       hairPhotosErased: typeof photosErased === 'number' ? photosErased : 0,
       guestContactsErased: typeof contactsErased === 'number' ? contactsErased : 0,
+      healthFormsErased: typeof healthErased === 'number' ? healthErased : 0,
+      passesErased: typeof passesErased === 'number' ? passesErased : 0,
       line: cfg ? 'configured' : 'not_configured',
       delivery,
       tidied: typeof tidied === 'number' ? tidied : 0,

@@ -1,6 +1,7 @@
 -- Bestie Credit: ledger rules, entity scope, cash top-ups, drawer, liability report. No cash-out, no crypto, never below zero.
 \set ON_ERROR_STOP on
 \set QUIET on
+alter table public.orgs alter column credit_terms_required set default false;   -- these tests are about the ledger, not the terms (credit_terms.test.sql covers them)
 
 create or replace function t_exec(uid uuid, role_name text, q text) returns bigint language plpgsql as $$
 declare n bigint;
@@ -101,7 +102,7 @@ select t_val('00000000-0000-0000-0000-0000000000e5', 'authenticated', 'foreign_o
 
 -- the shop switches Credit on; a device with a card reader and one without
 update public.stores set module_overrides = '{"tender.credit": true, "tender.gateway": true}' where id = (select v::uuid from t_out where k='store');
-update public.devices set stripe_reader_id = 'tmr_ABC123xyz' where id = (select v::uuid from t_out where k='dev');
+update public.devices set reader_id = 'tmr_ABC123xyz' where id = (select v::uuid from t_out where k='dev');
 select t_val('00000000-0000-0000-0000-0000000000a1', 'authenticated', 'dev2', $$insert into public.devices (org_id, store_id, name, role) values ((select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='store'), 'No reader', 'staff') returning id::text$$);
 create or replace function t_topup(p_tender text, p_amount bigint, p_dev text default 'dev') returns jsonb language sql as $$
   select jsonb_build_object('customer_id', (select v from t_out where k='cid'), 'store_id', (select v from t_out where k='store'),

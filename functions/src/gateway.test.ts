@@ -70,7 +70,7 @@ function backend(over: { attemptProvider?: string; rpc?: Record<string, unknown>
           provider: over.attemptProvider ?? 'acme',
         },
       ]);
-    if (url.includes('/rest/v1/devices')) return json([{ stripe_reader_id: 'rd_1' }]);
+    if (url.includes('/rest/v1/devices')) return json([{ reader_id: 'rd_1' }]);
     return json({}, 404);
   }) as unknown as typeof fetch;
   return { fetchImpl, calls, of: (fn: string) => calls.filter((c) => c.fn === fn) };
@@ -211,7 +211,7 @@ describe('the handlers with a different provider', () => {
       p_amount: 21000,
       p_currency: 'thb',
     });
-    expect(be.of('record_stripe_event')[0]!.body).toEqual({ p_id: 'ev_1', p_type: 'charge.paid' });
+    expect(be.of('record_payment_event')[0]!.body).toEqual({ p_id: 'ev_1', p_type: 'charge.paid' });
   });
 
   it('a provider can never settle an attempt that another provider started', async () => {

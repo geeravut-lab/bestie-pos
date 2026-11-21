@@ -21,6 +21,7 @@ import {
   verifyStripeSignature,
 } from './stripe.js';
 import type { StripeClient } from './stripe.js';
+import { createOmiseClient, omiseConfig, omiseGateway } from './omise.js';
 
 type Env = Record<string, string | undefined>;
 
@@ -164,6 +165,11 @@ export const GATEWAYS: Record<string, (env: Env, deps: Deps) => PaymentGateway |
       deps.stripe ?? createStripeClient(cfg.secretKey, deps.fetchImpl ?? fetch),
       cfg,
     );
+  },
+  omise(env, deps) {
+    const cfg = omiseConfig(env);
+    if (!cfg) return null;
+    return omiseGateway(createOmiseClient(cfg.secretKey, deps.fetchImpl ?? fetch), cfg);
   },
 };
 

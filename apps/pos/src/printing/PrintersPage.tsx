@@ -63,7 +63,11 @@ export function PrintersPage({ ctx }: { ctx: PageContext }) {
     setError(null);
     setMessage(null);
     try {
-      await printPicture(p, 'printer-test', browserDeps(sampleReceiptRows(lang)));
+      await printPicture(
+        p,
+        'printer-test',
+        browserDeps(sampleReceiptRows(lang === 'th' ? 'th' : 'en')),
+      );
       setMessage(p.kind === 'pdf' ? t.printerPdfSaved : t.printerSent);
     } catch (e) {
       setError(printErrorKey(e));

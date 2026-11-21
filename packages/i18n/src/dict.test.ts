@@ -106,3 +106,20 @@ describe('module names', () => {
     }
   });
 });
+
+describe('guest languages', () => {
+  it('only translate keys that exist, keep every {placeholder}, and fall back to English for the rest', async () => {
+    const { guestOverlays } = await import('./guest-langs');
+    for (const [l, o] of Object.entries(guestOverlays)) {
+      for (const [k, v] of Object.entries(o)) {
+        expect(k in dict.th, `${l}.${k}`).toBe(true);
+        expect(placeholders(v), `${l}.${k}`).toEqual(
+          placeholders((dict.th as Record<string, string>)[k]!),
+        );
+        expect(v.trim(), `${l}.${k}`).not.toBe('');
+      }
+      expect(Object.keys(dict[l as 'ru']).sort()).toEqual(Object.keys(dict.th).sort());
+    }
+    expect(dict.ru.appName).toBe(dict.th.appName);
+  });
+});

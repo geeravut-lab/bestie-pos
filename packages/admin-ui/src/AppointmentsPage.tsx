@@ -13,6 +13,7 @@ import {
   depositTotals,
   findConflict,
   formatTHB,
+  guestName,
   layoutColumn,
   localizedName,
   nextStatuses,
@@ -26,6 +27,8 @@ import {
   parseResources,
   timeLabel,
   toBangkokIso,
+  parseWeeklyOffs,
+  weeklyOffsForDay,
   isProviderKind,
 } from '@bestie/core';
 import type {
@@ -43,6 +46,8 @@ import { AsyncButton, Spinner } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
 import { CustomerPicker } from './CustomerPicker';
+import { CounterReminder } from './CounterReminder';
+import { DepositSlip, loadSeller } from './DepositSlip';
 import { tx } from './stockInput';
 import { bangkokToday } from './today';
 import { GuestHealthPanel } from './GuestHealthPanel';
@@ -112,6 +117,13 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
     ref: string;
   } | null>(null);
   const [settleTill, setSettleTill] = useState('');
+  const [slip, setSlip] = useState<{
+    deposit: Deposit;
+    fee: boolean;
+    seller: Awaited<ReturnType<typeof loadSeller>> & object;
+    service: string;
+    guest: string;
+  } | null>(null);
   const [picking, setPicking] = useState(false);
   const [tip, setTip] = useState<{
     staff: string;
@@ -181,6 +193,10 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
       const uses: Record<string, string> = {};
       for (const u of (us.error ? [] : (us.data ?? [])) as { id: string; appointment_id: string }[])
         uses[u.appointment_id] = u.id; // ascending: the last one wins = the latest use
+      const wk = await ctx.client
+        .from('resource_weekly_offs')
+        .select('id, resource_id, weekday, from_time, to_time, reason')
+        .eq('store_id', storeId);
       const blk = await ctx.client
         .from('resource_blocks')
         .select('resource_id, starts_at, ends_at, reason')
@@ -191,7 +207,9 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
         appts.length > 0
           ? ctx.client
               .from('appointment_deposits')
-              .select('id, appointment_id, amount, method, status, reference')
+              .select(
+                'id, appointment_id, amount, method, status, reference, invoice_no, invoice_vat, fee_invoice_no, fee_vat, created_at, resolved_at',
+              )
               .in(
                 'appointment_id',
                 appts.map((a) => a.id),
@@ -221,14 +239,18 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
             })),
         packages: pk.error ? [] : parseCustomerPackages(pk.data),
         uses,
-        blocks: blk.error
-          ? []
-          : ((blk.data ?? []) as Record<string, string | null>[]).map((b) => ({
-              resourceId: String(b.resource_id),
-              startsAt: String(b.starts_at),
-              endsAt: String(b.ends_at),
-              reason: b.reason ?? '',
-            })),
+        blocks: [
+          ...(blk.error
+            ? []
+            : ((blk.data ?? []) as Record<string, string | null>[]).map((b) => ({
+                resourceId: String(b.resource_id),
+                startsAt: String(b.starts_at),
+                endsAt: String(b.ends_at),
+                reason: b.reason ?? '',
+              }))),
+          // the weekly days off of this weekday, drawn like any other day off
+          ...(wk.error ? [] : weeklyOffsForDay(date, parseWeeklyOffs(wk.data))),
+        ],
         deposits: dep.error ? [] : parseDeposits(dep.data),
         tills: dev.error
           ? []
@@ -488,6 +510,20 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
     if (err) return fail(err);
     reload();
   };
+  // print the receipt of a deposit (or of a kept no-show fee): the seller's data is read now, the slip prints once and goes away
+  const printDeposit = async (x: Deposit, fee: boolean) => {
+    const a = d?.appts.find((y) => y.id === x.appointmentId);
+    if (!a || !storeId) return;
+    const seller = await loadSeller(ctx, storeId);
+    if (!seller) return setError('err_load_failed');
+    setSlip({
+      deposit: x,
+      fee,
+      seller,
+      service: guestName(a.serviceName, lang),
+      guest: a.guestName,
+    });
+  };
   const move = async (a: Appointment) => {
     if (!moving) return;
     const iso = toBangkokIso(date, moving.time);
@@ -511,6 +547,7 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
 
   return (
     <div className="admin-page">
+      {slip ? <DepositSlip {...slip} onDone={() => setSlip(null)} /> : null}
       <h1>{t.calTitle}</h1>
       <div className="actions">
         <button
@@ -717,6 +754,11 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
           </p>
           {sel.source === 'online' ? <HairRequestPanel ctx={ctx} appointmentId={sel.id} /> : null}
           {sel.source === 'online' ? <GuestHealthPanel ctx={ctx} appointmentId={sel.id} /> : null}
+          {sel.source === 'staff' &&
+          (sel.status === 'booked' || sel.status === 'confirmed') &&
+          bangkokParts(sel.startsAt).date >= todayDate ? (
+            <CounterReminder ctx={ctx} appointmentId={sel.id} />
+          ) : null}
           {sel.groupId && groupLive(sel).length > 1 ? (
             <p className="muted">
               {fmt(t.calGroupOf, { n: all.filter((a) => a.groupId === sel.groupId).length })}
@@ -773,6 +815,7 @@ export function AppointmentsPage({ ctx }: { ctx: PageContext }) {
               setSettleTill={setSettleTill}
               onTake={() => takeDeposit(sel)}
               onSettle={settle}
+              onPrint={printDeposit}
               money={(n) => formatTHB(n, locale)}
             />
           ) : null}
@@ -1236,6 +1279,7 @@ function DepositsBlock({
   setSettleTill,
   onTake,
   onSettle,
+  onPrint,
   money,
 }: {
   appt: Appointment;
@@ -1249,6 +1293,7 @@ function DepositsBlock({
   setSettleTill: (v: string) => void;
   onTake: () => Promise<void>;
   onSettle: (x: Deposit, action: 'forfeit' | 'refund') => Promise<void>;
+  onPrint: (x: Deposit, fee: boolean) => Promise<void>;
   money: (n: number) => string;
 }) {
   const { t } = useI18n();
@@ -1268,6 +1313,21 @@ function DepositsBlock({
                 {money(x.amount)} · {tx(t, `calDepMethod_${x.method}`)} ·{' '}
                 {tx(t, `calDepStatus_${x.status}`)}
                 {x.reference ? ` · ${x.reference}` : ''}
+                {x.invoiceNo ? ` · ${fmt(t.calDepDoc, { no: x.invoiceNo })}` : ''}
+                {x.invoiceNo ? (
+                  <span className="actions">
+                    <AsyncButton variant="secondary" onClick={() => onPrint(x, false)}>
+                      {t.calDepPrint}
+                    </AsyncButton>
+                  </span>
+                ) : null}
+                {x.status === 'forfeited' && x.feeInvoiceNo ? (
+                  <span className="actions">
+                    <AsyncButton variant="secondary" onClick={() => onPrint(x, true)}>
+                      {t.calDepPrintFee}
+                    </AsyncButton>
+                  </span>
+                ) : null}
                 {x.status === 'held' && canSettleDeposit(appt.status) && canRefund ? (
                   <span className="actions">
                     <AsyncButton variant="secondary" onClick={() => onSettle(x, 'forfeit')}>

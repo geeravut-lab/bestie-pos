@@ -82,7 +82,7 @@ describe('<HairAdvisor>', () => {
     const file = screen.getByLabelText('Choose a photo (JPG / PNG / WebP)') as HTMLInputElement;
     expect(file.disabled).toBe(true);
     await userEvent.click(
-      screen.getByLabelText('I agree that the shop keeps my hair photo for this booking only.'),
+      screen.getByLabelText(/I agree that the shop keeps my hair photo for this booking only/i),
     );
     expect(file.disabled).toBe(false);
   });

@@ -72,6 +72,10 @@ export async function notifyTickResponse(
       {},
       f,
     ).catch(() => 0);
+    // every night that has passed on a stay in the house with a room rate is posted to its folio (safe to repeat)
+    const nights = await callRpc(supabaseUrl, serviceRoleKey, 'folio_post_nights_all', {}, f).catch(
+      () => 0,
+    );
     const cfg = lineConfig(env);
     // guests who booked online and left a LINE / e-mail contact get one reminder shortly before the appointment
     const guests = await sendGuestReminders({
@@ -120,6 +124,7 @@ export async function notifyTickResponse(
       summaries,
       reminders: typeof reminded === 'number' ? reminded : 0,
       karaokeReleased: typeof released === 'number' ? released : 0,
+      folioNights: typeof nights === 'number' ? nights : 0,
       guestReminders: guests,
       clientPhotosErased: typeof clientPhotosErased === 'number' ? clientPhotosErased : 0,
       hairPhotosErased: typeof photosErased === 'number' ? photosErased : 0,

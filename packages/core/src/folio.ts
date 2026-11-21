@@ -16,6 +16,8 @@ export type FolioRoom = {
   name: string;
   active: boolean;
   sort: number;
+  /** Price per night, satang (null = no automatic nights). */
+  nightRate: number | null;
 };
 export function parseFolioRooms(v: unknown): FolioRoom[] {
   if (!Array.isArray(v)) return [];
@@ -29,6 +31,7 @@ export function parseFolioRooms(v: unknown): FolioRoom[] {
       name: str(o.name),
       active: o.active !== false,
       sort: num(o.sort),
+      nightRate: o.night_rate == null ? null : num(o.night_rate),
     });
   }
   return out.sort(
@@ -46,6 +49,8 @@ export type Stay = {
   note: string | null;
   status: 'open' | 'closed';
   closedAt: string | null;
+  /** The night rate copied onto this stay at check-in, satang (null = none). */
+  nightRate: number | null;
 };
 export function parseStays(v: unknown): Stay[] {
   if (!Array.isArray(v)) return [];
@@ -63,16 +68,23 @@ export function parseStays(v: unknown): Stay[] {
       note: str(o.note) || null,
       status: o.status === 'closed' ? 'closed' : 'open',
       closedAt: str(o.closed_at) || null,
+      nightRate: o.night_rate == null ? null : num(o.night_rate),
     });
   }
   return out;
 }
 
+export type FolioChargeKind = 'bill' | 'night' | 'return';
 export type FolioCharge = {
   id: string;
   folioId: string;
   storeId: string;
+  kind: FolioChargeKind;
+  /** The bill that was charged ('' for a night or a return). */
   orderId: string;
+  /** The Bangkok date a night starts ('' for a bill or a return). */
+  nightDate: string;
+  /** Satang: positive for a bill or a night, negative for a return. */
   amount: number;
   receiptNumber: string | null;
   voided: boolean;
@@ -84,13 +96,19 @@ export function parseFolioCharges(v: unknown): FolioCharge[] {
   const out: FolioCharge[] = [];
   for (const x of v) {
     const o = obj(x);
-    if (!str(o.id) || !str(o.folio_id) || num(o.amount) <= 0) continue;
+    const kind: FolioChargeKind =
+      o.kind === 'night' ? 'night' : o.kind === 'return' ? 'return' : 'bill';
+    const amount = num(o.amount);
+    if (!str(o.id) || !str(o.folio_id) || amount === 0) continue;
+    if (kind === 'return' ? amount > 0 : amount < 0) continue;
     out.push({
       id: str(o.id),
       folioId: str(o.folio_id),
       storeId: str(o.store_id),
+      kind,
       orderId: str(o.order_id),
-      amount: num(o.amount),
+      nightDate: str(o.night_date),
+      amount,
       receiptNumber: str(o.receipt_number) || null,
       voided: !!str(o.voided_at),
       voidReason: str(o.void_reason) || null,
@@ -99,6 +117,22 @@ export function parseFolioCharges(v: unknown): FolioCharge[] {
   }
   return out.sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
 }
+
+/** The lines of a stay as a statement lists them: nights by date first, then bills and returns in the order they happened. */
+export function statementLines(charges: readonly FolioCharge[]): FolioCharge[] {
+  const rank = (c: FolioCharge) => (c.kind === 'night' ? 0 : 1);
+  return [...charges].sort(
+    (a, b) =>
+      rank(a) - rank(b) ||
+      (a.kind === 'night' && b.kind === 'night'
+        ? a.nightDate.localeCompare(b.nightDate)
+        : Date.parse(a.createdAt) - Date.parse(b.createdAt)),
+  );
+}
+
+/** The nights counted on a stay (not taken off). */
+export const folioNights = (charges: readonly FolioCharge[]): number =>
+  charges.filter((c) => c.kind === 'night' && !c.voided).length;
 
 /** What a stay owes: the charges that were not taken off. */
 export const folioBalance = (charges: readonly FolioCharge[]): number =>

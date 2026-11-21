@@ -5,8 +5,11 @@
 export const RETURN_REASONS = ['wrong_item', 'defective', 'changed_mind', 'other'] as const;
 export type ReturnReason = (typeof RETURN_REASONS)[number];
 
-/** cash = out of the till's drawer · credit = back onto the member's Bestie Credit · manual = PromptPay / card refunded by hand. */
-export const RETURN_METHODS = ['cash', 'credit', 'manual'] as const;
+/**
+ * cash = out of the till's drawer · credit = back onto the member's Bestie Credit · manual = PromptPay / card refunded by hand (or a room
+ * bill whose stay is already checked out) · room = taken off the guest's open stay.
+ */
+export const RETURN_METHODS = ['cash', 'credit', 'manual', 'room'] as const;
 export type ReturnMethod = (typeof RETURN_METHODS)[number];
 
 export type ReturnLine = {
@@ -55,11 +58,14 @@ export function routeAvailable(
   method: ReturnMethod,
   payments: readonly PaidByTender[],
   returns: readonly { method: ReturnMethod; amount: number }[],
+  /** For a bill charged to a room: is the stay still open? (null = the bill was not charged to a room) */
+  roomStay: 'open' | 'closed' | null = null,
 ): number {
   const tenders: Record<ReturnMethod, readonly string[]> = {
     cash: ['cash'],
     credit: ['credit'],
-    manual: ['promptpay', 'gateway'],
+    manual: roomStay === 'closed' ? ['promptpay', 'gateway', 'room'] : ['promptpay', 'gateway'],
+    room: roomStay === 'open' ? ['room'] : [],
   };
   const paid = payments
     .filter((p) => tenders[method].includes(p.tender))
@@ -74,9 +80,11 @@ export function usableRoutes(
   payments: readonly PaidByTender[],
   returns: readonly { method: ReturnMethod; amount: number }[],
   creditAllowed: boolean,
+  roomStay: 'open' | 'closed' | null = null,
 ): ReturnMethod[] {
   return RETURN_METHODS.filter(
-    (m) => (m !== 'credit' || creditAllowed) && routeAvailable(m, payments, returns) >= amount,
+    (m) =>
+      (m !== 'credit' || creditAllowed) && routeAvailable(m, payments, returns, roomStay) >= amount,
   );
 }
 

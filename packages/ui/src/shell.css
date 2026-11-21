@@ -2429,3 +2429,40 @@ a.nav-card[aria-busy='true'] {
   height: 100%;
   border: 0;
 }
+
+/* ── the folio statement (A4) ─────────────────────────────────────────── */
+.folio-statement {
+  color: var(--bp-ink);
+  font-size: 10.5pt;
+}
+.folio-statement h1 {
+  font-size: 18pt;
+  margin: 0 0 2mm;
+}
+.folio-statement h2 {
+  font-size: 13pt;
+  margin: 0 0 5mm;
+}
+.folio-statement .folio-lines {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 5mm 0;
+}
+.folio-statement .folio-lines caption {
+  text-align: left;
+  font-weight: 700;
+  padding-bottom: 2mm;
+}
+.folio-statement .folio-lines td,
+.folio-statement .folio-lines th {
+  padding: 1.5mm 0;
+  border-bottom: 0.2mm solid var(--bp-line);
+  text-align: left;
+}
+.folio-statement .folio-lines td:last-child,
+.folio-statement .folio-lines th:last-child {
+  text-align: right;
+}
+.folio-statement .signature {
+  margin-top: 14mm;
+}

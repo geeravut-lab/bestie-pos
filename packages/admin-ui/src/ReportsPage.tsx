@@ -372,7 +372,9 @@ function ReturnsBlock({
       ? t.returnMethodCash
       : m === 'credit'
         ? t.returnMethodCredit
-        : t.returnMethodManual;
+        : m === 'room'
+          ? t.returnMethodRoom
+          : t.returnMethodManual;
   const reason = (x: string) =>
     x === 'wrong_item'
       ? t.returnReasonWrong

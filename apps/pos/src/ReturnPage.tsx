@@ -34,6 +34,8 @@ type Loaded = {
   lines: SoldLine[];
   payments: PaidByTender[];
   returns: { method: ReturnMethod; amount: number }[];
+  /** A bill charged to a room: is the guest's stay still open? */
+  roomStay: 'open' | 'closed' | null;
   earlier: { id: string; number: string; amount: number }[];
 };
 
@@ -51,6 +53,21 @@ async function loadBill(ctx: PageContext, orderId: string): Promise<Loaded | nul
   ]);
   for (const r of [ord, rec, lines, pays, rlines, rets])
     if (r.error) throw new Error(r.error.message);
+  // a bill charged to a room: is the stay still open? (a failed lookup just means the room route is not offered)
+  let roomStay: 'open' | 'closed' | null = null;
+  if (((pays.data ?? []) as { tender: string }[]).some((p) => p.tender === 'room')) {
+    const ch = await c
+      .from('folio_charges')
+      .select('folio_id, voided_at')
+      .eq('order_id', orderId)
+      .maybeSingle();
+    const row = ch.data as { folio_id?: string; voided_at?: string | null } | null;
+    if (!ch.error && row?.folio_id) {
+      const st = await c.from('folios').select('status').eq('id', row.folio_id).maybeSingle();
+      const status = (st.data as { status?: string } | null)?.status;
+      roomStay = row.voided_at ? 'closed' : status === 'open' ? 'open' : 'closed';
+    }
+  }
   if (!ord.data || !rec.data || ord.data.status !== 'paid') return null;
   const back = new Map<string, number>();
   for (const r of (rlines.data ?? []) as { order_line_id: string; quantity: number }[])
@@ -77,6 +94,7 @@ async function loadBill(ctx: PageContext, orderId: string): Promise<Loaded | nul
       method: r.refund_method,
       amount: num(r.amount),
     })),
+    roomStay,
     earlier: ((rets.data ?? []) as { id: string; number: string; amount: number }[]).map((r) => ({
       id: String(r.id),
       number: String(r.number),
@@ -135,7 +153,9 @@ export function ReturnPage({ ctx, orderId }: { ctx: PageContext; orderId: string
     [data, qty],
   );
   const picked = Object.values(qty).reduce((n, q) => n + q, 0);
-  const routes = data ? usableRoutes(amount, data.payments, data.returns, creditAllowed) : [];
+  const routes = data
+    ? usableRoutes(amount, data.payments, data.returns, creditAllowed, data.roomStay)
+    : [];
   const chosen: ReturnMethod | '' = method && routes.includes(method) ? method : (routes[0] ?? '');
 
   if (!allowed)
@@ -307,13 +327,21 @@ export function ReturnPage({ ctx, orderId }: { ctx: PageContext; orderId: string
                     ? t.returnMethodCash
                     : m === 'credit'
                       ? t.returnMethodCredit
-                      : t.returnMethodManual}{' '}
+                      : m === 'room'
+                        ? t.returnMethodRoom
+                        : t.returnMethodManual}{' '}
                   <span className="muted tabular">
-                    ({formatTHB(routeAvailable(m, data.payments, data.returns), locale)})
+                    (
+                    {formatTHB(
+                      routeAvailable(m, data.payments, data.returns, data.roomStay),
+                      locale,
+                    )}
+                    )
                   </span>
                 </label>
               ))}
               {chosen === 'manual' ? <p className="muted">{t.returnMethodManualHint}</p> : null}
+              {chosen === 'room' ? <p className="muted">{t.returnMethodRoomHint}</p> : null}
             </fieldset>
           ) : null}
 

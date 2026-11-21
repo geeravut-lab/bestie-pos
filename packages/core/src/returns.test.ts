@@ -97,3 +97,26 @@ describe('parseReturnsReport', () => {
     expect(r.rows[0]?.number).toBe('RT-0001');
   });
 });
+
+describe('the room route', () => {
+  const pays = [{ tender: 'room', amount: 21000 }];
+  it('carries what the room took while the stay is open, and nothing else', () => {
+    expect(routeAvailable('room', pays, [], 'open')).toBe(21000);
+    expect(routeAvailable('manual', pays, [], 'open')).toBe(0);
+    expect(routeAvailable('cash', pays, [], 'open')).toBe(0);
+    expect(routeAvailable('room', pays, [{ method: 'room', amount: 5000 }], 'open')).toBe(16000);
+  });
+  it('after check-out only the by-hand route is open', () => {
+    expect(routeAvailable('room', pays, [], 'closed')).toBe(0);
+    expect(routeAvailable('manual', pays, [], 'closed')).toBe(21000);
+  });
+  it('a bill that was not charged to a room has no room route', () => {
+    expect(routeAvailable('room', [{ tender: 'cash', amount: 100 }], [], null)).toBe(0);
+    expect(routeAvailable('manual', [{ tender: 'room', amount: 100 }], [], null)).toBe(0);
+  });
+  it('offers the routes that can carry the amount', () => {
+    expect(usableRoutes(21000, pays, [], false, 'open')).toEqual(['room']);
+    expect(usableRoutes(21000, pays, [], false, 'closed')).toEqual(['manual']);
+    expect(usableRoutes(100, [{ tender: 'cash', amount: 100 }], [], false)).toEqual(['cash']);
+  });
+});

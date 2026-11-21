@@ -13,18 +13,19 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { randomBytes } from 'node:crypto';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const [target, ...rest] = process.argv.slice(2);
 const steps = rest.filter((a) => !a.startsWith('--'));
 const yes = rest.includes('--yes');
 if (!['local', 'remote'].includes(target) || steps.length === 0) {
-  console.error('usage: run.mjs <local|remote> <setup|simulate|retail|cleanup>… [--yes]');
+  console.error('usage: run.mjs <local|remote> <setup|simulate|retail|network|cleanup>… [--yes]');
   process.exit(2);
 }
 const ref = process.env.SUPABASE_PROJECT_REF || 'pqomylchauwecpgqxoad';
 const token = process.env.SUPABASE_ACCESS_TOKEN;
-const password = process.env.DEMO_PASSWORD;
+let password = process.env.DEMO_PASSWORD;
 
 const files = (prefix) =>
   readdirSync(join(here, 'sql'))
@@ -35,6 +36,8 @@ const STEP_FILES = {
   simulate: () => ['00_helpers.sql', ...files('2')],
   // an extra shop (Retail) with sales and product returns, added to an existing demo; safe to run again (it skips what exists)
   retail: () => ['00_helpers.sql', '20_sim_helpers.sql', ...files('3')],
+  // the island network: a second business, Tourist Passes, Points earned at one business and spent at the other (needs migration 63; safe to run again)
+  network: () => ['00_helpers.sql', '20_sim_helpers.sql', ...files('4')],
   cleanup: () => ['00_helpers.sql', ...files('9')],
 };
 
@@ -85,6 +88,13 @@ async function main() {
     if (!STEP_FILES[step]) throw new Error(`unknown step ${step}`);
     if ((step === 'setup' || step === 'retail') && !password)
       throw new Error('set DEMO_PASSWORD (the password every demo account gets)');
+    if (step === 'network' && !password) {
+      // only the two accounts of the second business are new: without the shared demo password they get a random one nobody knows (set a password for them in Supabase Auth, or run this step again after cleanup with DEMO_PASSWORD)
+      password = randomBytes(18).toString('base64url');
+      console.log(
+        '▶ network: DEMO_PASSWORD is not set — the two new Palm Beach accounts get a random password (not shown)',
+      );
+    }
     if (step === 'cleanup' && !yes) {
       console.log(
         'cleanup is DESTRUCTIVE (deletes the demo organisation, its accounts and every record). Re-run with --yes to do it.',

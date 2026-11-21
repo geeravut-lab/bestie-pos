@@ -4,7 +4,7 @@ create schema if not exists demo;
 grant usage on schema demo to authenticated;
 
 create or replace function demo.uid(p_email text) returns uuid language sql stable as $$ select id from auth.users where email = p_email $$;
-create or replace function demo.org() returns uuid language sql stable as $$ select id from public.orgs where name = '[DEMO] Island Group' $$;
+create or replace function demo.org() returns uuid language sql stable as $$ select id from public.orgs where name = coalesce(nullif(current_setting('demo.org_name', true), ''), '[DEMO] Island Group') $$;
 create or replace function demo.store(p_name text) returns uuid language sql stable as $$ select id from public.stores where org_id = demo.org() and name = p_name and deleted_at is null $$;
 create or replace function demo.staff(p_email text) returns uuid language sql stable as $$ select id from public.staff where org_id = demo.org() and user_id = demo.uid(p_email) $$;
 create or replace function demo.device(p_store text, p_name text) returns uuid language sql stable as $$ select id from public.devices where store_id = demo.store(p_store) and name = p_name $$;

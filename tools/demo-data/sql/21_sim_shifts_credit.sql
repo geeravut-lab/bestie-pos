@@ -8,6 +8,16 @@ begin
 
   if not exists (select 1 from public.credit_ledger where org_id = demo.org() and kind = 'topup') then
     -- (customer phone, amount in satang, who takes the cash, shop, till)
+    -- the customer accepts the Credit terms at the counter first (migration 68: no top-up without it)
+    perform demo.run(r.by, format($q$select public.accept_credit_terms(%L, %L)$q$, demo.cust(r.phone), demo.store(r.store)))
+    from (values
+      ('66800000101', 'cashier.kitchen.demo@bestiedemo.example', 'Island Kitchen'),
+      ('66800000102', 'cashier.kitchen.demo@bestiedemo.example', 'Island Kitchen'),
+      ('66800000103', 'cashier.cafe.demo@bestiedemo.example',    'Breeze Café'),
+      ('66800000104', 'cashier.cafe.demo@bestiedemo.example',    'Breeze Café'),
+      ('66800000105', 'reception.spa.demo@bestiedemo.example',   'Lotus Spa'),
+      ('66800000106', 'reception.salon.demo@bestiedemo.example', 'Sunset Salon')
+    ) as r(phone, by, store);
     perform demo.val(r.by, format($q$select public.topup_credit(jsonb_build_object('id', gen_random_uuid(), 'customer_id', %L, 'store_id', %L, 'device_id', %L, 'amount', %s, 'funding', 'cash'))::text$q$,
       demo.cust(r.phone), demo.store(r.store), demo.device(r.store, r.dev), r.amount))
     from (values

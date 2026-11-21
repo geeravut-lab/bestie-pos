@@ -14,6 +14,7 @@ begin
   if exists (select 1 from public.orders where store_id = v_store) then return; end if;
   perform demo.open_shift(c, s, t, 30000);
   -- Liu Wei tops up 1,000.00 Credit in cash
+  perform demo.run(c, format($q$select public.accept_credit_terms(%L, %L)$q$, demo.cust('66800000107'), v_store));
   perform demo.val(c, format($q$select public.topup_credit(jsonb_build_object('id', gen_random_uuid(), 'customer_id', %L, 'store_id', %L, 'device_id', %L, 'amount', 100000, 'funding', 'cash'))::text$q$, demo.cust('66800000107'), v_store, v_dev));
 
   n1 := demo.sell(c, s, t, 'takeaway', null, '[{"n":"เสื้อยืดเกาะพะงัน","q":2},{"n":"หมวกปีกกว้าง","q":1}]', null, 0, c, t, '[{"t":"cash"}]');

@@ -40,6 +40,7 @@ async function loadTables(client: PageContext['client'], storeId: string): Promi
     .from('dining_tables')
     .select('id, name, zone, seats, sort, created_at')
     .eq('store_id', storeId)
+    .eq('kind', 'table')
     .eq('active', true)
     .is('deleted_at', null)
     .order('created_at');

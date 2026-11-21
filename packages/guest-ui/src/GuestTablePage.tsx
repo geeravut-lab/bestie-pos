@@ -236,7 +236,24 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
     <div className="guest-page">
       <GuestHead store={data.storeName} table={data.tableName} />
 
-      {placed ? (
+      {placed && data.kiosk ? (
+        <section className="card guest-sent kiosk-number" role="status">
+          <h2>{t.kioskNumberTitle}</h2>
+          <p className="kiosk-big tabular">{placed.number}</p>
+          <p>{t.kioskPayAtCounter}</p>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              setPlaced(null);
+              clientId.current = newId();
+            }}
+          >
+            {t.kioskNew}
+          </button>
+        </section>
+      ) : null}
+      {placed && !data.kiosk ? (
         <section className="card guest-sent" role="status">
           <h2>{t.gsSentTitle}</h2>
           <p>{placed.status === 'sent' ? t.gsSentKitchen : t.gsSentWaiting}</p>
@@ -270,8 +287,8 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
         </div>
       ) : null}
 
-      <CallStaff token={token} />
-      <ShopInfo token={token} ai={data.ai} />
+      {data.kiosk ? <p className="muted">{t.kioskIntro}</p> : <CallStaff token={token} />}
+      {data.kiosk ? null : <ShopInfo token={token} ai={data.ai} />}
       <FoodFilter token={token} ai={data.ai} filter={diet} onChange={setDiet} />
       {dietActive ? <p className="muted">{t.gsFilterWarning}</p> : null}
 
@@ -376,7 +393,7 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
         ) : null}
       </section>
 
-      {data.bill.lines.length > 0 ? (
+      {!data.kiosk && data.bill.lines.length > 0 ? (
         <section className="card" aria-label={t.gsBillTitle}>
           <h2>{t.gsBillTitle}</h2>
           <ul className="guest-bill">
@@ -401,7 +418,7 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
             <p className="muted">{fmt(t.gsPayReceipt, { number: paid.receipt })}</p>
           ) : null}
         </section>
-      ) : data.pay.enabled && data.bill.lines.length > 0 && data.pay.total > 0 ? (
+      ) : !data.kiosk && data.pay.enabled && data.bill.lines.length > 0 && data.pay.total > 0 ? (
         <section className="card guest-pay" aria-label={t.gsPay}>
           <h2>{t.gsPay}</h2>
           {payNote ? (
@@ -445,7 +462,7 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
         </section>
       ) : null}
 
-      <FeedbackForm token={token} />
+      {data.kiosk ? null : <FeedbackForm token={token} />}
 
       {open ? (
         <ItemSheet

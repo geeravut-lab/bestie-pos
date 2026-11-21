@@ -386,4 +386,21 @@ describe('spa advisor SQL mirror', () => {
     for (const c of DELIVERY_CODES) expect(sql).toContain(`'${c}'`);
     expect(sql).toContain("'room', 'platform'");
   });
+
+  it('kiosk: the module mirror and the rules that make a kiosk differ from a table live in migration 78', () => {
+    const dir = new URL('../../../supabase/migrations/', import.meta.url);
+    const sql = readFileSync(
+      new URL(readdirSync(dir).find((f) => f.endsWith('_kiosk.sql')) ?? '', dir),
+      'utf8',
+    );
+    expect(MODULE_BY_ID.kiosk.plan).toBe('pro');
+    expect(MODULE_BY_ID.kiosk.defaultProfiles).toEqual([]);
+    expect(sql).toContain("s.plan in ('pro', 'resort')");
+    expect(sql).toContain("(s.module_overrides ->> 'kiosk')::boolean");
+    // a kiosk order is its own takeaway bill KS001…, at the takeaway prices, never auto-sent
+    expect(sql).toContain("'takeaway'");
+    expect(sql).toContain("'KS'");
+    expect(sql).toContain("(s.qr_auto_send and t.kind <> ''kiosk'')");
+    expect(sql).toContain("t.kind <> 'kiosk' and ord.table_id = t.id");
+  });
 });

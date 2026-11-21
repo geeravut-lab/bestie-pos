@@ -16,6 +16,8 @@ export type GuestTable = {
   storeName: string;
   tableName: string;
   autoSend: boolean;
+  /** A self-order kiosk (module `kiosk`): every order is its own bill with a queue number, paid at the counter. */
+  kiosk: boolean;
   /** The shop switched the food assistant on (module ai.guest). The filter buttons work without it. */
   ai: boolean;
   menu: GuestMenu;
@@ -108,6 +110,7 @@ export async function loadGuestTable(
         storeName: nameOf(b.store),
         tableName: nameOf(b.table),
         autoSend: b.autoSend === true,
+        kiosk: b.kiosk === true,
         ai: b.ai === true,
         menu: parseGuestMenu(b.menu),
         bill: parseGuestBill(b.bill),

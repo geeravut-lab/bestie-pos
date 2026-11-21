@@ -2466,3 +2466,15 @@ a.nav-card[aria-busy='true'] {
 .folio-statement .signature {
   margin-top: 14mm;
 }
+
+/* ── the self-order kiosk: the queue number is the biggest thing on the screen ── */
+.kiosk-number {
+  text-align: center;
+}
+.kiosk-big {
+  font-size: clamp(3rem, 18vw, 7rem);
+  font-weight: 800;
+  line-height: 1;
+  margin: 0.2em 0;
+  color: var(--bp-ink);
+}

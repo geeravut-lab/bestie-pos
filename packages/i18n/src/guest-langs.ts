@@ -378,6 +378,11 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     kbkDepositSoFar: 'Заведение получило {paid} из {due}.',
     kbkDepositCheck: 'Проверить, получило ли заведение депозит',
     kbkCancelNote: 'При отмене заведение распорядится депозитом согласно своим правилам.',
+    kioskNumberTitle: 'Ваш номер в очереди',
+    kioskPayAtCounter: 'Оплатите на кассе и ждите, пока назовут этот номер.',
+    kioskNew: 'Сделать новый заказ',
+    kioskIntro: 'Выберите блюда и нажмите «Отправить заказ». Оплата на кассе.',
+    kiScan: 'Сканируйте, чтобы заказать',
   },
   he: {
     npTitle: 'כרטיס תייר',
@@ -744,6 +749,11 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     kbkDepositSoFar: 'העסק קיבל {paid} מתוך {due}.',
     kbkDepositCheck: 'בדיקה אם העסק קיבל את הפיקדון',
     kbkCancelNote: 'בעת ביטול העסק יטפל בפיקדון לפי המדיניות שלו.',
+    kioskNumberTitle: 'מספר התור שלכם',
+    kioskPayAtCounter: 'שלמו בקופה והמתינו עד שיקראו למספר הזה.',
+    kioskNew: 'הזמנה חדשה',
+    kioskIntro: 'בחרו מהתפריט ולחצו «שלחו הזמנה». משלמים בקופה.',
+    kiScan: 'סרקו כדי להזמין',
   },
   de: {
     npTitle: 'Touristen-Pass',
@@ -1134,6 +1144,12 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     kbkDepositCheck: 'Prüfen, ob die Anzahlung eingegangen ist',
     kbkCancelNote:
       'Bei einer Stornierung verfährt das Lokal mit der Anzahlung nach eigener Regelung.',
+    kioskNumberTitle: 'Ihre Warteschlangennummer',
+    kioskPayAtCounter: 'Bitte an der Kasse zahlen und warten, bis diese Nummer aufgerufen wird.',
+    kioskNew: 'Neue Bestellung',
+    kioskIntro:
+      'Wählen Sie aus der Karte und tippen Sie auf „Bestellung senden“. Bezahlt wird an der Kasse.',
+    kiScan: 'Zum Bestellen scannen',
   },
   zh: {
     npTitle: '游客通行卡',
@@ -1496,5 +1512,10 @@ export const guestOverlays: Record<'ru' | 'he' | 'de' | 'zh', Readonly<Record<st
     kbkDepositSoFar: '店家已收到 {paid}（共 {due}）。',
     kbkDepositCheck: '查看店家是否已收到定金',
     kbkCancelNote: '取消后，店家将按其政策处理定金。',
+    kioskNumberTitle: '您的排队号码',
+    kioskPayAtCounter: '请在柜台付款，并等待叫号。',
+    kioskNew: '重新点餐',
+    kioskIntro: '请选择菜品并点击“提交订单”，在柜台付款。',
+    kiScan: '扫码点餐',
   },
 };

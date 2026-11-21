@@ -277,6 +277,20 @@ describe('spa advisor SQL mirror', () => {
     for (const tag of SPA_TAGS) expect(sql).toContain(`'${tag}'`);
   });
 
+  it('ai.translate and the shift figures: registry and SQL agree', () => {
+    const dir = new URL('../../../supabase/migrations/', import.meta.url);
+    const sql = readFileSync(
+      new URL(readdirSync(dir).find((f) => f.endsWith('_shift_summary_translate.sql')) ?? '', dir),
+      'utf8',
+    );
+    expect(MODULE_BY_ID['ai.translate'].defaultProfiles).toEqual([]);
+    expect(MODULE_BY_ID['ai.translate'].plan).toBe('pro');
+    expect(sql).toContain("(s.module_overrides ->> 'ai.translate')::boolean, false");
+    expect(sql).toContain("s.plan in ('pro', 'resort')");
+    expect(sql).toContain("has_permission(sh.org_id, 'report.view')");
+    expect(sql).toContain('ask_shop_enabled(sh.store_id)');
+  });
+
   it('ai.hair: registry and SQL agree and the photo reaches a model only after a separate consent', () => {
     const dir = new URL('../../../supabase/migrations/', import.meta.url);
     const sql = readFileSync(

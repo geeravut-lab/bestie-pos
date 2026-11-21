@@ -10,7 +10,9 @@ import {
   summarizeShift,
 } from '@bestie/core';
 import type { OrderDoc } from '@bestie/core';
-import { errorText, fmt, formatDateTime, useI18n } from '@bestie/i18n';
+import { explainShift } from '@bestie/admin-ui';
+import type { ShiftExplained } from '@bestie/admin-ui';
+import { AppError, errorText, fmt, formatDateTime, useI18n } from '@bestie/i18n';
 import type { ErrorKey } from '@bestie/i18n';
 import { AsyncButton } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
@@ -33,6 +35,9 @@ export function ShiftPage({ ctx }: { ctx: PageContext }) {
   const paidToday = usePaidOrders(storeId, today);
   const paidOpened = usePaidOrders(storeId, openedDay);
   const canRun = ctx.isOwner || ctx.permissions.includes('shift.open_close');
+  const canExplain =
+    (ctx.isOwner || ctx.permissions.includes('report.view')) &&
+    (ctx.isModuleOn ? ctx.isModuleOn('ai.assistant') : false);
 
   if (!storeId)
     return (
@@ -89,6 +94,7 @@ export function ShiftPage({ ctx }: { ctx: PageContext }) {
                   {varianceText(t, s.variance ?? 0, locale)}
                 </span>
               </div>
+              {canExplain ? <ExplainShift ctx={ctx} shiftId={s.id} /> : null}
             </li>
           ))}
         </ul>
@@ -312,3 +318,46 @@ function useNow(ms: number): number {
 
 /** The wall clock, read only inside event handlers (kept out of render on purpose). */
 const clock = (): number => Date.now();
+
+/** "Let AI explain this shift": the figures come from the database; the model only explains and the numbers it quotes are checked against them. */
+function ExplainShift({ ctx, shiftId }: { ctx: PageContext; shiftId: string }) {
+  const { t } = useI18n();
+  const [res, setRes] = useState<ShiftExplained | null>(null);
+  const [failed, setFailed] = useState<ErrorKey | 'generic' | null>(null);
+  const run = async () => {
+    setFailed(null);
+    try {
+      setRes(await explainShift(ctx.client, shiftId));
+    } catch (e) {
+      setFailed(e instanceof AppError ? e.code : 'generic');
+    }
+  };
+  return (
+    <div>
+      <div className="actions">
+        <AsyncButton variant="secondary" onClick={run}>
+          {t.shiftExplain}
+        </AsyncButton>
+      </div>
+      {failed ? (
+        <Notice kind="error">{failed === 'generic' ? t.shiftExplainFailed : t[failed]}</Notice>
+      ) : null}
+      {res && !res.available ? <Notice kind="info">{t.shiftExplainOff}</Notice> : null}
+      {res && res.available ? (
+        <section className="card admin-card" aria-label={t.shiftExplainTitle}>
+          <h3>{t.shiftExplainTitle}</h3>
+          {res.unverified.length > 0 ? (
+            <Notice kind="info">
+              {fmt(t.shiftExplainWarn, { numbers: res.unverified.join(', ') })}
+            </Notice>
+          ) : null}
+          <p>{res.summary}</p>
+          <details>
+            <summary>{t.shiftExplainFigures}</summary>
+            <pre className="muted">{res.figures}</pre>
+          </details>
+        </section>
+      ) : null}
+    </div>
+  );
+}

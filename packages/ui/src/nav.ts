@@ -62,6 +62,7 @@ export const ART_IDS = [
   'book',
   'calendar',
   'karaoke',
+  'translate',
   'pay',
   'home',
   'account',
@@ -126,6 +127,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   item('book', '/g/book', 'navBook', 'hintBook', ['appointments']),
   item('calendar', '/calendar', 'navCalendar', 'hintCalendar', ['appointments']),
   item('karaoke', '/karaoke', 'navKaraoke', 'hintKaraoke', ['karaoke.rooms']),
+  item('translate', '/translate', 'navTranslate', 'hintTranslate', ['ai.translate']),
   item('pay', '/g/pay', 'navPay', 'hintPay', ['tender.promptpay']),
 ];
 
@@ -147,12 +149,22 @@ export const ROLE_LAYOUT: Readonly<Record<AppRole, RoleLayout>> = {
   cashier: {
     center: 'sell',
     tabs: ['home', 'orders', 'tables'],
-    cards: ['sell', 'tables', 'queue', 'karaoke', 'orders', 'customers', 'shift', 'receipts'],
+    cards: [
+      'sell',
+      'tables',
+      'queue',
+      'karaoke',
+      'orders',
+      'customers',
+      'shift',
+      'receipts',
+      'translate',
+    ],
   },
   waiter: {
     center: 'takeOrder',
     tabs: ['home', 'tables', 'ready'],
-    cards: ['takeOrder', 'tables', 'ready', 'customers'],
+    cards: ['takeOrder', 'tables', 'ready', 'customers', 'translate'],
   },
   kitchen: { tabs: ['home', 'kitchen', 'ready'], cards: ['kitchen'] },
   manager: {

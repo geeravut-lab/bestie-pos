@@ -128,3 +128,62 @@ export async function askShop(
     range: { from: String(r.from ?? ''), to: String(r.to ?? '') },
   };
 }
+
+export type ShiftExplained =
+  | { available: true; summary: string; unverified: string[]; figures: string }
+  | { available: false };
+
+/** "Explain this shift": the figures come from the database, a model only explains them, the numbers of its answer are checked. */
+export async function explainShift(
+  client: SupabaseClient,
+  shiftId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ShiftExplained> {
+  const { data } = await client.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new AppError('err_forbidden');
+  const res = await fetchImpl('/api/shift/summary', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ shift_id: shiftId }),
+  });
+  if (res.status === 403) throw new AppError('err_forbidden');
+  if (res.status === 429) throw new AppError('err_rate_limited');
+  if (!res.ok) throw new AppError('err_unknown');
+  const b = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!b || b.available !== true || typeof b.summary !== 'string') return { available: false };
+  return {
+    available: true,
+    summary: b.summary,
+    unverified: Array.isArray(b.unverified)
+      ? b.unverified.filter((x): x is string => typeof x === 'string')
+      : [],
+    figures: typeof b.figures === 'string' ? b.figures : '',
+  };
+}
+
+export const TRANSLATE_TARGETS = ['th', 'en', 'ru', 'he', 'de', 'zh'] as const;
+export type TranslateTarget = (typeof TRANSLATE_TARGETS)[number];
+
+/** Translate a short text for staff. Null = the service is not set up. Nothing is stored by the server. */
+export async function translateText(
+  client: SupabaseClient,
+  storeId: string,
+  text: string,
+  to: TranslateTarget,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string | null> {
+  const { data } = await client.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new AppError('err_forbidden');
+  const res = await fetchImpl('/api/staff/translate', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ store_id: storeId, text, to }),
+  });
+  if (res.status === 403) throw new AppError('err_forbidden');
+  if (res.status === 429) throw new AppError('err_rate_limited');
+  if (!res.ok) throw new AppError('err_unknown');
+  const b = (await res.json().catch(() => null)) as { available?: unknown; text?: unknown } | null;
+  return b && b.available === true && typeof b.text === 'string' ? b.text : null;
+}

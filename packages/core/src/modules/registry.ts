@@ -50,6 +50,7 @@ export const MODULE_IDS = [
   'ai.assistant',
   'ai.guest',
   'ai.hair',
+  'ai.translate',
   'line.notify',
 ] as const;
 
@@ -185,6 +186,7 @@ export const MODULES: readonly ModuleDef[] = [
   { id: 'ai.assistant', dependsOn: [], defaultProfiles: [], plan: 'pro', phase: 1 },
   { id: 'ai.guest', dependsOn: ['order.qr'], defaultProfiles: [], plan: 'pro', phase: 1 },
   { id: 'ai.hair', dependsOn: ['booking.online'], defaultProfiles: [], plan: 'pro', phase: 3 },
+  { id: 'ai.translate', dependsOn: [], defaultProfiles: [], plan: 'pro', phase: 3 },
   { id: 'line.notify', dependsOn: [], defaultProfiles: [], plan: 'basic', phase: 1 },
 ];
 

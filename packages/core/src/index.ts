@@ -65,3 +65,4 @@ export * from './creditTerms';
 export * from './commission';
 export * from './packages';
 export * from './karaoke';
+export * from './shiftFigures';

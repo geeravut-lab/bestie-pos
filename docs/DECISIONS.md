@@ -203,6 +203,8 @@
 
 - 2026-11-22 — **Guide set and coverage checklists.** Four Thai PDFs are generated from code (`tools/staff-guide`, `tools/quick-guides`, `tools/accounts-guide`, `tools/e2e-guide`, plus the customer guide) so they can be rebuilt when features change. Every guide ends with a **coverage table** that maps each registry module and each screen to a chapter or test flow, so a feature without a guide stands out; the staff guide's screenshots follow the device each role really uses (tablet for counter / kitchen / front desk, phone and small tablet for order takers). The crypto top-up is documented for both sides (counter and owner) with its legal gate stated first: off by default, needs the module, Credit on, `legalSignOff.cryptoTopup`, KYC and two-person wallet change; Credit funded by crypto has no cash-out and crypto is never a checkout tender. The test guide's crypto flow (T35) uses test networks only.
 
+- 2026-11-22 — **Guide file naming (owner order).** The short per-shop-type guides for customers are `docs/CUSTOMER-QUICK-GUIDES.pdf` (pictures in `docs/customer-quick-guides/`), not `QUICK-GUIDES.pdf`; use this name from now on. Guide files say who they are for: `CUSTOMER-GUIDE.pdf`, `CUSTOMER-QUICK-GUIDES.pdf`, `STAFF-GUIDE.pdf`, `STAFF-QUICK-GUIDES.pdf`, `E2E-TEST-GUIDE.pdf`, `TEST-ACCOUNTS.pdf`.
+
 ## Proposed (confirm)
 - Live sync = Supabase Realtime "ping" topics + refetch, per docs/LIVE-SYNC-KNOWLEDGE.md (adapted from Next.js `router.refresh()` to React Query/refetch).
 - Vercel layout: ONE Vercel project rooted at `apps/pos` serves `bestie-pos.vercel.app` (login, role home, POS, SSO callback). `apps/admin` and `apps/guest` get their own Vercel projects/URLs later (or are folded in as routes) — see Open questions.

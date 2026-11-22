@@ -1,4 +1,4 @@
-// Builds docs/QUICK-GUIDES.pdf (one A5 page per shop type, Thai, for printing at the shop) and docs/quick-guides/*.jpg
+// Builds docs/CUSTOMER-QUICK-GUIDES.pdf (one A5 page per shop type, Thai, for printing at the shop) and docs/customer-quick-guides/*.jpg
 // (the same pages as pictures to send through LINE). Phone screenshots come from tools/customer-guide/shots.
 // Run: node tools/quick-guides/build.mjs   (needs Playwright's Chromium and pdftoppm for the pictures)
 import { readFileSync, existsSync, mkdirSync } from 'node:fs';
@@ -200,7 +200,7 @@ const html = `<!doctype html><html lang="th"><head><meta charset="utf-8"><title>
 ).join('')}</body></html>`;
 
 const out = join(root, 'docs');
-mkdirSync(join(out, 'quick-guides'), { recursive: true });
+mkdirSync(join(out, 'customer-quick-guides'), { recursive: true });
 const { chromium } = require(
   process.env.PW_PATH || join(root, 'node_modules/.pnpm/playwright@1.63.0/node_modules/playwright'),
 );
@@ -209,31 +209,31 @@ const page = await browser.newPage();
 await page.setContent(html, { waitUntil: 'load' });
 await page.evaluate(() => globalThis.document.fonts.ready);
 await page.pdf({
-  path: join(out, 'QUICK-GUIDES.pdf'),
+  path: join(out, 'CUSTOMER-QUICK-GUIDES.pdf'),
   width: '148mm',
   height: '210mm',
   printBackground: true,
 });
 await browser.close();
 // pictures for LINE (one per shop type)
-const tmp = join(out, 'quick-guides', '_p');
+const tmp = join(out, 'customer-quick-guides', '_p');
 execFileSync('pdftoppm', [
   '-r',
   '150',
   '-jpeg',
   '-jpegopt',
   'quality=85',
-  join(out, 'QUICK-GUIDES.pdf'),
+  join(out, 'CUSTOMER-QUICK-GUIDES.pdf'),
   tmp,
 ]);
 const { readdirSync, renameSync } = await import('node:fs');
-const files = readdirSync(join(out, 'quick-guides'))
+const files = readdirSync(join(out, 'customer-quick-guides'))
   .filter((f) => f.startsWith('_p'))
   .sort();
 files.forEach((f, i) =>
   renameSync(
-    join(out, 'quick-guides', f),
-    join(out, 'quick-guides', `${i + 1}-${PAGES[i].key}.jpg`),
+    join(out, 'customer-quick-guides', f),
+    join(out, 'customer-quick-guides', `${i + 1}-${PAGES[i].key}.jpg`),
   ),
 );
 console.log('done', PAGES.length, 'pages');

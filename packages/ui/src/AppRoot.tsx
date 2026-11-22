@@ -39,6 +39,8 @@ export type AppRootProps = {
   brand?: Brand;
   /** Admin-uploaded home-card pictures by card id (docs/UX-DESIGN.md §7). Missing = built-in illustration. */
   cardImages?: Record<string, string>;
+  /** Called whenever the screen changes (usage analytics). */
+  onPathChange?: (path: string) => void;
 };
 
 /** Roles each app can preview until sign-in + roles arrive (Phase 1 §12). First = default. */
@@ -77,9 +79,23 @@ const demoStore = (profile: PreviewProfile): StoreModuleConfig => ({
   legalSignOff: { cryptoTopup: false },
 });
 
-function Frame({ app, live, gate, renderPage, headerExtra, cardImages }: AppRootProps) {
+function Frame({
+  app,
+  live,
+  gate,
+  renderPage,
+  headerExtra,
+  cardImages,
+  onPathChange,
+}: AppRootProps) {
   const { t } = useI18n();
   const location = useLocation();
+  const liveNow = Boolean(live);
+  useEffect(() => {
+    if (liveNow) onPathChange?.(location.pathname);
+    // the callback is created once per sign-in; re-running on the path (and on sign-in) is the contract
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, liveNow]);
   const navigate = useNavigate();
   const [pending, startTransition] = useTransition();
   const [target, setTarget] = useState<string | null>(null);

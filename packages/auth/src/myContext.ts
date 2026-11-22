@@ -128,7 +128,7 @@ export function appRoleFor(
  * "my role" and a cashier saw the owner's home screen and carried the owner's permissions in the screens.
  */
 export async function loadMyContext(client: SupabaseClient, userId: string): Promise<MyContext> {
-  const [profile, staff, stores, admin] = await Promise.all([
+  const [profile, staff, stores, admin, flags] = await Promise.all([
     client.from('profiles').select('display_name, language').maybeSingle(),
     client
       .from('staff')
@@ -144,6 +144,7 @@ export async function loadMyContext(client: SupabaseClient, userId: string): Pro
       )
       .is('deleted_at', null),
     client.rpc('is_platform_admin'),
+    client.from('platform_flags').select('module_id'), // modules the platform administrator switched off for everybody
   ]);
   if (staff.error) throw new Error(`staff: ${staff.error.code ?? 'error'}`);
   if (stores.error) throw new Error(`stores: ${stores.error.code ?? 'error'}`);
@@ -152,10 +153,14 @@ export async function loadMyContext(client: SupabaseClient, userId: string): Pro
     .filter((r) => r.user_id === userId) // belt and braces: never trust that the server already filtered
     .map(mapMembership)
     .filter((m): m is Membership => m !== null);
+  const killed: Record<string, boolean> = {};
+  for (const f of (flags.error ? [] : (flags.data ?? [])) as { module_id?: unknown }[])
+    if (typeof f.module_id === 'string') killed[f.module_id] = false; // a platform switch beats the shop's own
   const legalByOrg = new Map(memberships.map((m) => [m.orgId, m.legalSignOff]));
   const storeInfos = ((stores.data ?? []) as Row[])
     .map((r) => mapStore(r, legalByOrg.get(String(r.org_id)) ?? { cryptoTopup: false }))
-    .filter((s): s is StoreInfo => s !== null);
+    .filter((s): s is StoreInfo => s !== null)
+    .map((s) => ({ ...s, moduleOverrides: { ...s.moduleOverrides, ...killed } }));
 
   const p = profile.data as Row | null;
   return {

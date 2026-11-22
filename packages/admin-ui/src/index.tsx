@@ -33,7 +33,9 @@ import { DeliveryPage } from './DeliveryPage';
 import { FolioPage } from './FolioPage';
 import { HqPage } from './HqPage';
 import { BriefPage } from './BriefPage';
+import { AnalyticsPage } from './AnalyticsPage';
 import { CasesPage } from './CasesPage';
+import { FlagsPage } from './FlagsPage';
 import { CreditPage } from './CreditPage';
 import { PointsPage } from './PointsPage';
 import { TimeClockPage } from './TimeClockPage';
@@ -132,6 +134,8 @@ export function adminPages(ctx: PageContext): ReactNode | null {
   if (ctx.path === '/settings/info') return <ShopInfoPage ctx={ctx} />;
   if (ctx.path === '/admin/line') return <LineSettingsPage ctx={ctx} />;
   if (ctx.path === '/admin/cards') return <CardImagesPage ctx={ctx} />;
+  if (ctx.path === '/admin/flags') return <FlagsPage ctx={ctx} />;
+  if (ctx.path === '/admin/analytics') return <AnalyticsPage ctx={ctx} />;
   if (ctx.isPlatformAdmin && ctx.path === '/ai')
     return <AiSettingsPage ctx={ctx} onNavigate={ctx.navigate} />;
   // everyone else who opens the AI card (an owner / manager) gets the assistant for their own shop; the provider settings are the platform administrator's

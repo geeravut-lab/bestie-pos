@@ -7,6 +7,7 @@ import { useI18n } from '@bestie/i18n';
 import { createBrowserClient, readPublicEnv } from '@bestie/supabase';
 import type { PublicEnv } from '@bestie/supabase';
 import { AppRoot, AsyncButton, Icon, Spinner } from '@bestie/ui';
+import { trackPage } from './useUsageTracking';
 import type { AppId } from '@bestie/ui';
 import {
   AccountPage,
@@ -210,6 +211,7 @@ function Inner({
       cardImages={cardImages}
       live={live}
       gate={gate}
+      onPathChange={(p) => trackPage(auth.client, p)}
       renderPage={({ path, navigate }) => {
         if (!live || !my.data) return null;
         if (path === '/account') return <AccountPage />;

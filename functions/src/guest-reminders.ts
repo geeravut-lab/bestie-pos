@@ -84,3 +84,75 @@ export async function sendGuestReminders(args: {
   }
   return { due: due.length, sent };
 }
+
+export type DueTourReminder = {
+  id: string;
+  starts_at: string;
+  guest_name: string;
+  title: { th?: string; en?: string } | null;
+  shop_name: string;
+  seats: number;
+  guest_email: string | null;
+  guest_line_user_id: string | null;
+};
+
+/** The tour reminder, in both languages (the guest's language is not known). */
+export function tourReminderText(r: DueTourReminder): { subject: string; text: string } {
+  const when = new Date(r.starts_at);
+  const fmt = (locale: string) =>
+    new Intl.DateTimeFormat(locale, {
+      dateStyle: 'full',
+      timeStyle: 'short',
+      timeZone: 'Asia/Bangkok',
+    }).format(when);
+  const th = `${LINE_MESSAGES.tourReminder.th}: ${r.shop_name}\n${r.title?.th ?? ''} × ${r.seats}\n${fmt('th-TH')}\n${LINE_MESSAGES.tourReminderCancel.th}`;
+  const en = `${LINE_MESSAGES.tourReminder.en}: ${r.shop_name}\n${r.title?.en ?? r.title?.th ?? ''} × ${r.seats}\n${fmt('en-GB')}\n${LINE_MESSAGES.tourReminderCancel.en}`;
+  return { subject: `${r.shop_name} · ${fmt('en-GB')}`, text: `${th}\n\n${en}` };
+}
+
+/** Sends every due tour reminder once (a day ahead by default), the same rules as the appointment reminders. */
+export async function sendTourReminders(args: {
+  supabaseUrl: string;
+  serviceRoleKey: string;
+  env: Env;
+  line: LineConfig | null;
+  fetchImpl?: typeof fetch;
+  minutes?: number;
+}): Promise<{ due: number; sent: number }> {
+  const f = args.fetchImpl ?? fetch;
+  const due = (await callRpc(
+    args.supabaseUrl,
+    args.serviceRoleKey,
+    'guest_tour_reminders_due',
+    { p_minutes: args.minutes ?? 1440 },
+    f,
+  ).catch(() => [])) as DueTourReminder[];
+  if (!Array.isArray(due)) return { due: 0, sent: 0 };
+  let sent = 0;
+  for (const r of due) {
+    const { subject, text } = tourReminderText(r);
+    let delivered = false;
+    let retry = false;
+    if (r.guest_line_user_id && args.line) {
+      const out = await pushLine(args.line, r.guest_line_user_id, { type: 'text', text }, r.id, f);
+      if (out === 'sent') delivered = true;
+      else if (out === 'retry' || out === 'rate_limited') retry = true;
+    } else if (r.guest_line_user_id) retry = true;
+    if (r.guest_email) {
+      const out: EmailOutcome = await sendEmail({ to: r.guest_email, subject, text }, args.env, f);
+      if (out === 'sent') delivered = true;
+      else if (out === 'failed' || out === 'not_configured') retry = true;
+    }
+    if (delivered || !retry) {
+      await callRpc(
+        args.supabaseUrl,
+        args.serviceRoleKey,
+        'guest_tour_reminder_done',
+        { p_id: r.id },
+        f,
+      ).catch(() => {});
+      if (delivered) sent += 1;
+    }
+  }
+  return { due: due.length, sent };
+}

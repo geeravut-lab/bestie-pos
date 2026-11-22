@@ -137,6 +137,7 @@ export function parseTourSlots(v: unknown): TourSlot[] {
   return out;
 }
 export type TourBooking = {
+  slotId: string;
   id: string;
   guestName: string;
   phone: string | null;
@@ -155,6 +156,7 @@ export function parseTourBookings(v: unknown): TourBooking[] {
     const s = o.status;
     out.push({
       id: str(o.id),
+      slotId: str(o.slot_id),
       guestName: str(o.guest_name),
       phone: str(o.phone) || null,
       seats: num(o.seats),

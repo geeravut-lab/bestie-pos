@@ -3,7 +3,13 @@ import { formatTHB, guestName, tourDepositFor } from '@bestie/core';
 import type { TourOnlineInfo } from '@bestie/core';
 import { GUEST_LANGS, fmt, useI18n } from '@bestie/i18n';
 import { AsyncButton, LangSwitch, Spinner } from '@bestie/ui';
-import { cancelTourBooking, loadTourPage, loadTourStatus, sendTourBooking } from './tourApi';
+import {
+  cancelTourBooking,
+  loadTourPage,
+  loadTourStatus,
+  saveTourContact,
+  sendTourBooking,
+} from './tourApi';
 import type { TourBookOutcome, TourLoad } from './tourApi';
 
 type Done = {
@@ -111,6 +117,7 @@ export function TourBookPage({ token }: { token: string }) {
           token={token}
           done={done}
           payNote={info.payNote}
+          lineBasicId={load.lineBasicId}
           lang={lang}
           onAgain={() => {
             setDone(null);
@@ -135,12 +142,14 @@ function DonePanel({
   token,
   done,
   payNote,
+  lineBasicId,
   lang,
   onAgain,
 }: {
   token: string;
   done: Done;
   payNote: string;
+  lineBasicId: string | null;
   lang: string;
   onAgain: () => void;
 }) {
@@ -230,6 +239,9 @@ function DonePanel({
               </div>
             )
           ) : null}
+          {code ? (
+            <ReminderBox token={token} id={done.id} code={code} lineBasicId={lineBasicId} />
+          ) : null}
           <p className="muted">{t.bkDoneNote}</p>
           {needDeposit ? <p className="muted">{t.kbkCancelNote}</p> : null}
           {problem ? <p role="alert">{t.bkCancelClosed}</p> : null}
@@ -246,6 +258,64 @@ function DonePanel({
         </button>
       </div>
     </section>
+  );
+}
+
+/** How the guest gets a reminder before the trip: add the shop's LINE and send the booking code, and / or leave an e-mail address. */
+function ReminderBox({
+  token,
+  id,
+  code,
+  lineBasicId,
+}: {
+  token: string;
+  id: string;
+  code: string;
+  lineBasicId: string | null;
+}) {
+  const { t } = useI18n();
+  const [email, setEmail] = useState('');
+  const [state, setState] = useState<'idle' | 'saved' | 'bad' | 'failed'>('idle');
+  const save = async () => {
+    setState('idle');
+    const r = await saveTourContact(token, id, code, email.trim());
+    setState(r.ok ? 'saved' : r.error === 'bad_email' ? 'bad' : 'failed');
+  };
+  const lineUrl = lineBasicId ? `https://line.me/R/ti/p/${lineBasicId}` : null;
+  return (
+    <div className="card" aria-label={t.tbkRemindTitle}>
+      <h3>{t.tbkRemindTitle}</h3>
+      {lineUrl ? (
+        <>
+          <p>{fmt(t.bkRemindLine, { code })}</p>
+          <a className="btn btn-secondary" href={lineUrl} target="_blank" rel="noopener noreferrer">
+            {t.bkRemindLineAdd}
+          </a>
+        </>
+      ) : null}
+      <div className="form-row">
+        <label className="label" htmlFor="tbk-remind-email">
+          {t.bkRemindEmail}
+        </label>
+        <input
+          id="tbk-remind-email"
+          className="field"
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          maxLength={120}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <AsyncButton variant="secondary" onClick={save} disabled={email.trim() === ''}>
+          {t.bkRemindEmailSave}
+        </AsyncButton>
+      </div>
+      {state === 'saved' ? <p role="status">{t.tbkRemindEmailSaved}</p> : null}
+      {state === 'bad' ? <p role="alert">{t.bkRemindEmailBad}</p> : null}
+      {state === 'failed' ? <p role="alert">{t.err_load_failed}</p> : null}
+      <p className="muted">{t.tbkRemindNote}</p>
+    </div>
   );
 }
 

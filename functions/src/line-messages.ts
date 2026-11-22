@@ -42,6 +42,14 @@ export const LINE_MESSAGES = {
     th: 'ถ้าต้องการยกเลิก ใช้หน้าจองเดิมพร้อมรหัสจอง',
     en: 'To cancel, use your booking page with your booking code.',
   },
+  tourReminder: {
+    th: 'เตือนทัวร์ที่จองไว้',
+    en: 'Tour reminder',
+  },
+  tourReminderCancel: {
+    th: 'ถ้าต้องการยกเลิก ใช้หน้าจองทัวร์เดิมพร้อมรหัสจอง',
+    en: 'To cancel, use your tour booking page with your booking code.',
+  },
   testTitle: { th: 'ทดสอบการแจ้งเตือน', en: 'Test notification' },
   testSummary: { th: 'การแจ้งเตือนทาง LINE ใช้งานได้ปกติ', en: 'Your LINE notifications are working.' },
   openApp: { th: 'เปิดแอป', en: 'Open the app' },

@@ -151,6 +151,33 @@ describe('<TourBookPage>', () => {
     await waitFor(() => expect(posts(f).some((b) => b.op === 'cancel')).toBe(true));
   });
 
+  it('offers a reminder: the LINE code and an e-mail saved with the booking code', async () => {
+    const f = vi.fn(async (url: unknown, init?: RequestInit) => {
+      if (init?.method === 'POST') {
+        const b = JSON.parse(String(init.body)) as { op: string };
+        if (b.op === 'contact') return json({ ok: true, error: null });
+        return json({
+          result: { ok: true, id: BID, code: 'ABCD1234', deposit_due: 0, hold_until: null },
+        });
+      }
+      if (String(url).includes('&id=')) return json({ status: null });
+      return json({ info: info(), lineBasicId: '@bestie' });
+    });
+    vi.stubGlobal('fetch', f);
+    const user = userEvent.setup();
+    mount();
+    await fill(user);
+    await user.click(screen.getByRole('button', { name: 'Confirm the tour booking' }));
+    expect(await screen.findByText(/send your booking code ABCD1234/)).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Add the shop/ }).getAttribute('href')).toContain(
+      '@bestie',
+    );
+    await user.type(screen.getByLabelText('Or by e-mail'), 'anna@example.com');
+    await user.click(screen.getByRole('button', { name: 'Save the e-mail' }));
+    expect(await screen.findByText(/e-mail you a reminder before the trip/)).toBeTruthy();
+    const c = posts(f).find((x) => x.op === 'contact')!;
+    expect(c).toMatchObject({ id: BID, code: 'ABCD1234', email: 'anna@example.com' });
+  });
   it('tells the guest once the shop has received the deposit', async () => {
     vi.stubGlobal(
       'fetch',

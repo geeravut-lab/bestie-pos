@@ -79,6 +79,58 @@ Read-only. It prints ✅ / ❌ (fix before go-live) / ⚠️ (decide on purpose)
 - [ ] Close the shift: counted cash vs expected, variance recorded
 - [ ] Check `/admin/audit` shows the voids and shift events
 
+## 6b. Newer modules — switch on only what the shop uses, then run its check
+
+Every module is OFF until the owner switches it on at `/modules` (some need the Pro plan and a module they depend on — the page says which). Full step-by-step scripts for every role are in `docs/E2E-TEST-GUIDE.pdf (source: tools/e2e-guide)`.
+
+**Tours** (`slots.booking`, optional `tours.online`)
+- [ ] `/tours`: make a tour (title Thai required, start, length, seats, price per seat, guide) → book seats at the desk → **Check in** → **Open the bill** → pay it (a deposit already taken is on the bill as paid)
+- [ ] **Take a deposit** three ways: PromptPay, card, and **cash into a named till** — open a shift on that till first, close it later and check the cash deposit is in the expected cash
+- [ ] Online booking (`tours.online`): copy the link / QR at the bottom of `/tours`, book from a phone, note the **cancel code**, check the deposit shows as due, record it at the desk, check the guest page says *received*
+- [ ] Leave one online booking unpaid past its hold time: the next tick (`/api/notify/tick`) cancels it and the seats are free again
+- [ ] Cancel one booking that has a deposit and one **no-show**: both appear under *Cancelled and no-show bookings*; a manager keeps one deposit as a fee and refunds the other (cash refund names a till)
+- [ ] Reminder: after booking online add an e-mail (and the shop's LINE with the booking code); a counter booking: *Set up the guest reminder*. Needs `RESEND_API_KEY` + `EMAIL_FROM` (test mode: `EMAIL_REDIRECT_TO`) and the scheduler **(owner)**
+
+**Waiting list, time clock, stamp cards, promotions**
+- [ ] `/waitlist`: add two parties, seat one, mark one *left*; the quoted wait and the table turnover report make sense
+- [ ] `/timeclock`: clock in / out with the PIN of two people, plan a shift, download the timesheet CSV; the kitchen account can use it too
+- [ ] `/stamps`: a stamp card (free item after N stamps) and a day pass; pay a bill for a member, see the stamp, use the free item on the next bill (the line goes to price 0), void it and check the stamp comes back
+- [ ] `/promotions`: a happy-hour promotion; try one that sells below cost — it is saved OFF until forced; on the order screen the running promotion changes the unsent lines
+- [ ] Manager discount: a cashier asks, a manager types their PIN; a wrong PIN is refused, five wrong tries lock it
+
+**Stock, menu profit, smart operations**
+- [ ] `/stock`: items, goods in, waste with a reason, count; a supplier and a purchase order received in two parts; a transfer between two shops
+- [ ] `/menu-profit`, `/kpi`, `/stock/insights`: the numbers match a hand check of one dish / one day
+- [ ] Bad feedback (rating 1–2 on a table page) opens a case in `/cases`; acknowledge, resolve, reopen
+- [ ] `/brief` (business manager) and **Ask my shop** (`/ask`): numbers in the answer match the reports; without an AI key the page says so **(owner: keys in Vercel)**
+
+**Service shops (salon / spa)**
+- [ ] Calendar booking → arrived → bill → paid; a deposit then a no-show (keep as fee) and a refund; a package sold and a visit used; commission and tips report for a period
+- [ ] Online booking link + reminder by e-mail / LINE; the health form and hair advisor with the consent wording **(lawyer reads the wording first)**
+- [ ] Days off (one-off and weekly) block both the front desk and the online page
+
+**Retail**
+- [ ] Barcodes on items and variants; scan with a handheld scanner and with the camera (Chrome / Android); price labels print; stock count sheet; a return by cash and one onto Credit
+
+**Karaoke**
+- [ ] Room timer start / pause / stop (database clock), a time package, a bill `KR…`; the room QR queue page, add a song by link; online room booking with a deposit and the hold release
+
+**Resort**
+- [ ] `/folio`: rooms with a nightly rate, check in, charge a bill to the room (whole and part), nights posted, a return to the room, check out and the printed statement **(accountant: form of the documents)**
+
+**Delivery, kiosk, online food page, receipts**
+- [ ] `/delivery`: a platform with commission and a token; send a test order to `POST /api/delivery/intake`; close it with *Platform pays*; record a payout
+- [ ] `/kiosk`: a kiosk page and an online-order page; an order makes a bill `KS…` / `WB…` that the cashier pays
+- [ ] E-receipt by e-mail / LINE from the receipt page; customer display (`/display`) on a second screen
+- [ ] Full tax invoice `TI-…` from a receipt of a VAT shop (seller address set at *Settings → Accounting*) **(accountant)**
+
+**Island network and Credit**
+- [ ] Join the network (owner), issue a Tourist Pass at the counter, earn at one business and spend at another; the clearing statement shows both directions
+- [ ] Credit (only after the lawyer allows): terms accepted before the first top-up, top up in cash, spend on a bill, liability report per company
+
+**Platform administrator**
+- [ ] `/admin/flags`: switch a module off for every shop and back; `/admin/analytics`: counts appear after some use; `/ai`: provider and model per task with the Test button; `/admin/line`: the LINE connection check
+
 ## 7. Go-live
 
 - [ ] Staff know: PIN login, lock button, what to do offline (cash only; card / PromptPay need signal)

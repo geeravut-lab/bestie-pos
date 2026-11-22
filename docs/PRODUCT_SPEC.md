@@ -91,6 +91,13 @@ need appointments); enabling one auto-enables its dependencies. Disabling hides 
 | Network points + CRM | ● | ● | ● | ● | ● | ● | Basic |
 | Karaoke rooms: timer + time billing (profile Karaoke only; ○ elsewhere) | ○ | ○ | – | – | ○ | – | Basic |
 | Karaoke song queue from guests' phones (needs rooms) | – | – | – | – | – | – | Pro |
+| Stamp cards and day passes (free item) | ○ | ● | – | – | – | ○ | Basic |
+| LINE promotions to members who agreed | ○ | ○ | ○ | ○ | ○ | ○ | Pro |
+| Integration hub (API keys, webhooks, accountant CSV) | ○ | ○ | ○ | ○ | ○ | ○ | Pro |
+| Waiting list + table turnover | ● | ● | – | – | – | – | Basic |
+| Staff time clock + shift schedule | ○ | ○ | ○ | ○ | ○ | ○ | Basic |
+| AI business manager (morning brief, action centre) | ○ | ○ | ○ | ○ | ○ | ○ | Pro |
+| Tours: slots with seats, guide, check-in, deposit | – | – | – | – | – | – | Pro (default for the Tours profile) |
 | Karaoke room booking online with a deposit (needs rooms; off by default) | – | – | – | – | – | – | Pro |
 
 ## 6. Core features (benchmark-derived)

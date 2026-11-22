@@ -1,5 +1,5 @@
-import { detectImageType } from './brand';
-import type { BrandImageMime } from './brand';
+import { detectImageType } from './brand.js';
+import type { BrandImageMime } from './brand.js';
 
 /** Admin-uploaded replacements for the home-card illustrations (docs/UX-DESIGN.md §7). */
 export type CardImage = { mime: BrandImageMime; version: number };

@@ -289,7 +289,9 @@ function AddShopCard({ ctx, onAdded }: { ctx: PageContext; onAdded: () => void }
     cafe: t.profileCafe,
     salon: t.profileSalon,
     spa: t.profileSpa,
+    resort: t.profileResort,
     retail: t.profileRetail,
+    tours: t.profileTours,
     karaoke: t.profileKaraoke,
   };
 

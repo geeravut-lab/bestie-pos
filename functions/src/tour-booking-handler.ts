@@ -3,6 +3,7 @@
 //   GET  /api/guest/tour?t=<token>&id=<id>&code=<code>      → { status }    the deposit received? still held?
 //   POST /api/guest/tour { t, op: 'book', slot_id, seats, name, phone, client_id } → { result }
 //   POST /api/guest/tour { t, op: 'cancel', id, code }                             → { result }
+//   POST /api/guest/tour { t, op: 'contact', id, code, email }                     → { ok, error? }  (e-mail for the reminder before the trip; '' removes it)
 // Every rule (module on, notice time, seats left, limits, repeat = same answer) is checked by the database functions; this file only limits the request rate,
 // checks the shapes and talks to them with the service role. The browser never gets a key. Nothing here takes money: the deposit is recorded by the front desk.
 import { createRateLimiter } from './line.js';
@@ -63,7 +64,10 @@ export async function guestTourBookingResponse(
       const r = await rpc(f, supabaseUrl, serviceRoleKey, 'guest_tour_info', { p_token: token });
       if (!r.ok) return reply({ error: 'server_error' }, 502);
       const info = parseTourOnlineInfo(r.data);
-      return info ? reply({ info }) : reply({ error: 'not_found' }, 404);
+      // the Official Account a guest can add as a friend to get a reminder by LINE (absent = LINE is not set up)
+      const basic = env.LINE_BASIC_ID?.trim();
+      const lineBasicId = basic && /^@?[A-Za-z0-9._-]{2,40}$/.test(basic) ? basic : null;
+      return info ? reply({ info, lineBasicId }) : reply({ error: 'not_found' }, 404);
     }
 
     if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
@@ -111,6 +115,25 @@ export async function guestTourBookingResponse(
       return reply({
         result: o.ok === true ? { ok: true } : { ok: false, error: str(o.error, 30) || 'failed' },
       });
+    }
+    if (b.op === 'contact') {
+      if (!allowCancel(`tour-contact:${ip}`)) return reply({ error: 'rate_limited' }, 429);
+      const code = str(b.code, 20);
+      const email = str(b.email, 120);
+      if (typeof b.id !== 'string' || !UUID.test(b.id) || code.length < 4)
+        return reply({ error: 'invalid' }, 422);
+      const r = await rpc(f, supabaseUrl, serviceRoleKey, 'guest_tour_contact', {
+        p_token: b.t,
+        p_id: b.id,
+        p_code: code,
+        p_email: email,
+      });
+      if (!r.ok) return reply({ error: 'server_error' }, 502);
+      const o = (r.data && typeof r.data === 'object' ? r.data : {}) as {
+        ok?: unknown;
+        error?: unknown;
+      };
+      return reply({ ok: o.ok === true, error: typeof o.error === 'string' ? o.error : null });
     }
     return reply({ error: 'invalid' }, 422);
   } catch {

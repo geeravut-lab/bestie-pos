@@ -6,7 +6,8 @@ const obj = (v: unknown): Record<string, unknown> =>
 const API = '/api/guest/tour';
 
 export type TourLoad =
-  { ok: true; info: TourOnlineInfo } | { ok: false; reason: 'not_found' | 'failed' };
+  | { ok: true; info: TourOnlineInfo; lineBasicId: string | null }
+  | { ok: false; reason: 'not_found' | 'failed' };
 
 export async function loadTourPage(
   token: string,
@@ -16,8 +17,10 @@ export async function loadTourPage(
     const res = await fetchImpl(`${API}?t=${encodeURIComponent(token)}`);
     if (res.status === 404) return { ok: false, reason: 'not_found' };
     if (!res.ok) return { ok: false, reason: 'failed' };
-    const info = parseTourOnlineInfo(obj(await res.json().catch(() => null)).info);
-    return info ? { ok: true, info } : { ok: false, reason: 'not_found' };
+    const body = obj(await res.json().catch(() => null));
+    const info = parseTourOnlineInfo(body.info);
+    const basic = typeof body.lineBasicId === 'string' ? body.lineBasicId : null;
+    return info ? { ok: true, info, lineBasicId: basic } : { ok: false, reason: 'not_found' };
   } catch {
     return { ok: false, reason: 'failed' };
   }
@@ -92,5 +95,37 @@ export async function loadTourStatus(
     return parseTourStatus(obj(await res.json().catch(() => null)).status);
   } catch {
     return 'failed';
+  }
+}
+
+export type TourContactResult =
+  { ok: true } | { ok: false; error: 'bad_email' | 'closed' | 'invalid' | 'failed' };
+
+/** Save (or, with an empty string, remove) the e-mail for the reminder before the trip; the booking code is the proof. */
+export async function saveTourContact(
+  token: string,
+  id: string,
+  code: string,
+  email: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<TourContactResult> {
+  try {
+    const res = await fetchImpl(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ t: token, op: 'contact', id, code, email }),
+    });
+    if (!res.ok) return { ok: false, error: 'failed' };
+    const o = obj(await res.json().catch(() => null));
+    if (o.ok === true) return { ok: true };
+    return {
+      ok: false,
+      error:
+        o.error === 'bad_email' || o.error === 'closed' || o.error === 'invalid'
+          ? o.error
+          : 'failed',
+    };
+  } catch {
+    return { ok: false, error: 'failed' };
   }
 }

@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { sendEmail } from './email.js';
-import { reminderText, sendGuestReminders } from './guest-reminders.js';
-import type { DueReminder } from './guest-reminders.js';
+import {
+  reminderText,
+  sendGuestReminders,
+  sendTourReminders,
+  tourReminderText,
+} from './guest-reminders.js';
+import type { DueReminder, DueTourReminder } from './guest-reminders.js';
 import { handleLineWebhook, parseGuestCode } from './line.js';
 import type { LineConfig, LineStore } from './line.js';
 import { createHmac } from 'node:crypto';
@@ -132,6 +137,54 @@ describe('sendGuestReminders', () => {
   it('LINE not configured yet: wait, do not mark', async () => {
     const r = await run([due({ guest_line_user_id: 'Uabc123456' })], { line: null });
     expect(r.calls.some((c) => c.includes('guest_reminder_done'))).toBe(false);
+  });
+});
+
+describe('tour reminders', () => {
+  const tour = (over: Partial<DueTourReminder> = {}): DueTourReminder => ({
+    id: '6a7f3c1e-0000-4000-8000-000000000009',
+    starts_at: '2026-12-01T02:00:00Z',
+    guest_name: 'Anna',
+    title: { th: 'ดำน้ำ', en: 'Snorkel' },
+    shop_name: 'Island Tours',
+    seats: 2,
+    guest_email: null,
+    guest_line_user_id: null,
+    ...over,
+  });
+  it('is bilingual and names the shop, the tour, the seats and the Bangkok time', () => {
+    const { subject, text } = tourReminderText(tour());
+    expect(text).toContain('Island Tours');
+    expect(text).toContain('Snorkel × 2');
+    expect(text).toContain('ดำน้ำ × 2');
+    expect(text).toMatch(/09:00/); // 02:00Z = 09:00 in Bangkok
+    expect(subject).toContain('Island Tours');
+  });
+  const run = async (rows: DueTourReminder[], push = 200) => {
+    const calls: string[] = [];
+    const f = vi.fn(async (url: string | URL | Request) => {
+      const u = String(url);
+      calls.push(u);
+      if (u.includes('guest_tour_reminders_due')) return json(rows);
+      if (u.includes('guest_tour_reminder_done')) return json(null);
+      if (u.includes('api.line.me')) return new Response('{}', { status: push });
+      return json(null, 404);
+    });
+    const out = await sendTourReminders({
+      supabaseUrl: 'https://db.test',
+      serviceRoleKey: 'srv',
+      env: {},
+      line: cfg,
+      fetchImpl: f as never,
+    });
+    return { out, calls };
+  };
+  it('pushes by LINE once and marks it done; a LINE that is down is retried', async () => {
+    const ok = await run([tour({ guest_line_user_id: 'Uabc123456' })]);
+    expect(ok.out).toEqual({ due: 1, sent: 1 });
+    expect(ok.calls.some((c) => c.includes('guest_tour_reminder_done'))).toBe(true);
+    const down = await run([tour({ guest_line_user_id: 'Uabc123456' })], 503);
+    expect(down.calls.some((c) => c.includes('guest_tour_reminder_done'))).toBe(false);
   });
 });
 

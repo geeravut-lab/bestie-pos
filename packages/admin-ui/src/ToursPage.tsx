@@ -54,6 +54,7 @@ export function ToursPage({ ctx }: { ctx: PageContext }) {
     till: string;
   } | null>(null);
   const [settleTill, setSettleTill] = useState('');
+  const [rem, setRem] = useState<{ id: string; email: string; code: string | null } | null>(null);
   const [msg, setMsg] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
 
   const data = useRemote(async () => {
@@ -207,6 +208,26 @@ export function ToursPage({ ctx }: { ctx: PageContext }) {
     setMsg({ kind: 'success', text: t.touSettled });
     reload();
   };
+  const saveReminder = async () => {
+    if (!rem) return;
+    setMsg(null);
+    const r = await ctx.client.rpc('set_tour_contact', {
+      p_booking: rem.id,
+      p_email: rem.email.trim(),
+    });
+    if (r.error) {
+      if (r.error.code === '22023') return setMsg({ kind: 'error', text: t.touRemindBad });
+      return fail(r.error.code);
+    }
+    setMsg({ kind: 'success', text: t.touRemindSaved });
+  };
+  const showCode = async () => {
+    if (!rem) return;
+    setMsg(null);
+    const r = await ctx.client.rpc('tour_guest_code', { p_booking: rem.id });
+    if (r.error || typeof r.data !== 'string') return fail(r.error?.code);
+    setRem({ ...rem, code: r.data });
+  };
   const openBill = async (b: TourBooking) => {
     const r = await ctx.client.rpc('tour_to_order', {
       p: { booking_id: b.id, device_id: d?.till ?? null },
@@ -313,6 +334,17 @@ export function ToursPage({ ctx }: { ctx: PageContext }) {
                                 >
                                   {t.touCancelBooking}
                                 </AsyncButton>
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  onClick={() =>
+                                    setRem(
+                                      rem?.id === b.id ? null : { id: b.id, email: '', code: null },
+                                    )
+                                  }
+                                >
+                                  {t.touRemind}
+                                </button>
                                 {canTake ? (
                                   <button
                                     type="button"
@@ -338,6 +370,35 @@ export function ToursPage({ ctx }: { ctx: PageContext }) {
                               <AsyncButton onClick={() => openBill(b)}>{t.touOpenBill}</AsyncButton>
                             ) : null}
                           </div>
+                          {rem?.id === b.id ? (
+                            <div className="form-inline">
+                              {field(
+                                `rem-e-${b.id}`,
+                                t.touRemindEmail,
+                                <input
+                                  id={`rem-e-${b.id}`}
+                                  type="email"
+                                  inputMode="email"
+                                  maxLength={120}
+                                  value={rem.email}
+                                  onChange={(e) => setRem({ ...rem, email: e.target.value })}
+                                />,
+                              )}
+                              <AsyncButton onClick={saveReminder}>{t.touRemindSave}</AsyncButton>
+                              {b.source === 'staff' ? (
+                                <AsyncButton variant="secondary" onClick={showCode}>
+                                  {t.touRemindCode}
+                                </AsyncButton>
+                              ) : null}
+                              {rem.code ? (
+                                <p role="status">
+                                  <strong className="tabular">
+                                    {fmt(t.touRemindCodeText, { code: rem.code })}
+                                  </strong>
+                                </p>
+                              ) : null}
+                            </div>
+                          ) : null}
                           {dep?.id === b.id ? (
                             <div className="form-inline">
                               {field(

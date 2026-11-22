@@ -150,6 +150,48 @@ describe('POST', () => {
       error: 'too_late',
     });
   });
+  it('saves the e-mail for the reminder with the code as proof, and says when it is refused', async () => {
+    calls.length = 0;
+    const ok = await guestTourBookingResponse(
+      post({ t: TOKEN, op: 'contact', id: BOOKING, code: 'ABCD1234', email: ' a@b.co ' }),
+      env,
+      { fetchImpl: fakeFetch({ guest_tour_contact: { ok: true } }) },
+    );
+    expect(await ok.json()).toEqual({ ok: true, error: null });
+    expect(calls.find((c) => c.fn === 'guest_tour_contact')!.body).toEqual({
+      p_token: TOKEN,
+      p_id: BOOKING,
+      p_code: 'ABCD1234',
+      p_email: 'a@b.co',
+    });
+    const bad = await guestTourBookingResponse(
+      post({ t: TOKEN, op: 'contact', id: BOOKING, code: 'ABCD1234', email: 'x' }),
+      env,
+      { fetchImpl: fakeFetch({ guest_tour_contact: { ok: false, error: 'bad_email' } }) },
+    );
+    expect(await bad.json()).toEqual({ ok: false, error: 'bad_email' });
+    expect(
+      (
+        await guestTourBookingResponse(
+          post({ t: TOKEN, op: 'contact', id: BOOKING, code: 'x' }),
+          env,
+        )
+      ).status,
+    ).toBe(422);
+  });
+  it('the page info says which LINE account to add (only when it is set up)', async () => {
+    const f = fakeFetch({
+      guest_tour_info: { open: true, store_name: 'Tours', settings: {}, slots: [] },
+    });
+    const res = await guestTourBookingResponse(
+      get(`t=${TOKEN}`),
+      { ...env, LINE_BASIC_ID: '@bestie' },
+      { fetchImpl: f },
+    );
+    expect(((await res.json()) as { lineBasicId: string }).lineBasicId).toBe('@bestie');
+    const none = await guestTourBookingResponse(get(`t=${TOKEN}`), env, { fetchImpl: f });
+    expect(((await none.json()) as { lineBasicId: unknown }).lineBasicId).toBeNull();
+  });
   it('database trouble is a 502, other methods 405', async () => {
     const res = await guestTourBookingResponse(post(book), env, {
       fetchImpl: fakeFetch({}, 500),

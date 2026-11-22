@@ -3,7 +3,7 @@
 // Safe to call as often as every minute: everything it does is idempotent (dedupe keys, claim guard).
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { readServerEnv } from './env.js';
-import { sendGuestReminders } from './guest-reminders.js';
+import { sendGuestReminders, sendTourReminders } from './guest-reminders.js';
 import { deliverMarketing, deliverWebhooks } from './growth-deliver.js';
 import { postPmsCharges } from './pms-sync.js';
 import { lineConfig } from './line-handler.js';
@@ -111,6 +111,14 @@ export async function notifyTickResponse(
       line: cfg,
       fetchImpl: f,
     }).catch(() => ({ due: 0, sent: 0 }));
+    // guests who booked a tour and left a LINE / e-mail contact get one reminder about a day before the trip
+    const tourGuests = await sendTourReminders({
+      supabaseUrl,
+      serviceRoleKey,
+      env,
+      line: cfg,
+      fetchImpl: f,
+    }).catch(() => ({ due: 0, sent: 0 }));
     // promotional LINE messages to members who agreed (queued once a day per campaign), and the owners' signed webhooks
     const marketing = await deliverMarketing({
       supabaseUrl,
@@ -173,6 +181,7 @@ export async function notifyTickResponse(
       casesEscalated: typeof casesEscalated === 'number' ? casesEscalated : 0,
       insights: typeof insights === 'number' ? insights : 0,
       guestReminders: guests,
+      tourReminders: tourGuests,
       marketing,
       webhooks,
       clockClosed: typeof clockClosed === 'number' ? clockClosed : 0,

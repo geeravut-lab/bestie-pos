@@ -248,6 +248,24 @@ describe('<ToursPage>', () => {
     expect(within(row).getByText('Online')).toBeTruthy();
     expect(within(row).getByText(/Deposit .*300.* of .*900/)).toBeTruthy();
   });
+  it('sets up the guest reminder: an e-mail, and a one-time LINE code for a counter booking', async () => {
+    const { db } = mount((ctx) => <ToursPage ctx={ctx} />, tables, {
+      tour_guest_code: { data: 'A1B2C3D4' },
+    });
+    await screen.findByText('Snorkel');
+    await userEvent.click(screen.getByRole('button', { name: /Guest list/ }));
+    const row = screen.getByText('Anna').closest('li')!;
+    await userEvent.click(within(row).getByRole('button', { name: 'Set up the guest reminder' }));
+    await userEvent.type(screen.getByLabelText('Guest e-mail'), 'anna@example.com');
+    await userEvent.click(screen.getByRole('button', { name: 'Save the e-mail' }));
+    await waitFor(() => expect(db.rpcs.some((r) => r.fn === 'set_tour_contact')).toBe(true));
+    expect(db.rpcs.find((r) => r.fn === 'set_tour_contact')!.args).toEqual({
+      p_booking: 'b1',
+      p_email: 'anna@example.com',
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Show a LINE code' }));
+    expect(await screen.findByText(/send this code in the chat: A1B2C3D4/)).toBeTruthy();
+  });
   it('lets a manager keep or refund the deposit of a cancelled booking (cash comes out of a till)', async () => {
     const t5 = {
       ...tables,

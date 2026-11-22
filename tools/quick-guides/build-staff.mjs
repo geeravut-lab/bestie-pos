@@ -84,6 +84,48 @@ const PAGES = [
     ],
     ask: '<b>จอครัวไม่เห็นตั๋วของเมนูไหน?</b> เมนูนั้นยังไม่ได้ตั้งสถานี ให้บอกผู้จัดการ · จอครัวไม่รับออเดอร์ ไม่แก้ราคาหรือรายการ · เครื่องพิมพ์เสียไม่ขวางการส่งออเดอร์ จอ KDS ยังเห็นตั๋วเสมอ',
   },
+  {
+    key: 'manager',
+    icon: '🧑‍💼',
+    title: 'ผู้จัดการ',
+    sub: 'แท็บเล็ตหรือคอมพิวเตอร์ · อนุมัติ รายงาน ทีมงาน คืนเงิน',
+    layout: 'grid',
+    shots: [
+      ['g01-home', 'หน้าแรกของผู้จัดการ'],
+      ['g02-reports', 'รายงานยอดขาย'],
+      ['g04-receipt-open', 'ใบเสร็จ: พิมพ์ ใบกำกับภาษี คืนสินค้า'],
+      ['g05-staff', 'ทีมงาน PIN บทบาท'],
+    ],
+    steps: [
+      '<b>อนุมัติหน้าเครื่องแคชเชียร์:</b> พิมพ์ PIN ของตัวเองเมื่อแคชเชียร์ขอ ยกเลิกรายการที่ส่งแล้ว (ต้องมีเหตุผล) หรือส่วนลด % / บาท ระบบบันทึกชื่อผู้อนุมัติ · PIN ผิด 5 ครั้งล็อก 15 นาที',
+      '<b>คืนเงิน/คืนสินค้า:</b> ใบเสร็จ → คืนสินค้า เลือกรายการ เหตุผล และเส้นทาง (เงินสดจากลิ้นชัก / เข้า Credit ของสมาชิก / PromptPay-บัตรคืนมือใน Stripe แล้วกด "คืนแล้ว") ยอดคำนวณโดยระบบ',
+      '<b>เงินที่รอตรวจ:</b> แจ้งเตือน "ต้องตรวจ" = PromptPay/บัตรที่ยอดไม่ตรง เปิดที่ กระทบยอด ห้ามปิดบิลเองจากสลิป · กะที่ส่วนต่างเกินเกณฑ์ก็แจ้งมาที่คุณ',
+      '<b>ทีมงาน:</b> พนักงาน → เชิญด้วยรหัสครั้งเดียว ตั้ง PIN เปลี่ยนบทบาท ปิดการใช้งาน (ตั้ง PIN ให้เจ้าของไม่ได้) · สร้างบทบาทเองได้แต่มอบสิทธิ์ที่ตัวเองไม่มีไม่ได้',
+      '<b>รายงาน:</b> ยอดรายวัน/รายการ/ชั่วโมง/ช่องจ่าย/พนักงาน เลือกร้านเดียวหรือทุกร้าน ส่งออก CSV (มีบันทึก) · สต็อก ใบสั่งซื้อ ตอกบัตร ตารางกะ อยู่ที่เมนูของแต่ละโมดูล',
+    ],
+    ask: '<b>ผู้จัดการทำไม่ได้:</b> เปิดหน้า Crypto (เจ้าของเท่านั้น) · หน้าของผู้ดูแลแพลตฟอร์ม · ตั้งค่าภาษี/บิลและแต้ม/นโยบายบัญชี/โมดูล (เจ้าของ) · <b>Credit ถอนเป็นเงินสดไม่ได้เลย</b> ปรับยอดได้เฉพาะผู้มีสิทธิ์ พร้อมเหตุผล',
+  },
+  {
+    key: 'frontdesk',
+    icon: '💇',
+    title: 'ต้อนรับ ซาลอน / สปา',
+    sub: 'แท็บเล็ตที่เคาน์เตอร์ · นัดหมาย มัดจำ เปิดบิล แฟ้มลูกค้า',
+    layout: 'grid',
+    shots: [
+      ['f01-salon-calendar', 'ปฏิทินซาลอน คอลัมน์ต่อช่าง'],
+      ['f03-salon-booking-open', 'เปิดนัด: มัดจำ ทิป เปิดบิล'],
+      ['f05-spa-calendar', 'ปฏิทินสปา ห้อง/เตียง'],
+      ['f04-client-record', 'แฟ้มลูกค้า ฟอร์มสุขภาพ'],
+    ],
+    steps: [
+      '<b>จอง:</b> ปฏิทิน → แตะช่องของช่าง/ห้อง เลือกบริการ (ความยาวและราคาเติมให้) ใส่ชื่อลูกค้า (เลือกเป็นสมาชิกได้) ถ้าเวลาชนกับนัด/วันหยุด/พัก ระบบปฏิเสธ (ติดกันได้)',
+      '<b>มัดจำ:</b> กด "รับมัดจำ" (แนะนำ 30%) เงินสดเข้าลิ้นชัก / PromptPay-โอน / บัตร ได้ใบรับมัดจำ DP-… พิมพ์ 80 มม.',
+      '<b>วันนัด:</b> สถานะเดินหน้าอย่างเดียว ยืนยัน → มาถึง → กำลังบริการ → เสร็จ · มาถึงแล้วกด <b>เปิดบิล</b> (AP001…) มัดจำหักเป็นส่วนที่จ่ายแล้ว รับชำระส่วนที่เหลือ',
+      '<b>เตือนลูกค้า:</b> ใส่อีเมล หรือกด "รหัสครั้งเดียว" ให้ลูกค้าส่งใน LINE ของร้าน ระบบเตือนก่อนนัดแล้วลบข้อมูลติดต่อ · จองเป็นกลุ่ม 2–8 คน ที่ "จองกลุ่ม"',
+      '<b>สปา:</b> กรอกฟอร์มสุขภาพ<b>พร้อมลูกค้า</b> (ติ๊กยินยอม พิมพ์ชื่อเต็มเป็นลายเซ็น) แก้ไม่ได้ ถ้าต้องแก้ให้ทำฉบับใหม่ · รูปก่อน/หลัง ต้องติ๊กยินยอมของลูกค้าก่อนเสมอ',
+    ],
+    ask: '<b>ขอผู้จัดการ:</b> ยึดมัดจำของนัดที่ยกเลิก/ไม่มา หรือคืนมัดจำ · ลบแฟ้ม/ฟอร์มสุขภาพตามคำขอลูกค้า · ตั้งวันหยุดช่าง · อัตราคอมมิชชัน · รูปผมที่ลูกค้าส่งถูกลบเองหลังนัดจบ ห้ามเก็บสำเนาไว้ที่อื่น',
+  },
 ];
 
 const css = `
@@ -97,11 +139,11 @@ const css = `
 .head .t{font-size:20pt;font-weight:800;line-height:1.15}.head .s{font-size:10pt;opacity:.95;margin-top:1mm}
 .shots{display:flex;gap:3mm;margin:4.5mm 0 3mm}.shots figure{margin:0;flex:1;min-width:0}
 .frame{border:1px solid #bcd3d1;border-radius:2.5mm;overflow:hidden;box-shadow:0 1px 3px rgba(15,45,74,.2)}.frame img{width:100%;display:block}
-.grid{flex-wrap:wrap}.grid figure{flex:0 0 calc(50% - 1.5mm)}.grid .frame{height:44mm}.grid img{object-fit:cover;object-position:top}
+.grid{flex-wrap:wrap}.grid figure{flex:0 0 calc(50% - 1.5mm)}.grid .frame{height:33mm}.grid img{object-fit:cover;object-position:top}
 .phones .frame{height:84mm}.phones img{object-fit:cover;object-position:top;height:100%}
 .wide{flex-direction:row}.wide .frame{height:62mm}.wide img{object-fit:cover;object-position:top}
 figcaption{font-size:7.4pt;text-align:center;color:#33495e;margin-top:1mm;line-height:1.25}
-ol{margin:2mm 0 0;padding:0;list-style:none;counter-reset:s}ol li{counter-increment:s;position:relative;padding-left:8mm;margin:1.4mm 0;font-size:9.2pt;line-height:1.4}
+ol{margin:2mm 0 0;padding:0;list-style:none;counter-reset:s}ol li{counter-increment:s;position:relative;padding-left:8mm;margin:1.2mm 0;font-size:8.9pt;line-height:1.38}
 ol li::before{content:counter(s);position:absolute;left:0;top:0;width:5.6mm;height:5.6mm;border-radius:50%;background:var(--acc);color:#fff;font-weight:800;font-size:8pt;text-align:center;line-height:5.6mm}
 .ask{position:absolute;left:9mm;right:9mm;bottom:14mm;background:#fff6e0;border:1px solid #f1d28a;border-left:3pt solid #e8a400;border-radius:2mm;padding:2mm 3mm;font-size:8pt;line-height:1.4}
 .foot{position:absolute;left:9mm;right:9mm;bottom:5mm;display:flex;justify-content:space-between;font-size:7.5pt;color:#566}

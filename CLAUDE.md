@@ -105,6 +105,7 @@ Decisions log: @docs/DECISIONS.md
   `pnpm check` (everything CI runs) · `pnpm brand:build` (re-rasterise default logo/favicons).
 - Colours: only in `packages/ui/src/theme.css`, everywhere else `var(--bp-*)`. Bright fills (`brand`,
   `accent`, `sun`) carry **ink** text only — never white. Contrast is unit-tested.
+- Guide PDFs live in `docs/` and are named for their reader: `CUSTOMER-GUIDE.pdf`, `CUSTOMER-QUICK-GUIDES.pdf` (never `QUICK-GUIDES.pdf`), `STAFF-GUIDE.pdf`, `STAFF-QUICK-GUIDES.pdf`, `E2E-TEST-GUIDE.pdf`, `TEST-ACCOUNTS.pdf`.
 - Strings: every user-facing string (incl. `aria-label`, `alt`, `placeholder`) lives in
   `packages/i18n/src/dict.ts`. Thai literals elsewhere in `.ts/.tsx` fail lint.
 - Secrets: never in git, never with a `VITE_`/`NEXT_PUBLIC_`/`PUBLIC_` prefix. See docs/ENVIRONMENT.md.

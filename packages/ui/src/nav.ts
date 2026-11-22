@@ -57,6 +57,7 @@ export const ART_IDS = [
   'audit',
   'line',
   'analytics',
+  'platformAdmins',
   'guestMenu',
   'pass',
   'book',
@@ -129,6 +130,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   item('audit', '/admin/audit', 'navAudit', 'hintAudit'),
   item('line', '/admin/line', 'navLine', 'hintLine'),
   item('analytics', '/admin/analytics', 'navAnalytics', 'hintAnalytics'),
+  item('platformAdmins', '/admin/platform-admins', 'navPlatformAdmins', 'hintPlatformAdmins'),
   item('guestMenu', '/g/menu', 'navGuestMenu', 'hintGuestMenu'),
   item('pass', '/g/pass', 'navPass', 'hintPass', ['loyalty.network']),
   item('book', '/g/book', 'navBook', 'hintBook', ['appointments']),
@@ -260,7 +262,7 @@ export const ROLE_LAYOUT: Readonly<Record<AppRole, RoleLayout>> = {
   },
   platformAdmin: {
     tabs: ['home', 'branding', 'flags'],
-    cards: ['branding', 'flags', 'ai', 'line', 'analytics'],
+    cards: ['branding', 'flags', 'ai', 'line', 'analytics', 'platformAdmins'],
   },
   guest: {
     center: 'guestMenu',
@@ -312,7 +314,14 @@ export function activeNavId(
 }
 
 /** The platform administrator's pages, reachable from any app: they are not tied to a shop or to its modules. */
-export const PLATFORM_CARDS: readonly ArtId[] = ['branding', 'flags', 'ai', 'line', 'analytics'];
+export const PLATFORM_CARDS: readonly ArtId[] = [
+  'branding',
+  'flags',
+  'ai',
+  'line',
+  'analytics',
+  'platformAdmins',
+];
 
 /** The cards of a role; a platform administrator also gets the platform pages next to the ones of their shop role. */
 export function layoutFor(role: AppRole, platformAdmin = false): RoleLayout {

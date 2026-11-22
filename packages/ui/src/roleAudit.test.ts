@@ -67,7 +67,14 @@ const NEEDS: Partial<Record<ArtId, readonly string[] | 'owner'>> = {
   billing: 'owner',
   hub: 'owner',
 };
-const PLATFORM: readonly ArtId[] = ['branding', 'flags', 'ai', 'line', 'analytics'];
+const PLATFORM: readonly ArtId[] = [
+  'branding',
+  'flags',
+  'ai',
+  'line',
+  'analytics',
+  'platformAdmins',
+];
 const GUEST: readonly ArtId[] = ['guestMenu', 'pass', 'book', 'pay'];
 
 const may = (role: AppRole, need: readonly string[] | 'owner'): boolean => {

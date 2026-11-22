@@ -345,6 +345,23 @@ const SCENES: Record<ArtId, { tone: Tone; art: ReactNode }> = {
       </>
     ),
   },
+  platformAdmins: {
+    tone: 'sky',
+    art: (
+      <>
+        <path
+          className="il-white il-edge"
+          d="M80 12l40 14v26c0 22-16 36-40 44-24-8-40-22-40-44V26z"
+        />
+        <circle className="il-brand il-edge" cx="80" cy="42" r="11" />
+        <path
+          className="il-brand il-edge"
+          d="M58 74c3-10 11-15 22-15s19 5 22 15c-6 6-14 9-22 9s-16-3-22-9z"
+        />
+        <circle className="il-sun il-edge" cx="126" cy="20" r="8" />
+      </>
+    ),
+  },
   guestMenu: {
     tone: 'sun',
     art: (

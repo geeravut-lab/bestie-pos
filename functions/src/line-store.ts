@@ -121,9 +121,8 @@ export function createSupabaseLineStore(
         : null;
     },
     async activate(id, lineUserId) {
-      const res = await rest(
-        `notification_channels?id=eq.${encodeURIComponent(id)}&status=eq.pending`,
-        {
+      const patch = () =>
+        rest(`notification_channels?id=eq.${encodeURIComponent(id)}&status=eq.pending`, {
           method: 'PATCH',
           headers: { Prefer: 'return=representation' },
           body: JSON.stringify({
@@ -134,9 +133,23 @@ export function createSupabaseLineStore(
             verified_at: new Date().toISOString(),
             last_error: null,
           }),
-        },
-      );
-      if (res.status === 409) return false; // that LINE account is already active for another user
+        });
+      let res = await patch();
+      if (res.status === 409) {
+        // This LINE account is already the active channel of ANOTHER Bestie account. Whoever sent the code controls that LINE account AND proved they hold the new
+        // account's code, so the link MOVES to the new account (one LINE account serves one Bestie account); the old account is told nothing more than "stopped".
+        const freed = await rest(
+          `notification_channels?channel=eq.line&status=eq.active&address=eq.${encodeURIComponent(lineUserId)}`,
+          {
+            method: 'PATCH',
+            headers: { Prefer: 'return=representation' },
+            body: JSON.stringify({ status: 'stopped', last_error: 'moved' }),
+          },
+        );
+        if (!freed.ok) return false;
+        res = await patch();
+        if (res.status === 409) return false;
+      }
       return (await rows(res)).length === 1;
     },
     async markStopped(lineUserId, reason) {

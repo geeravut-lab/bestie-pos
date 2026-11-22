@@ -12,9 +12,15 @@ type Admin = {
   addedBy: string | null;
   isMe: boolean;
 };
-type LogAction = 'add' | 'remove' | 'member_move' | 'org_delete';
+type LogAction = 'add' | 'remove' | 'member_move' | 'org_delete' | 'user_delete';
 type LogLine = { action: LogAction; actor: string; target: string; detail: string; at: string };
-const LOG_ACTIONS: readonly string[] = ['add', 'remove', 'member_move', 'org_delete'];
+const LOG_ACTIONS: readonly string[] = [
+  'add',
+  'remove',
+  'member_move',
+  'org_delete',
+  'user_delete',
+];
 const obj = (x: unknown): Record<string, unknown> =>
   x && typeof x === 'object' ? (x as Record<string, unknown>) : {};
 const str = (x: unknown, fallback = ''): string => (typeof x === 'string' ? x : fallback);
@@ -176,7 +182,9 @@ export function PlatformAdminsPage({ ctx }: { ctx: PageContext }) {
                         ? t.paLogRemove
                         : l.action === 'member_move'
                           ? t.paLogMove
-                          : t.paLogOrgDelete,
+                          : l.action === 'user_delete'
+                            ? t.paLogUserDelete
+                            : t.paLogOrgDelete,
                     { actor: l.actor, target: l.target, detail: l.detail },
                   )}
                   <p className="muted">{l.at ? formatDateTime(lang, l.at) : ''}</p>

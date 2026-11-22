@@ -7,8 +7,22 @@ import { useRemote } from './useRemote';
 
 type Shop = { id: string; name: string };
 type Org = { id: string; name: string; staff: number; empty: boolean; stores: Shop[] };
-type Membership = { orgName: string; role: string; storeName: string | null; active: boolean };
-type Person = { userId: string; email: string; confirmed: boolean; memberships: Membership[] };
+type Membership = {
+  orgName: string;
+  role: string;
+  storeName: string | null;
+  active: boolean;
+  soleOwner: boolean;
+  empty: boolean;
+};
+type Person = {
+  userId: string;
+  email: string;
+  confirmed: boolean;
+  isAdmin: boolean;
+  isMe: boolean;
+  memberships: Membership[];
+};
 
 const ROLES = ['owner', 'manager', 'cashier', 'waiter', 'kitchen'] as const;
 type RoleKey = (typeof ROLES)[number];
@@ -32,6 +46,7 @@ export function OrgMembersPage({ ctx }: { ctx: PageContext }) {
   const [storeId, setStoreId] = useState('');
   const [leave, setLeave] = useState(true);
   const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [msg, setMsg] = useState<{ kind: 'error' | 'success'; lines: string[] } | null>(null);
 
   const orgs = useRemote(async (): Promise<Org[] | null> => {
@@ -73,7 +88,9 @@ export function OrgMembersPage({ ctx }: { ctx: PageContext }) {
         ? t.omErrUnconfirmed
         : code === '22023'
           ? t.omErrInvalid
-          : t.omErr;
+          : code === '23503'
+            ? t.omErrDelAdmin
+            : t.omErr;
 
   const orgList = orgs.data ?? [];
   const org = orgList.find((o) => o.id === orgId) ?? null;
@@ -81,6 +98,7 @@ export function OrgMembersPage({ ctx }: { ctx: PageContext }) {
   const find = async () => {
     setMsg(null);
     setConfirming(false);
+    setDeleting(false);
     const r = await ctx.client.rpc('platform_member_lookup', { p_email: email.trim() });
     if (r.error) {
       setPerson(null);
@@ -91,6 +109,8 @@ export function OrgMembersPage({ ctx }: { ctx: PageContext }) {
       userId: str(o.user_id),
       email: str(o.email, email.trim()),
       confirmed: o.confirmed === true,
+      isAdmin: o.is_admin === true,
+      isMe: o.is_me === true,
       memberships: list(o.memberships).map((x) => {
         const m = obj(x);
         return {
@@ -98,6 +118,8 @@ export function OrgMembersPage({ ctx }: { ctx: PageContext }) {
           role: str(m.role),
           storeName: typeof m.store_name === 'string' ? m.store_name : null,
           active: m.active !== false,
+          soleOwner: m.sole_owner === true,
+          empty: m.empty === true,
         };
       }),
     });
@@ -128,6 +150,35 @@ export function OrgMembersPage({ ctx }: { ctx: PageContext }) {
     setStoreId('');
     reload();
     await find();
+    setMsg({ kind: 'success', lines });
+  };
+
+  const blockers = person
+    ? person.memberships.filter((m) => m.soleOwner && !m.empty).map((m) => m.orgName)
+    : [];
+  const removeAccount = async () => {
+    if (!person) return;
+    setMsg(null);
+    const r = await ctx.client.rpc('platform_user_delete', { p_user: person.userId });
+    setDeleting(false);
+    if (r.error)
+      return setMsg({
+        kind: 'error',
+        lines: [
+          r.error.code === '55000'
+            ? t.omErrDelSelf
+            : r.error.code === '55006'
+              ? t.omErrDelOwner
+              : errText(r.error.code),
+        ],
+      });
+    const o = obj(r.data);
+    const deleted = list(o.deleted_orgs).map((x) => str(x));
+    const lines = [fmt(t.omDeleted, { email: person.email })];
+    if (deleted.length) lines.push(fmt(t.omDoneDeleted, { list: deleted.join(', ') }));
+    setPerson(null);
+    setEmail('');
+    reload();
     setMsg({ kind: 'success', lines });
   };
 
@@ -272,6 +323,41 @@ export function OrgMembersPage({ ctx }: { ctx: PageContext }) {
               onClick={() => setConfirming(true)}
             >
               {t.omMove}
+            </button>
+          )}
+        </section>
+      ) : null}
+
+      {person ? (
+        <section className="card admin-card">
+          <h2>{t.omDelTitle}</h2>
+          <p className="muted">{t.omDelBody}</p>
+          {person.isMe ? <Notice kind="error">{t.omErrDelSelf}</Notice> : null}
+          {person.isAdmin && !person.isMe ? <Notice kind="error">{t.omErrDelAdmin}</Notice> : null}
+          {blockers.length > 0 ? (
+            <Notice kind="error">{fmt(t.omDelBlocked, { list: blockers.join(', ') })}</Notice>
+          ) : null}
+          {deleting ? (
+            <div className="form-inline">
+              <AsyncButton onClick={removeAccount}>
+                {fmt(t.omDelConfirm, { email: person.email })}
+              </AsyncButton>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setDeleting(false)}
+              >
+                {t.omCancel}
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={person.isMe || person.isAdmin || blockers.length > 0}
+              onClick={() => setDeleting(true)}
+            >
+              {t.omDelButton}
             </button>
           )}
         </section>

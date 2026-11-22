@@ -103,6 +103,8 @@ function MenuEditor({ ctx, stores }: { ctx: PageContext; stores: StoreRow[] }) {
               ['stamps', '/stamps', t.stpTitle],
               ['marketing', '/marketing', t.mktTitle],
               ['slots.booking', '/tours', t.touTitle],
+              ['waitlist', '/waitlist', t.wlTitle],
+              ['timeclock', '/timeclock', t.tcTitle],
             ] as const
           ).map(([mod, path, text]) =>
             ctx.isModuleOn?.(mod) ? (

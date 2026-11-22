@@ -5,11 +5,12 @@ import { dict, fmt, formatDateTime, useI18n } from '@bestie/i18n';
 import { AsyncButton } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
-import { useOrder, useOutboxCounts, usePaidOrders } from '@bestie/offline';
+import { useOnline, useOrder, useOutboxCounts, usePaidOrders } from '@bestie/offline';
 import { TaxInvoicePanel } from '@bestie/admin-ui';
 import { usePosData, usePosStore } from './posData';
 import { Loading, Page } from './PosBits';
 import { PrintButton } from './printing/PrintButton';
+import { ReceiptSend } from './ReceiptSend';
 import { ReceiptView } from './ReceiptView';
 
 /** One receipt: view in the guest's language, print (browser print, 80 mm layout), back to selling. */
@@ -19,6 +20,7 @@ export function ReceiptPage({ ctx, orderId }: { ctx: PageContext; orderId: strin
   const remote = usePosData(ctx, order?.storeId ?? null);
   const { pending } = useOutboxCounts();
   const [chosen, setChosen] = useState<Lang | null>(null);
+  const online = useOnline();
 
   if (order === undefined) return <Loading />;
   if (order === null || !order.receipt)
@@ -62,6 +64,12 @@ export function ReceiptPage({ ctx, orderId }: { ctx: PageContext; orderId: strin
         </AsyncButton>
       </div>
       <ReceiptView order={order} receipt={order.receipt} lang={lang} />
+      <ReceiptSend
+        ctx={ctx}
+        orderId={order.id}
+        lang={lang === 'en' ? 'en' : 'th'}
+        online={online}
+      />
       <TaxInvoicePanel ctx={ctx} orderId={order.id} />
     </Page>
   );

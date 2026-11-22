@@ -200,3 +200,132 @@ describe('network consents', () => {
     ).toEqual([{ orgId: 'o', name: 'Cafe', blocked: true }]);
   });
 });
+
+import {
+  discountAmount,
+  hoursMinutes,
+  parseReceiptSend,
+  parseTimesheet,
+  parseTurnover,
+  parseWaitlist,
+  receiptText,
+  rowsToCsv,
+  timesheetCsv,
+  waitedMinutes,
+} from './growth';
+
+describe('waitlist and table turnover', () => {
+  it('reads entries and counts the minutes waited', () => {
+    const w = parseWaitlist([
+      {
+        id: 'a',
+        name: 'Anna',
+        party: 2,
+        status: 'called',
+        quoted_min: 25,
+        created_at: '2026-11-22T10:00:00Z',
+      },
+      { name: 'x' },
+    ]);
+    expect(w).toHaveLength(1);
+    expect(w[0]).toMatchObject({ status: 'called', quotedMin: 25 });
+    expect(waitedMinutes('2026-11-22T10:00:00Z', Date.parse('2026-11-22T10:17:30Z'))).toBe(17);
+    expect(waitedMinutes('2026-11-22T10:00:00Z', Date.parse('2026-11-22T09:00:00Z'))).toBe(0);
+  });
+  it('reads the turnover rows', () => {
+    expect(
+      parseTurnover([
+        {
+          table_id: 't',
+          name: 'T1',
+          seats: 4,
+          bills: 3,
+          avg_min: 52,
+          revenue: 90000,
+          per_hour: 34615,
+        },
+      ])[0],
+    ).toMatchObject({ avgMin: 52, perHour: 34615 });
+  });
+});
+
+describe('time clock', () => {
+  it('shows hours as h:mm and writes the timesheet CSV', () => {
+    expect(hoursMinutes(485)).toBe('8:05');
+    expect(hoursMinutes(0)).toBe('0:00');
+    const rows = parseTimesheet([
+      { staff_id: 's', name: 'Pim', worked_min: 485, days: 2, planned_min: 540 },
+    ]);
+    expect(timesheetCsv(rows).replace('﻿', '').trim().split('\r\n')).toEqual([
+      'name,days_worked,hours_worked,hours_planned',
+      'Pim,2,8:05,9:00',
+    ]);
+  });
+});
+
+describe('discount arithmetic', () => {
+  it('matches the database: a percentage in basis points or an amount, never above the bill', () => {
+    expect(discountAmount('percent', 1000, 10000)).toBe(1000);
+    expect(discountAmount('percent', 333, 10000)).toBe(333);
+    expect(discountAmount('percent', 99999, 10000)).toBe(10000);
+    expect(discountAmount('amount', 500, 10000)).toBe(500);
+    expect(discountAmount('amount', 50000, 10000)).toBe(10000);
+    expect(discountAmount('amount', 0, 10000)).toBe(0);
+    expect(discountAmount('percent', 1000, 0)).toBe(0);
+  });
+});
+
+describe('e-receipt text', () => {
+  const data = parseReceiptSend({
+    receipt: {
+      number: 'A+000012',
+      issued_at: '2026-11-22T05:30:00Z',
+      seller_name: 'Acme Co',
+      seller_tax_id: '1234567890123',
+      branch: '00000',
+      pos_id: 'POS-1',
+      vat_registered: true,
+      subtotal: 10000,
+      service_charge: 0,
+      vat: 654,
+      total: 10000,
+      rounding: 0,
+      payable: 10000,
+    },
+    lines: [{ name: { th: 'ผัดไทย', en: 'Pad Thai' }, qty: 2, unit_price: 5000 }],
+    payments: [{ tender: 'cash', amount: 10000 }],
+    member_line: true,
+  })!;
+  it('prints the frozen figures in the chosen language', () => {
+    const en = receiptText(data, 'en');
+    expect(en).toContain('Receipt no. A+000012');
+    expect(en).toContain('Tax ID: 1234567890123 (branch 00000)');
+    expect(en).toContain('2 x Pad Thai  100.00 THB');
+    expect(en).toContain('VAT: 6.54 THB');
+    expect(en).toContain('Cash: 100.00 THB');
+    expect(en).toContain('Abbreviated tax invoice');
+    const th = receiptText(data, 'th');
+    expect(th).toContain('ผัดไทย');
+    expect(th).toContain('ใบเสร็จเลขที่ A+000012');
+  });
+  it('leaves out the tax lines for a shop that is not VAT registered and rejects data without a receipt', () => {
+    const plain = receiptText({ ...data, vatRegistered: false, sellerTaxId: null }, 'en');
+    expect(plain).not.toMatch(/VAT|Tax ID|Abbreviated/);
+    expect(parseReceiptSend({ lines: [] })).toBeNull();
+    expect(data.memberLine).toBe(true);
+  });
+});
+
+describe('data export', () => {
+  it('writes the union of the keys as the header and guards formulas', () => {
+    const csv = rowsToCsv([
+      { name: 'Noi', phone: '081' },
+      { name: '=1+1', extra: 'x' },
+    ])
+      .replace('﻿', '')
+      .trim()
+      .split('\r\n');
+    expect(csv).toEqual(['name,phone,extra', 'Noi,081,', "'=1+1,,x"]);
+    expect(rowsToCsv([]).replace('﻿', '').trim()).toBe('');
+  });
+});

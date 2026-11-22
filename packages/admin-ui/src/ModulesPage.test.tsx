@@ -42,7 +42,7 @@ describe('<ModulesPage>', () => {
     await screen.findByRole('heading', { name: 'Modules' });
     expect((sw('Appointments & online booking') as HTMLInputElement).checked).toBe(true);
     expect((sw('Kitchen display') as HTMLInputElement).checked).toBe(false);
-    expect(screen.getAllByRole('switch')).toHaveLength(39);
+    expect(screen.getAllByRole('switch')).toHaveLength(41);
   });
 
   it('switching a module on saves ONLY the difference from the profile default, and auto-enables what it needs', async () => {

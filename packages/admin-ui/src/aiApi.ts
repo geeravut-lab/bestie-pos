@@ -6,7 +6,7 @@ import { AppError } from '@bestie/i18n';
 /** Call /api/ai with the signed-in admin's JWT. Only a code ever reaches the screen, never a provider message. */
 export async function callAi<T>(
   client: SupabaseClient,
-  op: 'status' | 'test' | 'review',
+  op: 'status' | 'test' | 'review' | 'eval',
   body?: unknown,
   fetchImpl: typeof fetch = fetch,
 ): Promise<T> {

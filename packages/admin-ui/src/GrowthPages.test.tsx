@@ -332,7 +332,8 @@ describe('<HubPage>', () => {
       { list_webhook_endpoints: { data: [] }, accounting_export: { data: [] } },
     );
     await screen.findByText('No webhooks yet');
-    await userEvent.click(screen.getByRole('button', { name: 'Download CSV' }));
+    const sec = screen.getByRole('region', { name: 'File for the accountant' });
+    await userEvent.click(within(sec).getByRole('button', { name: 'Download CSV' }));
     expect(await screen.findByText('No receipts in this period')).toBeTruthy();
     const a = db.rpcs.find((r) => r.fn === 'accounting_export')!.args as {
       p: { org_id: string; from: string; to: string };

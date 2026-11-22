@@ -34,6 +34,10 @@ import { FolioPage } from './FolioPage';
 import { HqPage } from './HqPage';
 import { BriefPage } from './BriefPage';
 import { CasesPage } from './CasesPage';
+import { CreditPage } from './CreditPage';
+import { PointsPage } from './PointsPage';
+import { TimeClockPage } from './TimeClockPage';
+import { WaitlistPage } from './WaitlistPage';
 import { HubPage } from './HubPage';
 import { MarketingPage } from './MarketingPage';
 import { StampsPage } from './StampsPage';
@@ -90,7 +94,11 @@ export function adminPages(ctx: PageContext): ReactNode | null {
   if (ctx.path === '/folio') return <FolioPage ctx={ctx} />;
   if (ctx.path === '/delivery') return <DeliveryPage ctx={ctx} />;
   if (ctx.path === '/kiosk') return <KioskPage ctx={ctx} />;
-  if (ctx.path === '/hq') return <HqPage ctx={ctx} />;
+  if (ctx.path === '/hq' || ctx.path === '/dashboard') return <HqPage ctx={ctx} />;
+  if (ctx.path === '/credit') return <CreditPage ctx={ctx} />;
+  if (ctx.path === '/points') return <PointsPage ctx={ctx} />;
+  if (ctx.path === '/waitlist') return <WaitlistPage ctx={ctx} />;
+  if (ctx.path === '/timeclock') return <TimeClockPage ctx={ctx} />;
   if (ctx.path === '/menu-profit') return <MenuProfitPage ctx={ctx} />;
   if (ctx.path === '/promotions') return <PromotionsPage ctx={ctx} />;
   if (ctx.path === '/upsell') return <UpsellPage ctx={ctx} />;
@@ -126,6 +134,8 @@ export function adminPages(ctx: PageContext): ReactNode | null {
   if (ctx.path === '/admin/cards') return <CardImagesPage ctx={ctx} />;
   if (ctx.isPlatformAdmin && ctx.path === '/ai')
     return <AiSettingsPage ctx={ctx} onNavigate={ctx.navigate} />;
+  // everyone else who opens the AI card (an owner / manager) gets the assistant for their own shop; the provider settings are the platform administrator's
+  if (ctx.path === '/ai') return <AskShopPage ctx={ctx} />;
   if (ctx.path === '/admin/ai/prompts')
     return <AiPromptsPage ctx={ctx} onNavigate={ctx.navigate} />;
   if (ctx.path === '/settings/billing') return <BillingPage ctx={ctx} />;

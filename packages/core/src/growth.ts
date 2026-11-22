@@ -398,3 +398,275 @@ export function parsePassPartners(v: unknown): PassPartner[] {
   }
   return out;
 }
+
+// ── points overview ──
+export type PointsOverview = {
+  outstanding: number;
+  earned30d: number;
+  redeemed30d: number;
+  members: number;
+  top: { customerId: string; name: string; balance: number }[];
+  recent: { kind: string; points: number; at: string; name: string }[];
+};
+export function parsePointsOverview(v: unknown): PointsOverview {
+  const o = obj(v);
+  return {
+    outstanding: num(o.outstanding),
+    earned30d: num(o.earned_30d),
+    redeemed30d: num(o.redeemed_30d),
+    members: num(o.members),
+    top: list(o.top).flatMap((x) => {
+      const r = obj(x);
+      return str(r.customer_id)
+        ? [{ customerId: str(r.customer_id), name: str(r.name), balance: num(r.balance) }]
+        : [];
+    }),
+    recent: list(o.recent).flatMap((x) => {
+      const r = obj(x);
+      return str(r.kind)
+        ? [{ kind: str(r.kind), points: num(r.points), at: str(r.at), name: str(r.name) }]
+        : [];
+    }),
+  };
+}
+
+// ── waitlist, table turnover ──
+export type WaitEntry = {
+  id: string;
+  name: string;
+  phone: string | null;
+  party: number;
+  status: 'waiting' | 'called' | 'seated' | 'left';
+  quotedMin: number;
+  note: string | null;
+  createdAt: string;
+};
+export function parseWaitlist(v: unknown): WaitEntry[] {
+  const out: WaitEntry[] = [];
+  for (const x of list(v)) {
+    const o = obj(x);
+    if (!str(o.id)) continue;
+    const s = o.status;
+    out.push({
+      id: str(o.id),
+      name: str(o.name),
+      phone: str(o.phone) || null,
+      party: num(o.party),
+      status: s === 'called' || s === 'seated' || s === 'left' ? s : 'waiting',
+      quotedMin: num(o.quoted_min),
+      note: str(o.note) || null,
+      createdAt: str(o.created_at),
+    });
+  }
+  return out;
+}
+/** Minutes a party has waited so far. */
+export const waitedMinutes = (createdAt: string, nowMs: number): number =>
+  Math.max(0, Math.floor((nowMs - Date.parse(createdAt)) / 60_000));
+export type TurnoverRow = {
+  tableId: string;
+  name: string;
+  seats: number;
+  bills: number;
+  avgMin: number;
+  revenue: number;
+  perHour: number;
+};
+export function parseTurnover(v: unknown): TurnoverRow[] {
+  const out: TurnoverRow[] = [];
+  for (const x of list(v)) {
+    const o = obj(x);
+    if (!str(o.table_id)) continue;
+    out.push({
+      tableId: str(o.table_id),
+      name: str(o.name),
+      seats: num(o.seats),
+      bills: num(o.bills),
+      avgMin: num(o.avg_min),
+      revenue: num(o.revenue),
+      perHour: num(o.per_hour),
+    });
+  }
+  return out;
+}
+
+// ── time clock ──
+export type ClockedIn = { staffId: string; name: string; since: string };
+export function parseClockedIn(v: unknown): ClockedIn[] {
+  const out: ClockedIn[] = [];
+  for (const x of list(v)) {
+    const o = obj(x);
+    if (str(o.staff_id))
+      out.push({ staffId: str(o.staff_id), name: str(o.name), since: str(o.since) });
+  }
+  return out;
+}
+export type SheetRow = {
+  staffId: string;
+  name: string;
+  workedMin: number;
+  days: number;
+  plannedMin: number;
+};
+export function parseTimesheet(v: unknown): SheetRow[] {
+  const out: SheetRow[] = [];
+  for (const x of list(v)) {
+    const o = obj(x);
+    if (str(o.staff_id))
+      out.push({
+        staffId: str(o.staff_id),
+        name: str(o.name),
+        workedMin: num(o.worked_min),
+        days: num(o.days),
+        plannedMin: num(o.planned_min),
+      });
+  }
+  return out;
+}
+/** 485 → "8:05" */
+export const hoursMinutes = (min: number): string =>
+  `${Math.floor(min / 60)}:${String(Math.round(min % 60)).padStart(2, '0')}`;
+export function timesheetCsv(rows: readonly SheetRow[]): string {
+  return toCsv(
+    ['name', 'days_worked', 'hours_worked', 'hours_planned'],
+    rows.map((r) => [r.name, r.days, hoursMinutes(r.workedMin), hoursMinutes(r.plannedMin)]),
+  );
+}
+
+// ── discount with a manager's PIN ──
+/** The discount a percentage (in basis points) or an amount gives on a bill, never more than the bill (same arithmetic as the database). */
+export function discountAmount(
+  kind: 'percent' | 'amount',
+  value: number,
+  billTotal: number,
+): number {
+  if (!Number.isInteger(value) || value < 1 || billTotal < 1) return 0;
+  return Math.min(
+    kind === 'percent' ? Math.floor((billTotal * Math.min(value, 10_000)) / 10_000) : value,
+    billTotal,
+  );
+}
+
+// ── e-receipt ──
+export type ReceiptSendData = {
+  number: string;
+  issuedAt: string;
+  sellerName: string;
+  sellerTaxId: string | null;
+  branch: string;
+  posId: string | null;
+  vatRegistered: boolean;
+  subtotal: number;
+  serviceCharge: number;
+  vat: number;
+  total: number;
+  rounding: number;
+  payable: number;
+  lines: { name: LocalizedText; qty: number; unitPrice: number }[];
+  payments: { tender: string; amount: number }[];
+  memberLine: boolean;
+};
+export function parseReceiptSend(v: unknown): ReceiptSendData | null {
+  const o = obj(v);
+  const r = obj(o.receipt);
+  if (!str(r.number)) return null;
+  return {
+    number: str(r.number),
+    issuedAt: str(r.issued_at),
+    sellerName: str(r.seller_name),
+    sellerTaxId: str(r.seller_tax_id) || null,
+    branch: str(r.branch),
+    posId: str(r.pos_id) || null,
+    vatRegistered: r.vat_registered === true,
+    subtotal: num(r.subtotal),
+    serviceCharge: num(r.service_charge),
+    vat: num(r.vat),
+    total: num(r.total),
+    rounding: num(r.rounding),
+    payable: num(r.payable),
+    lines: list(o.lines).map((x) => {
+      const l = obj(x);
+      return { name: name(l.name), qty: num(l.qty), unitPrice: num(l.unit_price) };
+    }),
+    payments: list(o.payments).map((x) => {
+      const p = obj(x);
+      return { tender: str(p.tender), amount: num(p.amount) };
+    }),
+    memberLine: o.member_line === true,
+  };
+}
+const TENDER_TH: Record<string, string> = {
+  cash: '\u0e40\u0e07\u0e34\u0e19\u0e2a\u0e14',
+  promptpay: '\u0e1e\u0e23\u0e49\u0e2d\u0e21\u0e40\u0e1e\u0e22\u0e4c',
+  gateway: '\u0e1a\u0e31\u0e15\u0e23',
+  credit: 'Bestie Credit',
+  points: 'Bestie Points',
+  room: '\u0e25\u0e07\u0e2b\u0e49\u0e2d\u0e07\u0e1e\u0e31\u0e01',
+  platform: '\u0e41\u0e1e\u0e25\u0e15\u0e1f\u0e2d\u0e23\u0e4c\u0e21',
+};
+const TENDER_EN: Record<string, string> = {
+  cash: 'Cash',
+  promptpay: 'PromptPay',
+  gateway: 'Card',
+  credit: 'Bestie Credit',
+  points: 'Bestie Points',
+  room: 'Charged to room',
+  platform: 'Delivery platform',
+};
+const baht = (satang: number): string => `${satangDecimal(satang)} THB`;
+/** The receipt as plain text for an e-mail or a LINE message, in Thai or English. Totals come from the frozen receipt, never recomputed. */
+export function receiptText(r: ReceiptSendData, lang: 'th' | 'en'): string {
+  const th = lang === 'th';
+  const L: string[] = [];
+  L.push(r.sellerName);
+  if (r.vatRegistered && r.sellerTaxId)
+    L.push(
+      `${th ? '\u0e40\u0e25\u0e02\u0e1b\u0e23\u0e30\u0e08\u0e33\u0e15\u0e31\u0e27\u0e1c\u0e39\u0e49\u0e40\u0e2a\u0e35\u0e22\u0e20\u0e32\u0e29\u0e35' : 'Tax ID'}: ${r.sellerTaxId}${r.branch ? ` (${th ? '\u0e2a\u0e32\u0e02\u0e32' : 'branch'} ${r.branch})` : ''}`,
+    );
+  if (r.posId) L.push(`POS ID: ${r.posId}`);
+  L.push(
+    `${th ? '\u0e43\u0e1a\u0e40\u0e2a\u0e23\u0e47\u0e08\u0e40\u0e25\u0e02\u0e17\u0e35\u0e48' : 'Receipt no.'} ${r.number}`,
+  );
+  if (r.issuedAt) L.push(r.issuedAt.slice(0, 16).replace('T', ' ') + ' UTC');
+  L.push('');
+  for (const l of r.lines) {
+    const n = (th ? l.name.th : l.name.en) || l.name.th || l.name.en || '';
+    L.push(`${l.qty} x ${n}  ${baht(l.unitPrice * l.qty)}`);
+  }
+  L.push('');
+  L.push(`${th ? '\u0e22\u0e2d\u0e14\u0e23\u0e27\u0e21' : 'Subtotal'}: ${baht(r.subtotal)}`);
+  if (r.serviceCharge > 0)
+    L.push(
+      `${th ? '\u0e04\u0e48\u0e32\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23' : 'Service charge'}: ${baht(r.serviceCharge)}`,
+    );
+  if (r.vatRegistered)
+    L.push(
+      `${th ? '\u0e20\u0e32\u0e29\u0e35\u0e21\u0e39\u0e25\u0e04\u0e48\u0e32\u0e40\u0e1e\u0e34\u0e48\u0e21' : 'VAT'}: ${baht(r.vat)}`,
+    );
+  if (r.rounding !== 0)
+    L.push(`${th ? '\u0e1b\u0e31\u0e14\u0e40\u0e28\u0e29' : 'Rounding'}: ${baht(r.rounding)}`);
+  L.push(`${th ? '\u0e22\u0e2d\u0e14\u0e0a\u0e33\u0e23\u0e30' : 'Total paid'}: ${baht(r.payable)}`);
+  for (const p of r.payments)
+    L.push(`${(th ? TENDER_TH : TENDER_EN)[p.tender] ?? p.tender}: ${baht(p.amount)}`);
+  if (r.vatRegistered)
+    L.push(
+      '',
+      th
+        ? '\u0e43\u0e1a\u0e01\u0e33\u0e01\u0e31\u0e1a\u0e20\u0e32\u0e29\u0e35\u0e2d\u0e22\u0e48\u0e32\u0e07\u0e22\u0e48\u0e2d'
+        : 'Abbreviated tax invoice',
+    );
+  return L.join('\n');
+}
+
+// ── data export ──
+export const EXPORT_DATASETS = ['customers', 'menu', 'orders', 'stock', 'staff', 'points'] as const;
+export type ExportDataset = (typeof EXPORT_DATASETS)[number];
+/** Flat objects → CSV with the union of their keys as the header (spreadsheet-safe cells). */
+export function rowsToCsv(rows: readonly Record<string, unknown>[]): string {
+  const keys: string[] = [];
+  for (const r of rows) for (const k of Object.keys(r)) if (!keys.includes(k)) keys.push(k);
+  return toCsv(
+    keys,
+    rows.map((r) => keys.map((k) => r[k] ?? '')),
+  );
+}

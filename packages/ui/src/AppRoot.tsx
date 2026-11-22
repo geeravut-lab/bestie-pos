@@ -21,6 +21,8 @@ export type LiveSession = {
   ctx: NavContext;
   /** The name of a role the shop made itself (null for the built-in roles). */
   roleName?: string | null;
+  /** The signed-in person is a platform administrator (shown the platform pages in any app). */
+  platformAdmin?: boolean;
 };
 
 export type AppRootProps = {
@@ -107,6 +109,7 @@ function Frame({ app, live, gate, renderPage, headerExtra, cardImages }: AppRoot
   return (
     <AppShell
       role={activeRole}
+      platformAdmin={live?.platformAdmin ?? false}
       ctx={ctx}
       path={location.pathname}
       onNavigate={go}
@@ -165,6 +168,7 @@ function Frame({ app, live, gate, renderPage, headerExtra, cardImages }: AppRoot
           pendingPath={pendingPath}
           imageUrls={cardImages}
           roleName={live?.roleName ?? null}
+          platformAdmin={live?.platformAdmin ?? false}
         />
       ) : (
         <PageSoon art={current?.id ?? 'home'} onNavigate={go} />

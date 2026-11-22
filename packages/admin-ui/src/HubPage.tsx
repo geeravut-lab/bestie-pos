@@ -12,6 +12,7 @@ import { fmt, formatDateTime, useI18n } from '@bestie/i18n';
 import { AsyncButton, Spinner } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
+import { DataExportPanel } from './DataExportPanel';
 import { useRemote } from './useRemote';
 
 const addDays = (d: string, n: number): string => {
@@ -232,6 +233,8 @@ export function HubPage({ ctx }: { ctx: PageContext }) {
         </fieldset>
         <AsyncButton onClick={addHook}>{t.hubHookAdd}</AsyncButton>
       </section>
+
+      <DataExportPanel ctx={ctx} />
 
       <section className="card admin-card" aria-label={t.hubExportTitle}>
         <h2>{t.hubExportTitle}</h2>

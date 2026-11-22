@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { fmt, useI18n } from '@bestie/i18n';
 import { Illustration } from './Illustration';
-import { NAV_BY_ID, ROLE_LAYOUT, WIDE_CARDS, disabledNavIds, roleLabelKey } from './nav';
+import {
+  NAV_BY_ID,
+  WIDE_CARDS,
+  disabledNavIds,
+  layoutFor,
+  roleLabelKey,
+  ungatePlatform,
+} from './nav';
 import type { AppRole, ArtId, NavContext } from './nav';
 import { Spinner } from './Spinner';
 
@@ -14,6 +21,8 @@ export type RoleHomeProps = {
   imageUrls?: Partial<Record<ArtId, string>>;
   /** The name of a role the shop made itself; built-in roles use the translated label of `role`. */
   roleName?: string | null;
+  /** A platform administrator also gets the platform cards. */
+  platformAdmin?: boolean;
 };
 
 /**
@@ -27,10 +36,11 @@ export function RoleHome({
   pendingPath = null,
   imageUrls = {},
   roleName = null,
+  platformAdmin = false,
 }: RoleHomeProps) {
   const { t } = useI18n();
-  const layout = ROLE_LAYOUT[role];
-  const disabled = disabledNavIds(ctx);
+  const layout = layoutFor(role, platformAdmin);
+  const disabled = ungatePlatform(disabledNavIds(ctx), platformAdmin);
 
   return (
     <div className="home">

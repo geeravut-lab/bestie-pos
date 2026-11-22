@@ -24,6 +24,8 @@ export const MODULE_IDS = [
   'marketing',
   'integration.hub',
   'stamps',
+  'waitlist',
+  'timeclock',
   'delivery',
   'service.charge',
   // services / bookings
@@ -122,6 +124,14 @@ export const MODULES: readonly ModuleDef[] = [
   { id: 'marketing', dependsOn: [], defaultProfiles: [], plan: 'pro', phase: 4 },
   { id: 'integration.hub', dependsOn: [], defaultProfiles: [], plan: 'pro', phase: 4 },
   { id: 'stamps', dependsOn: [], defaultProfiles: ['cafe'], plan: 'basic', phase: 4 },
+  {
+    id: 'waitlist',
+    dependsOn: [],
+    defaultProfiles: ['restaurant', 'cafe'],
+    plan: 'basic',
+    phase: 4,
+  },
+  { id: 'timeclock', dependsOn: [], defaultProfiles: [], plan: 'basic', phase: 4 },
   { id: 'delivery', dependsOn: [], defaultProfiles: [], plan: 'pro', phase: 4 },
   {
     id: 'service.charge',

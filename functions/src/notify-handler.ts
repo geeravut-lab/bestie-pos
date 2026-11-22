@@ -144,6 +144,10 @@ export async function notifyTickResponse(
     const passesErased = tidyNow
       ? await callRpc(supabaseUrl, serviceRoleKey, 'network_passes_cleanup', {}, f).catch(() => 0)
       : 0;
+    // a forgotten clock-out is closed at 16 hours
+    const clockClosed = tidyNow
+      ? await callRpc(supabaseUrl, serviceRoleKey, 'timeclock_autoclose', {}, f).catch(() => 0)
+      : 0;
     const webhooksErased = tidyNow
       ? await callRpc(supabaseUrl, serviceRoleKey, 'webhook_cleanup', {}, f).catch(() => 0)
       : 0;
@@ -162,6 +166,7 @@ export async function notifyTickResponse(
       guestReminders: guests,
       marketing,
       webhooks,
+      clockClosed: typeof clockClosed === 'number' ? clockClosed : 0,
       webhooksErased: typeof webhooksErased === 'number' ? webhooksErased : 0,
       clientPhotosErased: typeof clientPhotosErased === 'number' ? clientPhotosErased : 0,
       hairPhotosErased: typeof photosErased === 'number' ? photosErased : 0,

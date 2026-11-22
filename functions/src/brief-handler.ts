@@ -8,6 +8,7 @@ import type { ProviderId } from '../../packages/core/src/ai.js';
 import { AiError } from './ai-adapters.js';
 import type { ProviderAdapter } from './ai-adapters.js';
 import { keysFrom, loadSettings } from './ai-handler.js';
+import { budgetGuard } from './ai-budget.js';
 import { runAiWith } from './ai-run.js';
 import { readServerEnv } from './env.js';
 import { adaptersFor, loadAddition, logUsage } from './food-ai-handler.js';
@@ -73,6 +74,7 @@ export async function briefSummaryResponse(
           prompt: `Findings of the shop's business manager (the only facts you may use; amounts are THB):\n"""\n${pack.text}\n"""\nWrite a short morning brief for the owner in at most 120 words: what needs attention first and why. Quote numbers exactly as written. Do not invent causes, do not promise results, do not give orders: the owner decides.`,
           maxTokens: 450,
         },
+        guard: budgetGuard(f, supabaseUrl, serviceRoleKey, String(body.store_id)),
         settings,
         keys,
         adapters: adaptersFor(f, deps),

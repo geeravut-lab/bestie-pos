@@ -257,9 +257,25 @@ export function activeNavId(
   return best?.id;
 }
 
+/** The platform administrator's pages, reachable from any app: they are not tied to a shop or to its modules. */
+export const PLATFORM_CARDS: readonly ArtId[] = ['branding', 'flags', 'ai', 'line', 'analytics'];
+
+/** The cards of a role; a platform administrator also gets the platform pages next to the ones of their shop role. */
+export function layoutFor(role: AppRole, platformAdmin = false): RoleLayout {
+  const base = ROLE_LAYOUT[role];
+  if (!platformAdmin) return base;
+  return { ...base, cards: [...new Set<ArtId>([...base.cards, ...PLATFORM_CARDS])] };
+}
+
 /** Items shown in the "More" sheet = everything the role can reach that is not already a tab / the centre action. */
-export function moreItems(role: AppRole): ArtId[] {
-  const layout = ROLE_LAYOUT[role];
+export function moreItems(role: AppRole, platformAdmin = false): ArtId[] {
+  const layout = layoutFor(role, platformAdmin);
   const shown = new Set<ArtId>([...layout.tabs, ...(layout.center ? [layout.center] : [])]);
   return layout.cards.filter((id) => !shown.has(id));
+}
+
+/** Platform pages are never greyed out by a shop's module switches (the AI provider page has nothing to do with one shop's modules). */
+export function ungatePlatform(disabled: Set<ArtId>, platformAdmin: boolean): Set<ArtId> {
+  if (platformAdmin) for (const id of PLATFORM_CARDS) disabled.delete(id);
+  return disabled;
 }

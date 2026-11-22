@@ -420,6 +420,24 @@ describe('spa advisor SQL mirror', () => {
     expect(sql).toContain("'ai.business_manager','marketing','integration.hub','stamps'];");
   });
 
+  it('ops tools: the module mirrors live in migration 86', () => {
+    const dir = new URL('../../../supabase/migrations/', import.meta.url);
+    const sql = readFileSync(
+      new URL(readdirSync(dir).find((f) => f.endsWith('_ops_tools.sql')) ?? '', dir),
+      'utf8',
+    );
+    expect(MODULE_BY_ID.waitlist).toMatchObject({
+      plan: 'basic',
+      defaultProfiles: ['restaurant', 'cafe'],
+    });
+    expect(MODULE_BY_ID.timeclock).toMatchObject({ plan: 'basic', defaultProfiles: [] });
+    expect(sql).toContain(
+      "(s.module_overrides ->> 'waitlist')::boolean, s.profile in ('restaurant', 'cafe')",
+    );
+    expect(sql).toContain("(s.module_overrides ->> 'timeclock')::boolean, false");
+    expect(sql).toContain("'integration.hub','stamps','waitlist','timeclock'];");
+  });
+
   it('kiosk: the module mirror and the rules that make a kiosk differ from a table live in migration 78', () => {
     const dir = new URL('../../../supabase/migrations/', import.meta.url);
     const sql = readFileSync(

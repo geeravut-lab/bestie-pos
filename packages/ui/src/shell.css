@@ -755,6 +755,30 @@ a.nav-card[aria-busy='true'] {
   font-size: 0.875rem;
   font-weight: 700;
 }
+/* An inline form (a row of inputs / selects and a button): the inputs look like every other field and wrap on a phone. */
+.form-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+.form-inline input:not([type='checkbox'], [type='radio'], [type='file']),
+.form-inline select,
+.form-inline textarea {
+  flex: 1 1 14rem;
+  min-width: 0;
+  min-height: var(--bp-touch);
+  padding: 0 0.85rem;
+  border: 2px solid var(--bp-field-border);
+  border-radius: var(--bp-radius-control);
+  background: var(--bp-surface);
+  color: var(--bp-ink);
+  font: inherit;
+  font-size: 1rem;
+}
+.form-inline input::placeholder {
+  color: var(--bp-muted);
+}
 .hint {
   font-size: 0.875rem;
 }

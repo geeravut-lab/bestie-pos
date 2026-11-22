@@ -3,9 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@bestie/i18n';
 import { InstallAppButton, InstallAppCard } from './InstallApp';
-import { isIosDevice } from './useInstallApp';
+import { isIosDevice, isPhoneDevice, resetInstallForTests } from './useInstallApp';
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  resetInstallForTests();
+});
 
 const mount = (ui: React.ReactNode) => render(<I18nProvider initialLang="en">{ui}</I18nProvider>);
 
@@ -46,19 +49,52 @@ describe('install the app', () => {
     expect(document.querySelector('.spinner')).toBeNull(); // spinner cleared when done
   });
 
-  it('says so when the person closes the browser dialog, and the top-bar button is only there while it is possible', async () => {
+  it('says so when the person closes the browser dialog', async () => {
+    mount(<InstallAppCard />);
+    const { prompt } = offerInstall('dismissed');
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Install the app on this device' }),
+    );
+    await waitFor(() => expect(prompt).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(/Not installed yet/)).toBeTruthy();
+  });
+
+  it('shows the top-bar button on a computer once the browser offers installation, and it opens the browser dialog', async () => {
+    mount(<InstallAppButton onShowSteps={() => {}} />);
+    expect(screen.queryByRole('button', { name: 'Install app' })).toBeNull();
+    const { prompt } = offerInstall('accepted');
+    await userEvent.click(await screen.findByRole('button', { name: 'Install app' }));
+    await waitFor(() => expect(prompt).toHaveBeenCalledTimes(1));
+  });
+
+  it('knows a smartphone from a tablet and a desktop', () => {
+    expect(isPhoneDevice('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)')).toBe(true);
+    expect(isPhoneDevice('Mozilla/5.0 (Linux; Android 14; Pixel 8) Mobile Safari/537.36')).toBe(
+      true,
+    );
+    expect(isPhoneDevice('Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X)')).toBe(false);
+    expect(isPhoneDevice('Mozilla/5.0 (Linux; Android 14; SM-X900) Safari/537.36')).toBe(false); // an Android tablet has no "Mobile"
+    expect(isPhoneDevice('Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120')).toBe(false);
+    expect(isPhoneDevice('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15')).toBe(
+      false,
+    );
+  });
+
+  it('keeps the top-bar button off a phone, and the account card still works there', async () => {
+    const ua = vi
+      .spyOn(navigator, 'userAgent', 'get')
+      .mockReturnValue('Mozilla/5.0 (Linux; Android 14; Pixel 8) Mobile Safari/537.36');
     mount(
       <>
         <InstallAppButton onShowSteps={() => {}} />
         <InstallAppCard />
       </>,
     );
-    // an earlier test installed the app in this module's memory; a new offer shows it is a one-shot per offer
-    offerInstall('dismissed');
-    const top = screen.queryAllByRole('button', { name: 'Install app' });
-    if (top.length > 0) {
-      await userEvent.click(top[0]!);
-      expect(await screen.findByText(/Not installed yet/)).toBeTruthy();
-    }
+    offerInstall('accepted'); // the browser offers installation
+    expect(
+      await screen.findByRole('button', { name: 'Install the app on this device' }),
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Install app' })).toBeNull();
+    ua.mockRestore();
   });
 });

@@ -16,5 +16,5 @@ export type { RoleHomeProps } from './RoleHome';
 export { Spinner } from './Spinner';
 export { useAsyncAction } from './useAsyncAction';
 export { useBackClosableSheet } from './useBackClosableSheet';
-export { isIosDevice, promptInstall, useInstallApp } from './useInstallApp';
+export { isIosDevice, isPhoneDevice, promptInstall, useInstallApp } from './useInstallApp';
 export type { InstallState } from './useInstallApp';

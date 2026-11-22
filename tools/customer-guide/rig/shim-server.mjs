@@ -24,6 +24,8 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = sign({
   iss: 'supabase',
   exp: 4102444800,
 });
+process.env.PRICE_URL_COINGECKO = `http://127.0.0.1:${PORT}/fake/coingecko`;
+process.env.PRICE_URL_THAI_TICKER = `http://127.0.0.1:${PORT}/fake/ticker`;
 process.env.SITE_URL = `http://127.0.0.1:${PORT}`;
 const MIME = {
   '.html': 'text/html',
@@ -59,6 +61,14 @@ http
       if (req.method === 'OPTIONS') {
         res.writeHead(204, cors);
         return res.end();
+      }
+      if (url.pathname === '/fake/coingecko') {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        return res.end('{"tether":{"thb":36.12}}');
+      }
+      if (url.pathname === '/fake/ticker') {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        return res.end('{"THB_USDT":{"last":36.08}}');
       }
       if (url.pathname.startsWith('/rest/v1/')) {
         const data = await body(req);

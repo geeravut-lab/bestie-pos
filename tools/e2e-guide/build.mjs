@@ -6,6 +6,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FLOWS1 } from './flows1.mjs';
 import { FLOWS2 } from './flows2.mjs';
+import { FLOWS3, COVERAGE } from './flows3.mjs';
 import * as C from './content.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -17,7 +18,7 @@ const fontDir = join(
 );
 const b64 = (p) => readFileSync(p).toString('base64');
 const shotsDir = process.env.SHOTS_DIR || '/tmp/shots';
-const FLOWS = [...FLOWS1, ...FLOWS2];
+const FLOWS = [...FLOWS1, ...FLOWS2, ...FLOWS3];
 const esc = (s) =>
   String(s ?? '')
     .replace(/&/g, '&amp;')
@@ -121,6 +122,21 @@ const accTable = `<table class="steps"><thead><tr><th>บัญชี (@bestiede
 const dataTable = `<table class="steps"><thead><tr><th>ร้าน/กลุ่ม</th><th>ข้อมูลเดโมที่มีอยู่แล้ว</th></tr></thead><tbody>${C.DEMO_DATA.map((a) => `<tr><td class="who">${esc(a[0])}</td><td>${esc(a[1])}</td></tr>`).join('')}</tbody></table>`;
 const noTable = `<table class="steps"><thead><tr><th>เรื่อง</th><th>เหตุผล/วิธีทดสอบ</th></tr></thead><tbody>${C.NOT_TESTABLE.map((a) => `<tr><td class="who">${esc(a[0])}</td><td>${esc(a[1])}</td></tr>`).join('')}</tbody></table>`;
 
+const covGroups = [...new Set(COVERAGE.map((c) => c[0]))];
+const covTable = covGroups
+  .map(
+    (g) =>
+      `<h3>${esc(g)}</h3><table class="steps"><thead><tr><th>ฟังก์ชัน/หน้าจอ</th><th>เมนูหรือโมดูล</th><th>ทดสอบใน flow</th></tr></thead><tbody>${COVERAGE.filter(
+        (c) => c[0] === g,
+      )
+        .map(
+          (c) =>
+            `<tr><td class="who" style="width:200pt">${esc(c[1])}</td><td><code>${esc(c[2])}</code></td><td>${esc(c[3])}</td></tr>`,
+        )
+        .join('')}</tbody></table>`,
+  )
+  .join('');
+
 const css = `
 @font-face{font-family:'NST';src:url(data:font/woff2;base64,${b64(join(fontDir, 'noto-sans-thai-thai-wght-normal.woff2'))}) format('woff2');font-weight:100 900;unicode-range:U+0E01-0E5B,U+200C-200D,U+25CC}
 @font-face{font-family:'NST';src:url(data:font/woff2;base64,${b64(join(fontDir, 'noto-sans-thai-latin-wght-normal.woff2'))}) format('woff2');font-weight:100 900;unicode-range:U+0000-00FF,U+2000-206F,U+2190-21FF,U+25A0-25FF}
@@ -174,6 +190,8 @@ ${FLOWS.map(flowHtml).join('\n')}
 <p>ทุกบัญชีใช้รหัสผ่านกลางที่เจ้าของระบบตั้งไว้ (ไม่พิมพ์ในเอกสาร) PIN ของพนักงานคือ <b>1234</b> บัญชีบนเครื่อง POS ใช้ได้ทั้งการล็อกอินและล็อกหน้าจอด้วย PIN ไม่มีบัญชีเดโมใดเป็นผู้ดูแลแพลตฟอร์ม</p>${accTable}</div>
 <div class="part" style="page-break-before:avoid"><h1>ภาคผนวก ข · ข้อมูลเดโมที่มีอยู่แล้ว</h1>${dataTable}</div>
 <div class="part"><h1>ภาคผนวก ค · สิ่งที่ทดสอบไม่ได้หรือต้องมีของจริง</h1><p>รายการนี้ไม่ใช่ข้อบกพร่อง แต่คือสิ่งที่ต้องมีคีย์ อุปกรณ์ หรือการตรวจจากผู้เชี่ยวชาญก่อน</p>${noTable}</div>
+<div class="part"><h1>ภาคผนวก ง · ตารางครบทุกฟังก์ชัน (Feature coverage)</h1>
+<p>ตารางนี้ไล่ทุกโมดูลในทะเบียนโมดูลและทุกหน้าจอของระบบ ว่าทดสอบอยู่ใน flow ไหน ถ้าพบฟังก์ชันที่ไม่มีใน flow ใดเลย ให้แจ้งทีมเพื่อเพิ่ม (ไฟล์ต้นทาง tools/e2e-guide/flows3.mjs)</p>${covTable}</div>
 </body></html>`;
 
 const out = join(root, 'docs');

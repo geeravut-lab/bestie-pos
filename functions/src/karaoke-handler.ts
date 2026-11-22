@@ -131,7 +131,7 @@ export async function guestKaraokeResponse(
       const room = parseKaraokeRoomView(r.data);
       if (!room) return reply({ error: 'not_found' }, 404);
       const q = sp.get('q');
-      if (q === null) return reply({ room });
+      if (q === null) return reply({ room: r.data });
       // a search costs YouTube quota: only for a room that is in use, with the songs module on, and at a modest rate
       const words = q.replace(/\s+/g, ' ').trim().slice(0, 80);
       if (words.length < 2) return reply({ available: true, songs: [] });

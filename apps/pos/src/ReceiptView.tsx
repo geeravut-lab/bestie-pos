@@ -108,6 +108,14 @@ export function ReceiptView({
             </div>
           ))}
         {receipt.payments
+          .filter((p) => p.tender === 'credit')
+          .map((p) => (
+            <div key={p.id}>
+              <dt>{d.receiptCredit}</dt>
+              <dd>{money(p.amount)}</dd>
+            </div>
+          ))}
+        {receipt.payments
           .filter((p) => p.tender === 'room')
           .map((p) => (
             <div key={p.id}>

@@ -110,7 +110,7 @@ export async function guestIslandResponse(
     const r = await rpc(f, supabaseUrl, serviceRoleKey, 'guest_island', { p_slug: n });
     if (!r.ok) return reply({ error: 'server_error' }, 502);
     const island = parseIsland(r.data);
-    return island ? reply({ island }) : reply({ error: 'not_found' }, 404);
+    return island ? reply({ island: r.data }) : reply({ error: 'not_found' }, 404);
   } catch {
     return reply({ error: 'server_error' }, 502);
   }

@@ -52,8 +52,8 @@ describe('GET', () => {
       }),
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { info: { storeName: string; rooms: unknown[] } };
-    expect(body.info.storeName).toBe('Sing');
+    const body = (await res.json()) as { info: { store_name: string; rooms: unknown[] } };
+    expect(body.info.store_name).toBe('Sing');
     expect(body.info.rooms).toHaveLength(1);
   });
   it('a wrong link is 404, a malformed one 422', async () => {
@@ -125,7 +125,7 @@ describe('GET', () => {
       env,
       { fetchImpl: f },
     );
-    expect(((await res.json()) as { status: { depositPaid: number } }).status.depositPaid).toBe(
+    expect(((await res.json()) as { status: { deposit_paid: number } }).status.deposit_paid).toBe(
       18000,
     );
     expect(calls.at(-1)?.body).toEqual({ p_token: TOKEN, p_id: BOOKING, p_code: 'ABCD1234' });

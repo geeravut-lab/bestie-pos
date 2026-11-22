@@ -48,6 +48,21 @@ const stub = (status: number, body: unknown) => {
 };
 
 describe('<AskShopPage>', () => {
+  it('offers example questions about the newer modules, only where the module is on and only for one shop', async () => {
+    mount(ctx({ isModuleOn: (m: string) => m !== 'delivery' }));
+    expect(
+      await screen.findByRole('button', { name: /Which promotions gave away how much/ }),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: /free items did the stamp cards/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /commission did the delivery/ })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: /Which table earns the most/ }));
+    expect((screen.getByLabelText('Your question') as HTMLTextAreaElement).value).toBe(
+      'Which table earns the most per hour?',
+    );
+    await userEvent.selectOptions(await screen.findByLabelText('Shop'), 'all');
+    expect(screen.queryByRole('button', { name: /Which table earns the most/ })).toBeNull();
+    expect(screen.getByRole('button', { name: 'How do customers pay most?' })).toBeTruthy();
+  });
   it('sends the period and the question, shows the answer, the check and the figures', async () => {
     const f = stub(200, {
       available: true,

@@ -161,7 +161,7 @@ describe('<ToursPage>', () => {
     expect(screen.getByText(/Pim/)).toBeTruthy();
     await userEvent.click(screen.getByRole('button', { name: /Guest list \(1\)/ }));
     expect(screen.getByText('Anna')).toBeTruthy();
-    expect(screen.queryByText('Cy')).toBeNull();
+    expect(within(screen.getByText('Anna').closest('ul')!).queryByText('Cy')).toBeNull(); // not in the guest list of the tour
   });
   it('books seats with a request id, checks guests in and says when the tour is full', async () => {
     const { db } = mount((ctx) => <ToursPage ctx={ctx} />, tables, {
@@ -265,6 +265,32 @@ describe('<ToursPage>', () => {
     });
     await userEvent.click(screen.getByRole('button', { name: 'Show a LINE code' }));
     expect(await screen.findByText(/send this code in the chat: A1B2C3D4/)).toBeTruthy();
+  });
+  it('lists every cancelled and no-show booking in one place, whichever tour it was for', async () => {
+    const t6 = {
+      ...tables,
+      tour_bookings: [
+        ...tables.tour_bookings,
+        {
+          id: 'b3',
+          slot_id: 't1',
+          guest_name: 'Dee',
+          phone: '0877777777',
+          seats: 2,
+          status: 'no_show',
+          source: 'online',
+          deposit: 60000,
+          deposit_due: 60000,
+        },
+      ],
+    };
+    mount((ctx) => <ToursPage ctx={ctx} />, t6);
+    const sec = await screen.findByRole('region', { name: /Cancelled and no-show bookings/ });
+    expect(within(sec).getByText('Cy')).toBeTruthy();
+    expect(within(sec).getByText('Dee')).toBeTruthy();
+    expect(within(sec).getByText('No-show')).toBeTruthy();
+    expect(within(sec).queryByText('Anna')).toBeNull(); // a live booking is not in this list
+    expect(within(sec).getAllByText(/Snorkel/).length).toBeGreaterThan(0);
   });
   it('lets a manager keep or refund the deposit of a cancelled booking (cash comes out of a till)', async () => {
     const t5 = {

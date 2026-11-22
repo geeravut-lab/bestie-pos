@@ -66,6 +66,34 @@ describe('sendEmail', () => {
     expect(url).toBe('https://api.resend.com/emails');
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer re_test');
   });
+  it('test mode: EMAIL_REDIRECT_TO sends everything to that one address and names the intended one', async () => {
+    const f = vi.fn(async () => json({ id: 'x' }));
+    const env = {
+      RESEND_API_KEY: 'k',
+      EMAIL_FROM: 'onboarding@resend.dev',
+      EMAIL_REDIRECT_TO: 'me@example.test',
+    };
+    expect(
+      await sendEmail({ to: 'guest@b.co', subject: 'Hello', text: 'Body' }, env, f as never),
+    ).toBe('sent');
+    const body = JSON.parse(
+      String((f.mock.calls[0] as unknown as [string, RequestInit])[1].body),
+    ) as {
+      to: string[];
+      subject: string;
+      text: string;
+    };
+    expect(body.to).toEqual(['me@example.test']);
+    expect(body.subject).toBe('[TEST → guest@b.co] Hello');
+    expect(body.text).toContain('meant for guest@b.co');
+    expect(
+      await sendEmail(
+        { to: 'guest@b.co', subject: 's', text: 't' },
+        { ...env, EMAIL_REDIRECT_TO: 'bad' },
+        f as never,
+      ),
+    ).toBe('not_configured');
+  });
   it('tells a refused address from a service that is down', async () => {
     const env = { RESEND_API_KEY: 'k', EMAIL_FROM: 'a@b.co' };
     expect(

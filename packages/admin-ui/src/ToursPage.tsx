@@ -92,11 +92,35 @@ export function ToursPage({ ctx }: { ctx: PageContext }) {
     for (const raw of (books.data ?? []) as { slot_id: string }[]) {
       (bySlot[raw.slot_id] ??= []).push(...parseTourBookings([raw]));
     }
+    // every cancelled / no-show booking of the shop in one list (newest first), whichever tour it was for
+    const lostRes = await ctx.client
+      .from('tour_bookings')
+      .select('*')
+      .eq('store_id', storeId)
+      .in('status', ['cancelled', 'no_show'])
+      .order('created_at', { ascending: false })
+      .limit(100);
+    const lostBookings = parseTourBookings(lostRes.data).filter(
+      (b) => b.status === 'cancelled' || b.status === 'no_show',
+    );
+    const lostSlotIds = [
+      ...new Set(((lostRes.data ?? []) as { slot_id?: string }[]).map((r) => r.slot_id ?? '')),
+    ].filter(Boolean);
+    const lostSlots = lostSlotIds.length
+      ? parseTourSlots((await ctx.client.from('tour_slots').select('*').in('id', lostSlotIds)).data)
+      : [];
+    const lost: LostRow[] = lostBookings
+      .map((b) => {
+        const sl = lostSlots.find((x) => x.id === b.slotId);
+        return { booking: b, title: sl?.title ?? null, startsAt: sl?.startsAt ?? '' };
+      })
+      .sort((a, b) => b.startsAt.localeCompare(a.startsAt));
     const tillList = (tills.data ?? []) as { id: string; name: string }[];
     return {
       slots: parsed,
       bookings: bySlot,
       deposits: parseTourDeposits(deps.data),
+      lost,
       staff: (staff.data ?? []) as { id: string; display_name: string }[],
       tills: tillList,
       till: tillList[0]?.id ?? null,
@@ -498,6 +522,31 @@ export function ToursPage({ ctx }: { ctx: PageContext }) {
           );
         })}
       </ul>
+      {d && d.lost.length > 0 ? (
+        <section className="card admin-card" aria-label={t.touLostTitle}>
+          <h2>
+            {t.touLostTitle} ({d.lost.length})
+          </h2>
+          <ul className="member-list">
+            {d.lost.map((r) => (
+              <li key={r.booking.id}>
+                <strong>{r.booking.guestName}</strong> × {r.booking.seats}{' '}
+                <span className="badge">{t[`touSt_${r.booking.status}`]}</span>
+                {r.booking.source === 'online' ? (
+                  <span className="badge">{t.touOnline}</span>
+                ) : null}
+                <span className="muted">
+                  {' '}
+                  · {r.title ? guestName(r.title, lang) : '—'}
+                  {r.startsAt ? ` · ${formatDateTime(lang, r.startsAt)}` : ''}
+                  {r.booking.phone ? ` · ${r.booking.phone}` : ''}
+                  {r.booking.deposit > 0 ? ` · ${t.touDeposit}: ${money(r.booking.deposit)}` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       {canRefund && d ? (
         <HeldDeposits
           rows={heldOfCancelled(d.slots, d.bookings, d.deposits)}
@@ -605,6 +654,7 @@ export function ToursPage({ ctx }: { ctx: PageContext }) {
   );
 }
 
+type LostRow = { booking: TourBooking; title: TourSlot['title'] | null; startsAt: string };
 type HeldRow = { deposit: TourDeposit; guest: string; tour: string };
 /** The deposits still held for bookings that were cancelled or did not show: a manager keeps them as a fee or gives them back. */
 function heldOfCancelled(

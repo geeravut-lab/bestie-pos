@@ -1,3 +1,4 @@
+import { InstallAppButton } from './InstallApp';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useI18n } from '@bestie/i18n';
@@ -174,7 +175,10 @@ export function AppShell({
           <span className="topbar-brand">
             <Brand />
           </span>
-          <div className="topbar-right">{headerRight}</div>
+          <div className="topbar-right">
+            <InstallAppButton onShowSteps={() => onNavigate('/account')} />
+            {headerRight}
+          </div>
         </header>
         <main id="main" className="shell-main">
           {children}

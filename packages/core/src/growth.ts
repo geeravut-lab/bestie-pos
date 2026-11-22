@@ -1,5 +1,5 @@
 // Growth tools (stamp cards, tours, marketing, integration hub, network consents): readers for what the database answers, and the few rules that live in code.
-import { toCsv } from './csv';
+import { toCsv } from './csv.js';
 import type { LocalizedText } from './types';
 
 const obj = (x: unknown): Record<string, unknown> =>

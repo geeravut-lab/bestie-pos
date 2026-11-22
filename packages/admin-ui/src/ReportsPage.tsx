@@ -169,6 +169,15 @@ export function ReportsPage({ ctx }: { ctx: PageContext }) {
         >
           {t.rcLink}
         </button>
+        {ctx.isOwner ? (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => ctx.navigate('/integrations')}
+          >
+            {t.hubTitle}
+          </button>
+        ) : null}
       </div>
       <section className="card admin-card">
         <div className="filters">

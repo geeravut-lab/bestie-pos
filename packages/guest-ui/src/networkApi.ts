@@ -1,5 +1,5 @@
 import { parseIsland, parsePass } from '@bestie/core';
-import type { Island, Pass } from '@bestie/core';
+import type { Island, Pass, PassPartner } from '@bestie/core';
 
 export type Loaded<T> = { ok: true; data: T } | { ok: false; reason: 'not_found' | 'failed' };
 
@@ -80,5 +80,44 @@ export async function registerPass(
     return { ok: false, error: 'failed' };
   } catch {
     return { ok: false, error: 'failed' };
+  }
+}
+
+/** The businesses that share this pass's points (the guest's own switches), or null when the list could not be read. */
+export async function loadPassPartners(
+  token: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<PassPartner[] | null> {
+  try {
+    const res = await fetchImpl(`/api/guest/pass?t=${encodeURIComponent(token)}&partners=1`);
+    if (!res.ok) return null;
+    const raw = obj(await res.json().catch(() => null)).partners; // the server already shaped the list
+    if (!Array.isArray(raw)) return null;
+    return raw.flatMap((x) => {
+      const o = obj(x);
+      return typeof o.orgId === 'string' && typeof o.name === 'string'
+        ? [{ orgId: o.orgId, name: o.name, blocked: o.blocked === true }]
+        : [];
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function setPassBlock(
+  token: string,
+  org: string,
+  blocked: boolean,
+  fetchImpl: typeof fetch = fetch,
+): Promise<boolean> {
+  try {
+    const res = await fetchImpl('/api/guest/pass', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ op: 'block', t: token, org, blocked }),
+    });
+    return res.ok && obj(await res.json().catch(() => null)).ok === true;
+  } catch {
+    return false;
   }
 }

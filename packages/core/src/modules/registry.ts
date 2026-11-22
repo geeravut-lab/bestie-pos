@@ -21,6 +21,9 @@ export const MODULE_IDS = [
   'kiosk',
   'guest.concierge',
   'ai.business_manager',
+  'marketing',
+  'integration.hub',
+  'stamps',
   'delivery',
   'service.charge',
   // services / bookings
@@ -116,6 +119,9 @@ export const MODULES: readonly ModuleDef[] = [
   { id: 'kiosk', dependsOn: [], defaultProfiles: [], plan: 'pro', phase: 4 },
   { id: 'guest.concierge', dependsOn: [], defaultProfiles: [], plan: 'basic', phase: 4 },
   { id: 'ai.business_manager', dependsOn: [], defaultProfiles: [], plan: 'pro', phase: 4 },
+  { id: 'marketing', dependsOn: [], defaultProfiles: [], plan: 'pro', phase: 4 },
+  { id: 'integration.hub', dependsOn: [], defaultProfiles: [], plan: 'pro', phase: 4 },
+  { id: 'stamps', dependsOn: [], defaultProfiles: ['cafe'], plan: 'basic', phase: 4 },
   { id: 'delivery', dependsOn: [], defaultProfiles: [], plan: 'pro', phase: 4 },
   {
     id: 'service.charge',

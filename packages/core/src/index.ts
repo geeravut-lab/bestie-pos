@@ -76,3 +76,4 @@ export * from './upsell';
 export * from './kpi';
 export * from './menuImport';
 export * from './smartOps';
+export * from './growth';

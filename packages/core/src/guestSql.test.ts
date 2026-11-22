@@ -400,6 +400,26 @@ describe('spa advisor SQL mirror', () => {
     expect(sql).toContain("'guest.concierge','ai.business_manager'];");
   });
 
+  it('growth tools: the module mirrors live in migration 85', () => {
+    const dir = new URL('../../../supabase/migrations/', import.meta.url);
+    const sql = readFileSync(
+      new URL(readdirSync(dir).find((f) => f.endsWith('_growth_tools.sql')) ?? '', dir),
+      'utf8',
+    );
+    expect(MODULE_BY_ID.marketing).toMatchObject({ plan: 'pro', defaultProfiles: [] });
+    expect(MODULE_BY_ID['integration.hub']).toMatchObject({ plan: 'pro', defaultProfiles: [] });
+    expect(MODULE_BY_ID.stamps).toMatchObject({ plan: 'basic', defaultProfiles: ['cafe'] });
+    expect(MODULE_BY_ID['slots.booking']).toMatchObject({
+      plan: 'pro',
+      defaultProfiles: ['tours'],
+    });
+    expect(sql).toContain("(s.module_overrides ->> 'marketing')::boolean, false");
+    expect(sql).toContain("(s.module_overrides ->> 'integration.hub')::boolean, false");
+    expect(sql).toContain("(s.module_overrides ->> 'stamps')::boolean, s.profile = 'cafe'");
+    expect(sql).toContain("(s.module_overrides ->> 'slots.booking')::boolean, s.profile = 'tours'");
+    expect(sql).toContain("'ai.business_manager','marketing','integration.hub','stamps'];");
+  });
+
   it('kiosk: the module mirror and the rules that make a kiosk differ from a table live in migration 78', () => {
     const dir = new URL('../../../supabase/migrations/', import.meta.url);
     const sql = readFileSync(

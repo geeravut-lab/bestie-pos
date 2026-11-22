@@ -4,6 +4,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { readServerEnv } from './env.js';
 import { sendGuestReminders } from './guest-reminders.js';
+import { deliverMarketing, deliverWebhooks } from './growth-deliver.js';
 import { postPmsCharges } from './pms-sync.js';
 import { lineConfig } from './line-handler.js';
 import { callRpc, createSupabaseNotifyStore, deliverQueue } from './notify-deliver.js';
@@ -102,6 +103,16 @@ export async function notifyTickResponse(
       line: cfg,
       fetchImpl: f,
     }).catch(() => ({ due: 0, sent: 0 }));
+    // promotional LINE messages to members who agreed (queued once a day per campaign), and the owners' signed webhooks
+    const marketing = await deliverMarketing({
+      supabaseUrl,
+      serviceRoleKey,
+      cfg,
+      fetchImpl: f,
+    }).catch(() => ({ queued: 0, claimed: 0, sent: 0, failed: 0 }));
+    const webhooks = await deliverWebhooks({ supabaseUrl, serviceRoleKey, fetchImpl: f }).catch(
+      () => ({ claimed: 0, sent: 0, failed: 0 }),
+    );
     const delivery = cfg
       ? await deliverQueue({
           store: deps.store ?? createSupabaseNotifyStore(supabaseUrl, serviceRoleKey, f),
@@ -133,6 +144,9 @@ export async function notifyTickResponse(
     const passesErased = tidyNow
       ? await callRpc(supabaseUrl, serviceRoleKey, 'network_passes_cleanup', {}, f).catch(() => 0)
       : 0;
+    const webhooksErased = tidyNow
+      ? await callRpc(supabaseUrl, serviceRoleKey, 'webhook_cleanup', {}, f).catch(() => 0)
+      : 0;
     // audit rows older than the retention (default 5 years) are removed in bulk; nothing else can delete audit rows
     const purged = tidyNow
       ? await callRpc(supabaseUrl, serviceRoleKey, 'audit_purge', {}, f)
@@ -146,6 +160,9 @@ export async function notifyTickResponse(
       casesEscalated: typeof casesEscalated === 'number' ? casesEscalated : 0,
       insights: typeof insights === 'number' ? insights : 0,
       guestReminders: guests,
+      marketing,
+      webhooks,
+      webhooksErased: typeof webhooksErased === 'number' ? webhooksErased : 0,
       clientPhotosErased: typeof clientPhotosErased === 'number' ? clientPhotosErased : 0,
       hairPhotosErased: typeof photosErased === 'number' ? photosErased : 0,
       guestContactsErased: typeof contactsErased === 'number' ? contactsErased : 0,

@@ -26,6 +26,14 @@ export const LINE_MESSAGES = {
     th: 'ตั้งค่าเตือนนัดเรียบร้อยแล้ว เราจะส่งข้อความเตือนที่นี่ก่อนถึงเวลานัด',
     en: 'Your appointment reminder is set. We will message you here shortly before your appointment.',
   },
+  marketingLinked: {
+    th: 'เชื่อมต่อแล้ว เราจะส่งโปรโมชันให้ที่นี่ ไม่บ่อย พิมพ์ STOP เมื่อไรก็ได้เพื่อหยุดรับ',
+    en: 'You are connected. We will send you the occasional offer here. Reply STOP any time to stop.',
+  },
+  marketingStopped: {
+    th: 'หยุดส่งโปรโมชันให้แล้ว',
+    en: 'You will not receive offers any more.',
+  },
   guestReminder: {
     th: 'เตือนนัด',
     en: 'Appointment reminder',

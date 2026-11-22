@@ -143,3 +143,51 @@ describe('<IslandPage>', () => {
     );
   });
 });
+
+describe('<PassPage> consents', () => {
+  const org = (n: string) => ({ org_id: `o-${n}`, name: n, blocked: false });
+  it('lets the guest stop sharing with one business and keeps the switch', async () => {
+    const posts: unknown[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: unknown, init?: RequestInit) => {
+        const u = String(url);
+        if (init?.method === 'POST') {
+          posts.push(JSON.parse(String(init.body)));
+          return new Response(JSON.stringify({ ok: true }));
+        }
+        if (u.includes('partners=1'))
+          return new Response(
+            JSON.stringify({
+              partners: [org('Cafe Nok'), org('Palm Spa')].map((p, i) => ({
+                orgId: p.org_id,
+                name: p.name,
+                blocked: i === 1,
+              })),
+            }),
+          );
+        if (u.includes('pass-wallet')) return new Response('{}', { status: 404 });
+        return new Response(
+          JSON.stringify({
+            pass: {
+              name: 'Liu',
+              code: 'BP-ABCD2345KK',
+              network: net,
+              points: 12,
+              activity: [],
+              shops,
+            },
+          }),
+        );
+      }),
+    );
+    mount(<PassPage token={T} />);
+    expect(await screen.findByText('Businesses that share my points')).toBeTruthy();
+    expect(screen.getAllByText('Palm Spa').length).toBeGreaterThan(0);
+    const sharing = screen.getAllByRole('button', { name: 'Sharing' });
+    await userEvent.click(sharing[0]!);
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0]).toEqual({ op: 'block', t: T, org: 'o-Cafe Nok', blocked: true });
+    expect(await screen.findAllByRole('button', { name: 'Not sharing' })).toHaveLength(2);
+  });
+});

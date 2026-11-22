@@ -98,6 +98,24 @@ function MenuEditor({ ctx, stores }: { ctx: PageContext; stores: StoreRow[] }) {
               {t.kiNavLink}
             </button>
           ) : null}
+          {(
+            [
+              ['stamps', '/stamps', t.stpTitle],
+              ['marketing', '/marketing', t.mktTitle],
+              ['slots.booking', '/tours', t.touTitle],
+            ] as const
+          ).map(([mod, path, text]) =>
+            ctx.isModuleOn?.(mod) ? (
+              <button
+                key={path}
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => ctx.navigate(path)}
+              >
+                {text}
+              </button>
+            ) : null,
+          )}
           {ctx.isModuleOn?.('delivery') ? (
             <button
               type="button"

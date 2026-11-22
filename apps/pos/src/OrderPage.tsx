@@ -49,6 +49,7 @@ import { ManagerVoid } from './ManagerVoid';
 import { OrderCustomer } from './OrderCustomer';
 import { OrderDelivery, useDeliveryBill } from './OrderDelivery';
 import { OrderPromo, useOrderExtras } from './OrderPromo';
+import { OrderStamps } from './OrderStamps';
 import { PaySheet } from './PaySheet';
 import { useSplitInfo } from './useSplitInfo';
 import {
@@ -308,6 +309,9 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
         {pending > 0 ? ` · ${t.orderWaitingSync}` : ''}
       </p>
       <OrderCustomer ctx={ctx} orderId={order.id} open={open} online={netUp} />
+      {open && canEdit && (ctx.isModuleOn?.('stamps') ?? false) ? (
+        <OrderStamps ctx={ctx} orderId={order.id} storeId={order.storeId} online={netUp} />
+      ) : null}
       {canEdit && extras ? (
         <OrderPromo order={order} menu={menu} extras={extras} apply={apply} onAdd={addItem} />
       ) : null}

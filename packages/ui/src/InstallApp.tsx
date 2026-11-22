@@ -1,12 +1,16 @@
 import { useState } from 'react';
 import { useI18n } from '@bestie/i18n';
 import { AsyncButton } from './AsyncButton';
-import { promptInstall, useInstallApp } from './useInstallApp';
+import { isPhoneDevice, promptInstall, useInstallApp } from './useInstallApp';
 
-/** Small button for the top bar: only where installing really is possible (a browser prompt, or the iPhone steps on the account page). */
+/**
+ * Small button for the top bar, for computers and tablets only: where installing really is possible (a browser prompt, or the iPad steps on the account page).
+ * On a smartphone the top bar is too narrow, so the phone uses the "Install the app on this device" card on the account page instead.
+ */
 export function InstallAppButton({ onShowSteps }: { onShowSteps: () => void }) {
   const { t } = useI18n();
   const state = useInstallApp();
+  if (typeof navigator !== 'undefined' && isPhoneDevice(navigator.userAgent)) return null;
   if (state === 'available')
     return (
       <AsyncButton variant="secondary" className="install-btn" onClick={() => promptInstall()}>

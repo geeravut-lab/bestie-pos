@@ -204,43 +204,47 @@ function DeviceItem({
             />
           </div>
         ) : null}
-        {canEdit ? (
-          <div className="actions">
-            <AsyncButton variant="secondary" onClick={saveReader}>
-              {t.deviceReaderSave}
-            </AsyncButton>
-            <AsyncButton variant="secondary" onClick={savePos}>
-              {t.deviceSave}
-            </AsyncButton>
-            <AsyncButton variant="secondary" onClick={() => save({ active: !device.active })}>
-              {device.active ? t.deviceDisable : t.deviceEnable}
-            </AsyncButton>
-            {device.active || isHere ? (
-              <AsyncButton
-                variant="secondary"
-                onClick={() =>
-                  setDeviceBinding(
-                    isHere
-                      ? null
-                      : {
-                          deviceId: device.id,
-                          storeId: device.store_id,
-                          orgId: ctx.orgId,
-                          name: device.name,
-                          code: device.code ?? 'A',
-                          role: device.role,
-                          station: device.station,
-                          posId: device.revenue_pos_id,
-                          reader: device.reader_id !== null,
-                        },
-                  )
-                }
-              >
-                {isHere ? t.deviceUnbind : t.deviceBind}
+        <div className="actions">
+          {canEdit ? (
+            <>
+              <AsyncButton variant="secondary" onClick={saveReader}>
+                {t.deviceReaderSave}
               </AsyncButton>
-            ) : null}
-          </div>
-        ) : null}
+              <AsyncButton variant="secondary" onClick={savePos}>
+                {t.deviceSave}
+              </AsyncButton>
+              <AsyncButton variant="secondary" onClick={() => save({ active: !device.active })}>
+                {device.active ? t.deviceDisable : t.deviceEnable}
+              </AsyncButton>
+            </>
+          ) : null}
+          {/* Choosing which device THIS tablet is only changes this browser (nothing is written to the shop), so anyone who can open the page may do it:
+              a cashier whose tablet was never set up must not be stuck behind a button only the owner can see. */}
+          {device.active || isHere ? (
+            <AsyncButton
+              variant="secondary"
+              onClick={() =>
+                setDeviceBinding(
+                  isHere
+                    ? null
+                    : {
+                        deviceId: device.id,
+                        storeId: device.store_id,
+                        orgId: ctx.orgId,
+                        name: device.name,
+                        code: device.code ?? 'A',
+                        role: device.role,
+                        station: device.station,
+                        posId: device.revenue_pos_id,
+                        reader: device.reader_id !== null,
+                      },
+                )
+              }
+            >
+              {isHere ? t.deviceUnbind : t.deviceBind}
+            </AsyncButton>
+          ) : null}
+        </div>
       </div>
       {error ? <Notice kind="error">{errorText(error, t)}</Notice> : null}
       {saved ? <Notice kind="success">{t.deviceSaved}</Notice> : null}

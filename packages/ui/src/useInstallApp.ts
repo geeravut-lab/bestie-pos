@@ -31,6 +31,10 @@ export const isStandalone = (): boolean => {
 export const isIosDevice = (ua: string, touchPoints: number): boolean =>
   /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && touchPoints > 1);
 
+/** A smartphone (not a tablet, not a desktop): Android phones say "Mobile", iPhones say "iPhone"; an iPad / Android tablet does not match. */
+export const isPhoneDevice = (ua: string): boolean =>
+  /iPhone|iPod|Android.*Mobile|Windows Phone|Mobile/.test(ua);
+
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault(); // keep it: the page decides when to show the browser's install dialog
@@ -71,6 +75,13 @@ export async function promptInstall(): Promise<'accepted' | 'dismissed' | 'unava
   if (choice.outcome === 'accepted') installed = true;
   emit();
   return choice.outcome;
+}
+
+/** Tests only: forget what the browser offered, so each test starts as a fresh page load. */
+export function resetInstallForTests(): void {
+  deferred = null;
+  installed = false;
+  emit();
 }
 
 export function useInstallApp(): InstallState {

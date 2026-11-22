@@ -133,6 +133,25 @@ describe('<DevicesPage>', () => {
     );
     expect(screen.queryByRole('button', { name: 'Register device' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Switch off device' })).toBeNull();
+  });
+
+  it('a cashier without settings permission can still choose which device this tablet is', async () => {
+    localStorage.removeItem('bestie-device');
+    mount(
+      ctx(fakeDb({ devices: [device], stores }).client, {
+        isOwner: false,
+        permissions: ['order.create', 'payment.take'],
+      }),
+    );
+    await screen.findByText('Counter iPad');
+    await userEvent.click(screen.getByRole('button', { name: 'Use this tablet as this device' }));
+    expect(JSON.parse(localStorage.getItem('bestie-device')!)).toMatchObject({
+      deviceId: 'd1',
+      role: 'cashier',
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Stop using this tablet as a till' }));
+    expect(localStorage.getItem('bestie-device')).toBeNull();
   });
 });
 

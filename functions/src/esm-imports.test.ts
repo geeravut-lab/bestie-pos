@@ -16,7 +16,8 @@ function listTs(dir: string): string[] {
   );
 }
 
-const IMPORT = /(^|\n)\s*(import|export)\s+(type\s+)?([^'";]*?\sfrom\s+)?['"](\.{1,2}\/[^'"]+)['"]/g;
+const IMPORT =
+  /(^|\n)\s*(import|export)\s+(type\s+)?([^'";]*?\sfrom\s+)?['"](\.{1,2}\/[^'"]+)['"]/g;
 
 function resolveSpec(from: string, spec: string): { file: string; hasExt: boolean } | null {
   const target = resolve(dirname(from), spec);

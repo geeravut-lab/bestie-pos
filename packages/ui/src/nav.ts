@@ -58,6 +58,7 @@ export const ART_IDS = [
   'line',
   'analytics',
   'platformAdmins',
+  'orgMembers',
   'guestMenu',
   'pass',
   'book',
@@ -131,6 +132,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   item('line', '/admin/line', 'navLine', 'hintLine'),
   item('analytics', '/admin/analytics', 'navAnalytics', 'hintAnalytics'),
   item('platformAdmins', '/admin/platform-admins', 'navPlatformAdmins', 'hintPlatformAdmins'),
+  item('orgMembers', '/admin/org-members', 'navOrgMembers', 'hintOrgMembers'),
   item('guestMenu', '/g/menu', 'navGuestMenu', 'hintGuestMenu'),
   item('pass', '/g/pass', 'navPass', 'hintPass', ['loyalty.network']),
   item('book', '/g/book', 'navBook', 'hintBook', ['appointments']),
@@ -262,7 +264,7 @@ export const ROLE_LAYOUT: Readonly<Record<AppRole, RoleLayout>> = {
   },
   platformAdmin: {
     tabs: ['home', 'branding', 'flags'],
-    cards: ['branding', 'flags', 'ai', 'line', 'analytics', 'platformAdmins'],
+    cards: ['branding', 'flags', 'ai', 'line', 'analytics', 'platformAdmins', 'orgMembers'],
   },
   guest: {
     center: 'guestMenu',
@@ -321,6 +323,7 @@ export const PLATFORM_CARDS: readonly ArtId[] = [
   'line',
   'analytics',
   'platformAdmins',
+  'orgMembers',
 ];
 
 /** The cards of a role; a platform administrator also gets the platform pages next to the ones of their shop role. */

@@ -31,12 +31,14 @@ export function Notice({
   kind,
   children,
 }: {
-  kind: 'error' | 'success' | 'info';
+  kind: 'error' | 'success' | 'info' | 'warning';
   children: ReactNode;
 }) {
   return (
     <p className={`notice notice-${kind}`} role={kind === 'error' ? 'alert' : 'status'}>
-      <span aria-hidden="true">{kind === 'error' ? '✕' : kind === 'success' ? '✓' : 'ⓘ'}</span>{' '}
+      <span aria-hidden="true">
+        {kind === 'error' ? '✕' : kind === 'success' ? '✓' : kind === 'warning' ? '⚠' : 'ⓘ'}
+      </span>{' '}
       {children}
     </p>
   );
@@ -224,6 +226,7 @@ export function OnboardingPage({ onCreated }: { onCreated: () => Promise<void> }
   const [storeName, setStoreName] = useState('');
   const [profile, setProfile] = useState<string>('restaurant');
   const [error, setError] = useState<ErrorKey | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const names: Record<string, string> = {
     restaurant: t.profileRestaurant,
     cafe: t.profileCafe,
@@ -233,6 +236,19 @@ export function OnboardingPage({ onCreated }: { onCreated: () => Promise<void> }
     retail: t.profileRetail,
     karaoke: t.profileKaraoke,
     tours: t.profileTours,
+  };
+
+  // A second business made by mistake is the commonest onboarding error (the team already has one): ask once before creating.
+  const askFirst = async () => {
+    setError(null);
+    if (orgName.trim().length < 1) return setError('err_invalid_input');
+    setConfirming(true);
+  };
+  const goToInvite = () => {
+    setConfirming(false);
+    const el = document.getElementById('accept-code');
+    el?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    el?.focus();
   };
 
   const create = async () => {
@@ -255,6 +271,12 @@ export function OnboardingPage({ onCreated }: { onCreated: () => Promise<void> }
     <AuthFrame>
       <section className="card auth-card">
         <h1>{t.onboardingTitle}</h1>
+        <Notice kind="warning">
+          <strong>{t.onboardingTeamWarnTitle}</strong> {t.onboardingTeamWarnBody}
+        </Notice>
+        <button type="button" className="btn btn-secondary" onClick={goToInvite}>
+          {t.onboardingHaveInvite}
+        </button>
         <p className="muted">{t.onboardingBody}</p>
         <form className="auth-form" onSubmit={(e) => e.preventDefault()}>
           <div className="form-row">
@@ -301,9 +323,21 @@ export function OnboardingPage({ onCreated }: { onCreated: () => Promise<void> }
             </div>
           </div>
           {error ? <Notice kind="error">{errorText(error, t)}</Notice> : null}
-          <AsyncButton type="submit" onClick={create}>
-            {t.onboardingCreate}
-          </AsyncButton>
+          {confirming ? (
+            <>
+              <Notice kind="warning">{t.onboardingConfirmNew}</Notice>
+              <AsyncButton type="submit" onClick={create}>
+                {t.onboardingConfirmCreate}
+              </AsyncButton>
+              <button type="button" className="btn btn-secondary" onClick={goToInvite}>
+                {t.onboardingHaveInvite}
+              </button>
+            </>
+          ) : (
+            <AsyncButton type="submit" onClick={askFirst}>
+              {t.onboardingCreate}
+            </AsyncButton>
+          )}
         </form>
       </section>
       <AcceptInviteCard onJoined={onCreated} />

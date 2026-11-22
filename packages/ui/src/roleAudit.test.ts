@@ -74,6 +74,7 @@ const PLATFORM: readonly ArtId[] = [
   'line',
   'analytics',
   'platformAdmins',
+  'orgMembers',
 ];
 const GUEST: readonly ArtId[] = ['guestMenu', 'pass', 'book', 'pay'];
 

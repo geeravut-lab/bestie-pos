@@ -179,6 +179,11 @@ h3 {
   background: var(--bp-info-bg);
   color: var(--bp-info-fg);
 }
+.notice-warning {
+  background: var(--bp-warning-bg);
+  color: var(--bp-warning-fg);
+  border: 2px solid var(--bp-warning-fg);
+}
 
 /* ── language switch ─────────────────────────────────────────────────────── */
 .lang-switch {

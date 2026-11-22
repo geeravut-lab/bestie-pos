@@ -362,6 +362,19 @@ const SCENES: Record<ArtId, { tone: Tone; art: ReactNode }> = {
       </>
     ),
   },
+  orgMembers: {
+    tone: 'sky',
+    art: (
+      <>
+        <rect className="il-white il-edge" x="76" y="24" width="64" height="58" rx="8" />
+        <path className="il-edge-line" d="M88 40h40M88 52h40M88 64h26" />
+        <circle className="il-brand il-edge" cx="40" cy="42" r="12" />
+        <path className="il-brand il-edge" d="M18 80c2-12 10-18 22-18s20 6 22 18z" />
+        <path className="il-accent il-edge-line" d="M60 52h12M67 46l6 6-6 6" />
+        <circle className="il-sun il-edge" cx="136" cy="20" r="7" />
+      </>
+    ),
+  },
   guestMenu: {
     tone: 'sun',
     art: (

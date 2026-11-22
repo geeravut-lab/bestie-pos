@@ -12,7 +12,9 @@ type Admin = {
   addedBy: string | null;
   isMe: boolean;
 };
-type LogLine = { action: 'add' | 'remove'; actor: string; target: string; at: string };
+type LogAction = 'add' | 'remove' | 'member_move' | 'org_delete';
+type LogLine = { action: LogAction; actor: string; target: string; detail: string; at: string };
+const LOG_ACTIONS: readonly string[] = ['add', 'remove', 'member_move', 'org_delete'];
 const obj = (x: unknown): Record<string, unknown> =>
   x && typeof x === 'object' ? (x as Record<string, unknown>) : {};
 const str = (x: unknown, fallback = ''): string => (typeof x === 'string' ? x : fallback);
@@ -45,9 +47,10 @@ export function PlatformAdminsPage({ ctx }: { ctx: PageContext }) {
     const log: LogLine[] = (Array.isArray(o.log) ? o.log : []).map((x) => {
       const l = obj(x);
       return {
-        action: l.action === 'remove' ? 'remove' : 'add',
+        action: (LOG_ACTIONS.includes(str(l.action)) ? str(l.action) : 'add') as LogAction,
         actor: str(l.actor_email, '—'),
         target: str(l.target_email, '—'),
+        detail: str(l.detail),
         at: str(l.at),
       };
     });
@@ -166,10 +169,16 @@ export function PlatformAdminsPage({ ctx }: { ctx: PageContext }) {
             <ul className="member-list">
               {d.log.map((l, i) => (
                 <li key={`${l.at}-${i}`} className="card admin-card">
-                  {fmt(l.action === 'add' ? t.paLogAdd : t.paLogRemove, {
-                    actor: l.actor,
-                    target: l.target,
-                  })}
+                  {fmt(
+                    l.action === 'add'
+                      ? t.paLogAdd
+                      : l.action === 'remove'
+                        ? t.paLogRemove
+                        : l.action === 'member_move'
+                          ? t.paLogMove
+                          : t.paLogOrgDelete,
+                    { actor: l.actor, target: l.target, detail: l.detail },
+                  )}
                   <p className="muted">{l.at ? formatDateTime(lang, l.at) : ''}</p>
                 </li>
               ))}

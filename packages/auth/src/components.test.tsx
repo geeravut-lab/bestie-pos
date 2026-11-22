@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@bestie/i18n';
 import { AuthProvider } from './context';
-import { AcceptInviteCard, LoginPage, SsoCallbackPage } from './components';
+import { AcceptInviteCard, LoginPage, OnboardingPage, SsoCallbackPage } from './components';
 
 afterEach(() => {
   cleanup();
@@ -212,5 +212,57 @@ describe('<AcceptInviteCard>', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Join the shop' }));
     await screen.findByRole('alert');
     expect(rpc).not.toHaveBeenCalled();
+  });
+});
+
+describe('<OnboardingPage> duplicate-business warning', () => {
+  const clientWith = (rpc: ReturnType<typeof vi.fn>) =>
+    ({
+      auth: {
+        getSession: vi.fn(async () => ({ data: { session: null } })),
+        onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: () => {} } } })),
+      },
+      rpc,
+      from: vi.fn(),
+    }) as never;
+
+  it('offers every business type, none of them marked as coming soon', () => {
+    mount(<OnboardingPage onCreated={async () => {}} />, clientWith(vi.fn()));
+    const group = screen.getByRole('group', { name: 'Store type' });
+    const chips = group.querySelectorAll('button.chip');
+    expect(chips.length).toBe(8);
+    chips.forEach((c) => expect((c as HTMLButtonElement).disabled).toBe(false));
+    expect(screen.queryByText(/Coming soon/)).toBeNull();
+  });
+
+  it('warns first that a team with a business should ask for an invite code', () => {
+    mount(<OnboardingPage onCreated={async () => {}} />, clientWith(vi.fn()));
+    expect(screen.getByText(/already have a business in Bestie/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /I have an invite code/ })).toBeTruthy();
+  });
+
+  it('does not create anything on the first press; only the confirming press calls create_org', async () => {
+    const rpc = vi.fn(async () => ({ data: 'org-id', error: null }));
+    const onCreated = vi.fn(async () => {});
+    mount(<OnboardingPage onCreated={onCreated} />, clientWith(rpc));
+    await userEvent.type(screen.getByLabelText('Business name'), 'My Co');
+    await userEvent.click(screen.getByRole('button', { name: 'Create shop' }));
+    expect(rpc).not.toHaveBeenCalled();
+    expect(screen.getByText(/Confirming creates a new business/)).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm: create a new business' }));
+    await waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1));
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect((rpc.mock.calls[0] as unknown[])[0]).toBe('create_org');
+  });
+
+  it('the invite button leaves the confirmation and focuses the code box', async () => {
+    const rpc = vi.fn();
+    mount(<OnboardingPage onCreated={async () => {}} />, clientWith(rpc));
+    await userEvent.type(screen.getByLabelText('Business name'), 'My Co');
+    await userEvent.click(screen.getByRole('button', { name: 'Create shop' }));
+    await userEvent.click(screen.getAllByRole('button', { name: /I have an invite code/ })[0]!);
+    expect(document.activeElement).toBe(document.getElementById('accept-code'));
+    expect(rpc).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Confirm: create a new business' })).toBeNull();
   });
 });

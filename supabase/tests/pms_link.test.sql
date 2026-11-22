@@ -73,7 +73,8 @@ select t_val('00000000-0000-0000-0000-0000000000a1', 'authenticated', 'bar_dev',
 select t_val('00000000-0000-0000-0000-0000000000a1', 'authenticated', 'desk_dev', $$insert into public.devices (org_id, store_id, name, role, revenue_pos_id) values ((select v::uuid from t_out where k='org'), (select v::uuid from t_out where k='resort'), 'Front desk', 'cashier', 'POS-FD') returning id::text$$);
 
 -- ── the module ──
-select t_rows(null, 'service_role', $$select 1 where not public.folio_enabled((select v::uuid from t_out where k='resort'))$$, 1, 'a resort-profile shop on the default plan does not have the folio yet');
+update public.stores set plan = 'pro' where id = (select v::uuid from t_out where k='resort');  -- a resort shop on Pro (a new resort shop starts on Resort since migration 92)
+select t_rows(null, 'service_role', $$select 1 where not public.folio_enabled((select v::uuid from t_out where k='resort'))$$, 1, 'a resort-profile shop on the Pro plan does not have the folio');
 select t_err('00000000-0000-0000-0000-0000000000a1', 'authenticated', $$select public.save_folio_room(jsonb_build_object('store_id', (select v from t_out where k='resort'), 'name', '101'))$$, '0A000', 'so rooms cannot be made');
 update public.stores set plan = 'resort' where id = (select v::uuid from t_out where k='resort');
 select t_rows(null, 'service_role', $$select 1 where public.folio_enabled((select v::uuid from t_out where k='resort')) and not public.folio_enabled((select v::uuid from t_out where k='bar'))$$, 1, 'on the Resort plan the resort profile has it, the cafe does not');

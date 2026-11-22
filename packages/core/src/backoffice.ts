@@ -94,13 +94,15 @@ export const formatInviteCode = (v: string): string =>
     .match(/.{1,4}/g)
     ?.join('-') ?? '';
 
-/** Profiles a new shop can pick in Phase 1 (the others arrive with their phase — docs/PHASE1_TASKS.md). */
+/** Profiles a new shop can pick: all eight are built. */
 export const SELECTABLE_PROFILES = [
   'restaurant',
   'cafe',
   'salon',
   'spa',
+  'resort',
   'retail',
+  'tours',
   'karaoke',
 ] as const;
 

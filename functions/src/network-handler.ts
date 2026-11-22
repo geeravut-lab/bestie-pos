@@ -7,6 +7,7 @@
 // Every rule is checked by the database functions; this file limits the request rate, checks shapes and talks to them with the service role.
 import { readServerEnv } from './env.js';
 import { clientKey, jsonObject, rpc } from './guest-extras-handler.js';
+import { wire } from './guest-wire.js';
 import { createRateLimiter } from './line.js';
 import { parsePassPartners } from '../../packages/core/src/growth.js';
 import { parseIsland, parsePass } from '../../packages/core/src/network.js';
@@ -51,7 +52,8 @@ export async function guestPassResponse(
       const r = await rpc(f, supabaseUrl, serviceRoleKey, 'guest_pass', { p_token: t });
       if (!r.ok) return reply({ error: 'server_error' }, 502);
       const pass = parsePass(r.data);
-      return pass ? reply({ pass }) : reply({ error: 'not_found' }, 404);
+      // the page parses the answer again with the same core parser, so it must receive the database's own shape (`booking_token`, `order_token`), not the parsed camelCase one
+      return pass ? reply({ pass: wire(pass, r.data) }) : reply({ error: 'not_found' }, 404);
     }
     if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
     const b = await jsonObject(request, 2000);

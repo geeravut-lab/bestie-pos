@@ -32,6 +32,45 @@ describe('GET /api/guest/pass', () => {
   });
 });
 
+describe('GET /api/guest/pass keeps the shops\' booking and ordering links (owner report: no "Order food" button on the pass page)', () => {
+  it('sends the database shape, so the page can parse it again and still see both tokens', async () => {
+    const order = 'c'.repeat(32);
+    const book = 'd'.repeat(32);
+    const db = {
+      name: 'Liu',
+      code: 'BP-ABCD2345KK',
+      network: { slug: 'koh-phangan', name: { th: 'เกาะ' } },
+      points: 10,
+      activity: [],
+      shops: [
+        {
+          category: 'cafe',
+          title: { th: 'บรีซ', en: 'Breeze' },
+          about: null,
+          order_token: order,
+          booking_token: null,
+        },
+        {
+          category: 'spa',
+          title: { th: 'โลตัส' },
+          about: null,
+          order_token: null,
+          booking_token: book,
+        },
+      ],
+    };
+    const r = await guestPassResponse(req(`/api/guest/pass?t=${T}`), env, {
+      fetchImpl: (async () => json(db)) as never,
+    });
+    const body = (await r.json()) as { pass: unknown };
+    // what the page does with the answer
+    const { parsePass } = await import('../../packages/core/src/network.js');
+    const page = parsePass(body.pass);
+    expect(page?.shops[0]).toMatchObject({ orderToken: order, bookingToken: null });
+    expect(page?.shops[1]).toMatchObject({ orderToken: null, bookingToken: book });
+  });
+});
+
 describe('POST /api/guest/pass (register)', () => {
   const post = (body: unknown) =>
     req('/api/guest/pass', {

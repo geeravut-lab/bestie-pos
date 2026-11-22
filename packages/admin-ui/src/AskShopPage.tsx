@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useRemote } from './useRemote';
 import { ASK_PRESETS } from '@bestie/core';
-import type { AskPreset } from '@bestie/core';
+import type { AskPreset, ModuleId } from '@bestie/core';
 import { AppError, errorText, fmt, useI18n } from '@bestie/i18n';
 import type { Dict, ErrorKey } from '@bestie/i18n';
 import { AsyncButton } from '@bestie/ui';
@@ -19,6 +19,15 @@ const PRESET_KEY: Record<AskPreset, string> = {
   month: 'repPresetMonth',
 };
 const EXAMPLES = ['askShopEx1', 'askShopEx2', 'askShopEx3', 'askShopEx4'] as const;
+/** Questions about the newer modules: shown for ONE shop (the all-shops answer uses sales only) and only where the module is on. */
+const MODULE_EXAMPLES: readonly { key: string; module?: ModuleId }[] = [
+  { key: 'askShopEx5' },
+  { key: 'askShopEx10' },
+  { key: 'askShopEx6', module: 'stamps' },
+  { key: 'askShopEx7', module: 'tables.floorplan' },
+  { key: 'askShopEx8', module: 'delivery' },
+  { key: 'askShopEx9', module: 'slots.booking' },
+];
 
 /** "Ask my shop" (owner / manager): a plain-language answer about a period. Read only; every figure is read from the shop's reports. */
 export function AskShopPage({ ctx }: { ctx: PageContext }) {
@@ -124,6 +133,20 @@ export function AskShopPage({ ctx }: { ctx: PageContext }) {
               {tx(t, k)}
             </button>
           ))}
+          {scope !== 'all'
+            ? MODULE_EXAMPLES.filter((e) => !e.module || (ctx.isModuleOn?.(e.module) ?? true)).map(
+                (e) => (
+                  <button
+                    key={e.key}
+                    type="button"
+                    className="chip"
+                    onClick={() => setQuestion(tx(t, e.key))}
+                  >
+                    {tx(t, e.key)}
+                  </button>
+                ),
+              )
+            : null}
         </div>
         <div className="actions">
           <AsyncButton disabled={!on || question.trim().length < 2} onClick={ask}>

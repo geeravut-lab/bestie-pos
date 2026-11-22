@@ -143,6 +143,8 @@ export type TourBooking = {
   seats: number;
   status: 'booked' | 'checked_in' | 'cancelled' | 'no_show';
   deposit: number;
+  depositDue: number;
+  source: 'staff' | 'online';
   orderId: string | null;
 };
 export function parseTourBookings(v: unknown): TourBooking[] {
@@ -158,6 +160,8 @@ export function parseTourBookings(v: unknown): TourBooking[] {
       seats: num(o.seats),
       status: s === 'checked_in' || s === 'cancelled' || s === 'no_show' ? s : 'booked',
       deposit: num(o.deposit),
+      depositDue: num(o.deposit_due),
+      source: o.source === 'online' ? 'online' : 'staff',
       orderId: str(o.order_id) || null,
     });
   }
@@ -669,4 +673,170 @@ export function rowsToCsv(rows: readonly Record<string, unknown>[]): string {
     keys,
     rows.map((r) => keys.map((k) => r[k] ?? '')),
   );
+}
+
+// ── tours: what a guest's phone reads and sends ──
+const TOUR_PATH = /^\/tour\/([0-9a-f]{32})\/?$/;
+export const tourTokenFromPath = (pathname: string): string | null =>
+  TOUR_PATH.exec(pathname)?.[1] ?? null;
+export const tourLink = (origin: string, token: string): string =>
+  `${origin.replace(/\/+$/, '')}/tour/${token}`;
+/** The deposit due for a booking: the shop's percentage of price × seats, half up (the same integer arithmetic as the database). */
+export const tourDepositFor = (price: number, seats: number, pct: number): number =>
+  Math.floor((price * seats * pct + 50) / 100);
+
+export type TourOnlineSlot = {
+  id: string;
+  title: LocalizedText;
+  startsAt: string;
+  durationMin: number;
+  price: number;
+  seatsLeft: number;
+  note: string | null;
+  depositPerSeat: number;
+};
+export type TourOnlineInfo = {
+  open: boolean;
+  storeName: string;
+  depositPct: number;
+  holdMin: number;
+  payNote: string;
+  slots: TourOnlineSlot[];
+};
+export function parseTourOnlineInfo(v: unknown): TourOnlineInfo | null {
+  const o = obj(v);
+  if (!str(o.store_name)) return null;
+  const s = obj(o.settings);
+  const slots: TourOnlineSlot[] = [];
+  for (const x of list(o.slots)) {
+    const t = obj(x);
+    if (!str(t.id) || !str(t.starts_at)) continue;
+    slots.push({
+      id: str(t.id),
+      title: name(t.title),
+      startsAt: str(t.starts_at),
+      durationMin: num(t.duration_min),
+      price: num(t.price),
+      seatsLeft: num(t.seats_left),
+      note: str(t.note) || null,
+      depositPerSeat: num(t.deposit_per_seat),
+    });
+  }
+  return {
+    open: o.open === true,
+    storeName: str(o.store_name),
+    depositPct: num(s.deposit_pct),
+    holdMin: num(s.hold_min),
+    payNote: str(s.pay_note),
+    slots,
+  };
+}
+export type TourBookError =
+  | 'not_found'
+  | 'closed'
+  | 'invalid'
+  | 'unavailable'
+  | 'rate_limited'
+  | 'too_many'
+  | 'full'
+  | 'too_late';
+const TOUR_ERRORS: readonly string[] = [
+  'not_found',
+  'closed',
+  'invalid',
+  'unavailable',
+  'rate_limited',
+  'too_many',
+  'full',
+  'too_late',
+];
+export type TourBookResult =
+  | { ok: true; id: string; code: string | null; depositDue: number; holdUntil: string | null }
+  | { ok: false; error: TourBookError | 'failed' };
+export function parseTourBookResult(v: unknown): TourBookResult {
+  const o = obj(v);
+  if (o.ok === true && str(o.id))
+    return {
+      ok: true,
+      id: str(o.id),
+      code: str(o.code) || null,
+      depositDue: num(o.deposit_due),
+      holdUntil: str(o.hold_until) || null,
+    };
+  const e = str(o.error);
+  return { ok: false, error: TOUR_ERRORS.includes(e) ? (e as TourBookError) : 'failed' };
+}
+export type TourStatus = {
+  status: string;
+  seats: number;
+  depositDue: number;
+  depositReceived: number;
+  holdUntil: string | null;
+  startsAt: string;
+  title: LocalizedText;
+} | null;
+export function parseTourStatus(v: unknown): TourStatus {
+  const o = obj(v);
+  if (!str(o.status)) return null;
+  return {
+    status: str(o.status),
+    seats: num(o.seats),
+    depositDue: num(o.deposit_due),
+    depositReceived: num(o.deposit_received),
+    holdUntil: str(o.hold_until) || null,
+    startsAt: str(o.starts_at),
+    title: name(o.title),
+  };
+}
+export type TourSettings = {
+  depositPct: number;
+  holdMin: number;
+  daysAhead: number;
+  noticeMin: number;
+  payNote: string;
+};
+export function parseTourLink(
+  v: unknown,
+): { token: string; settings: TourSettings; enabled: boolean } | null {
+  const o = obj(v);
+  if (!/^[0-9a-f]{32}$/.test(str(o.token))) return null;
+  const s = obj(o.settings);
+  return {
+    token: str(o.token),
+    enabled: o.enabled === true,
+    settings: {
+      depositPct: num(s.deposit_pct),
+      holdMin: num(s.hold_min),
+      daysAhead: num(s.days_ahead),
+      noticeMin: num(s.notice_min),
+      payNote: str(s.pay_note),
+    },
+  };
+}
+export type TourDeposit = {
+  id: string;
+  bookingId: string;
+  amount: number;
+  method: 'cash' | 'promptpay' | 'gateway';
+  status: 'held' | 'on_bill' | 'refunded' | 'forfeited';
+};
+export function parseTourDeposits(v: unknown): TourDeposit[] {
+  const out: TourDeposit[] = [];
+  for (const x of list(v)) {
+    const o = obj(x);
+    if (!str(o.id)) continue;
+    const m = o.method === 'cash' || o.method === 'gateway' ? o.method : 'promptpay';
+    const s =
+      o.status === 'on_bill' || o.status === 'refunded' || o.status === 'forfeited'
+        ? o.status
+        : 'held';
+    out.push({
+      id: str(o.id),
+      bookingId: str(o.booking_id),
+      amount: num(o.amount),
+      method: m,
+      status: s,
+    });
+  }
+  return out;
 }

@@ -329,3 +329,88 @@ describe('data export', () => {
     expect(rowsToCsv([]).replace('﻿', '').trim()).toBe('');
   });
 });
+
+import {
+  parseTourBookResult,
+  parseTourDeposits,
+  parseTourLink,
+  parseTourOnlineInfo,
+  parseTourStatus,
+  tourDepositFor,
+  tourLink,
+  tourTokenFromPath,
+} from './growth';
+
+describe('tours online', () => {
+  const T = 'a'.repeat(32);
+  it('finds the link token in a path and builds the link', () => {
+    expect(tourTokenFromPath(`/tour/${T}`)).toBe(T);
+    expect(tourTokenFromPath(`/tour/${T}/`)).toBe(T);
+    expect(tourTokenFromPath('/tour/xyz')).toBeNull();
+    expect(tourTokenFromPath(`/tours/${T}`)).toBeNull();
+    expect(tourLink('https://x.app/', T)).toBe(`https://x.app/tour/${T}`);
+  });
+  it('rounds the deposit half up like the database', () => {
+    expect(tourDepositFor(150000, 2, 40)).toBe(120000);
+    expect(tourDepositFor(99900, 1, 30)).toBe(29970);
+    expect(tourDepositFor(1001, 1, 50)).toBe(501);
+    expect(tourDepositFor(1000, 3, 0)).toBe(0);
+  });
+  it('reads the page data, the answer to a booking, the status and the owner link', () => {
+    const info = parseTourOnlineInfo({
+      open: true,
+      store_name: 'Dive',
+      settings: { deposit_pct: 40, hold_min: 60, pay_note: 'PromptPay 081' },
+      slots: [
+        {
+          id: 's',
+          title: { th: 'ดำน้ำ', en: 'Snorkel' },
+          starts_at: '2026-11-25T02:00:00Z',
+          duration_min: 240,
+          price: 150000,
+          seats_left: 4,
+          deposit_per_seat: 60000,
+        },
+        { x: 1 },
+      ],
+    });
+    expect(info).toMatchObject({
+      open: true,
+      depositPct: 40,
+      holdMin: 60,
+      payNote: 'PromptPay 081',
+    });
+    expect(info!.slots).toHaveLength(1);
+    expect(parseTourOnlineInfo({ nothing: true })).toBeNull();
+    expect(
+      parseTourBookResult({ ok: true, id: 'b', code: 'ABCD1234', deposit_due: 120000 }),
+    ).toEqual({ ok: true, id: 'b', code: 'ABCD1234', depositDue: 120000, holdUntil: null });
+    expect(parseTourBookResult({ ok: false, error: 'full' })).toEqual({ ok: false, error: 'full' });
+    expect(parseTourBookResult({ ok: false, error: 'something odd' })).toEqual({
+      ok: false,
+      error: 'failed',
+    });
+    expect(parseTourBookResult(null)).toEqual({ ok: false, error: 'failed' });
+    expect(
+      parseTourStatus({
+        status: 'booked',
+        seats: 2,
+        deposit_due: 100,
+        deposit_received: 0,
+        starts_at: 'x',
+        title: { th: 'a' },
+      }),
+    ).toMatchObject({ status: 'booked', depositDue: 100 });
+    expect(parseTourStatus(null)).toBeNull();
+    expect(
+      parseTourLink({ token: T, enabled: true, settings: { deposit_pct: 30, days_ahead: 60 } }),
+    ).toMatchObject({ token: T, enabled: true, settings: { depositPct: 30, daysAhead: 60 } });
+    expect(parseTourLink({ token: 'short' })).toBeNull();
+    expect(
+      parseTourDeposits([
+        { id: 'd', booking_id: 'b', amount: 5000, method: 'cash', status: 'refunded' },
+        { amount: 1 },
+      ]),
+    ).toEqual([{ id: 'd', bookingId: 'b', amount: 5000, method: 'cash', status: 'refunded' }]);
+  });
+});

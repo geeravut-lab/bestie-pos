@@ -49,6 +49,12 @@ export type PageContext = {
 };
 
 /** Tablet mode (apps/pos): a lock screen in front of the app, the acting person's role, extra header controls. */
+/** Pages of the guest role (`/g/…`): no shop, no account. */
+export type GuestPages = (p: {
+  path: string;
+  navigate: (path: string) => void;
+}) => ReactNode | null;
+
 export type DeviceMode = {
   /** Full-screen takeover (device not set up / locked). Return null once someone is working. */
   gate: (ctx: PageContext, acting: ActingIdentity | null) => ReactNode | null;
@@ -114,11 +120,13 @@ function Inner({
   app,
   env,
   pages,
+  guestPages,
   deviceMode,
 }: {
   app: AppId;
   env: PublicEnv | undefined;
   pages?: (ctx: PageContext) => ReactNode | null;
+  guestPages?: GuestPages;
   deviceMode?: DeviceMode;
 }) {
   const auth = useAuth();
@@ -213,6 +221,8 @@ function Inner({
       gate={gate}
       onPathChange={(p) => trackPage(auth.client, p)}
       renderPage={({ path, navigate }) => {
+        // the guest role's cards (/g/…) need no shop and no sign-in
+        if (path.startsWith('/g/')) return guestPages?.({ path, navigate }) ?? null;
         if (!live || !my.data) return null;
         if (path === '/account') return <AccountPage />;
         if (path === '/notifications') return <NotificationsPage />;
@@ -251,11 +261,13 @@ export function AuthApp({
   app,
   rawEnv,
   pages,
+  guestPages,
   deviceMode,
 }: {
   app: AppId;
   rawEnv: Record<string, string | boolean | undefined>;
   pages?: (ctx: PageContext) => ReactNode | null;
+  guestPages?: GuestPages;
   deviceMode?: DeviceMode;
 }) {
   const env = useMemo(() => {
@@ -269,7 +281,7 @@ export function AuthApp({
   const client = useMemo(() => (env ? createBrowserClient(env) : null), [env]);
   return (
     <AuthProvider client={client}>
-      <Inner app={app} env={env} pages={pages} deviceMode={deviceMode} />
+      <Inner app={app} env={env} pages={pages} guestPages={guestPages} deviceMode={deviceMode} />
     </AuthProvider>
   );
 }

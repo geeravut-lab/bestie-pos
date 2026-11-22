@@ -77,6 +77,14 @@ export async function notifyTickResponse(
       {},
       f,
     ).catch(() => 0);
+    // an online tour booking whose deposit did not arrive in time is released (its seats are free again)
+    const toursReleased = await callRpc(
+      supabaseUrl,
+      serviceRoleKey,
+      'tour_release_unpaid',
+      {},
+      f,
+    ).catch(() => 0);
     // every night that has passed on a stay in the house with a room rate is posted to its folio (safe to repeat)
     const nights = await callRpc(supabaseUrl, serviceRoleKey, 'folio_post_nights_all', {}, f).catch(
       () => 0,
@@ -159,6 +167,7 @@ export async function notifyTickResponse(
       summaries,
       reminders: typeof reminded === 'number' ? reminded : 0,
       karaokeReleased: typeof released === 'number' ? released : 0,
+      toursReleased: typeof toursReleased === 'number' ? toursReleased : 0,
       folioNights: typeof nights === 'number' ? nights : 0,
       pmsPosted,
       casesEscalated: typeof casesEscalated === 'number' ? casesEscalated : 0,

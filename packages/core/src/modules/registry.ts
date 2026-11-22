@@ -37,6 +37,7 @@ export const MODULE_IDS = [
   'booking.online',
   'advisor.spa',
   'slots.booking',
+  'tours.online',
   // karaoke
   'karaoke.rooms',
   'karaoke.songs',
@@ -162,6 +163,7 @@ export const MODULES: readonly ModuleDef[] = [
   { id: 'booking.online', dependsOn: ['appointments'], defaultProfiles: [], plan: 'pro', phase: 2 },
   { id: 'advisor.spa', dependsOn: ['booking.online'], defaultProfiles: [], plan: 'pro', phase: 2 },
   { id: 'slots.booking', dependsOn: [], defaultProfiles: ['tours'], plan: 'pro', phase: 2 },
+  { id: 'tours.online', dependsOn: ['slots.booking'], defaultProfiles: [], plan: 'pro', phase: 4 },
   { id: 'karaoke.rooms', dependsOn: [], defaultProfiles: ['karaoke'], plan: 'basic', phase: 3 },
   {
     id: 'karaoke.songs',

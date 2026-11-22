@@ -1,5 +1,5 @@
 export { AuthApp } from './AuthApp';
-export type { DeviceMode, PageContext } from './AuthApp';
+export type { DeviceMode, GuestPages, PageContext } from './AuthApp';
 export { effectiveActing, withActing } from './acting';
 export type { ActingIdentity } from './acting';
 export { AuthProvider, useAuth } from './context';

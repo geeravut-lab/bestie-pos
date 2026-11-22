@@ -4,6 +4,7 @@
 //   1. the database (with the person's own token) says whether they may ask about this shop (`ask_shop_context`:
 //      report.view + access to the shop + the `ai.assistant` module on a Pro plan);
 //   2. the server reads `sales_report()` for the chosen period and the equal period before it, again with the person's token;
+//   2b. for ONE shop, the figures of the newer modules (KPIs, promotions, stamp cards, tables, delivery, tours) are read the same way; a module that is off or a right the person lacks just leaves its section out;
 //   3. code builds a figures pack; the model only EXPLAINS it (task `ask_shop`), it never calculates;
 //   4. code checks every number in the answer against the pack and lists any it cannot find (`unverified`).
 // Works without any AI key (`available: false`); every call is logged by tokens only (`ai_usage_log`).
@@ -16,6 +17,7 @@ import {
   unverifiedNumbers,
 } from '../../packages/core/src/askShop.js';
 import type { AskPreset } from '../../packages/core/src/askShop.js';
+import { buildOpsFigures } from '../../packages/core/src/askOps.js';
 import { parseSalesReport, presetRange } from '../../packages/core/src/reportRead.js';
 import { AiError, createAnthropicAdapter, createGoogleAdapter } from './ai-adapters.js';
 import { keysFrom, loadSettings } from './ai-handler.js';
@@ -54,6 +56,57 @@ async function rpc(
     body: JSON.stringify(args),
   });
   return { ok: res.ok, data: await res.json().catch(() => null) };
+}
+
+/** One read of a table with the person's own token (row level security decides what they may see). */
+async function restGet(f: typeof fetch, url: string, apikey: string, bearer: string, path: string) {
+  const res = await f(`${url}/rest/v1/${path}`, {
+    headers: { apikey, Authorization: `Bearer ${bearer}` },
+  });
+  return res.ok ? ((await res.json().catch(() => null)) as unknown) : null;
+}
+
+/** The figures of the newer modules for one shop; every part is best effort (module off / no right = the part is missing, never an error). */
+async function readOps(
+  f: typeof fetch,
+  url: string,
+  anon: string,
+  token: string,
+  storeId: string,
+  orgId: string,
+  range: { from: string; to: string },
+) {
+  const args = { p: { store_id: storeId, org_id: orgId, from: range.from, to: range.to } };
+  const report = async (fn: string): Promise<unknown> => {
+    try {
+      const r = await rpc(f, url, anon, token, fn, args);
+      return r.ok ? r.data : null;
+    } catch {
+      return null;
+    }
+  };
+  const tours = async (): Promise<unknown> => {
+    try {
+      const q = new URLSearchParams({
+        select: 'status,source,seats,deposit,deposit_due',
+        store_id: `eq.${storeId}`,
+      });
+      q.append('created_at', `gte.${range.from}T00:00:00+07:00`);
+      q.append('created_at', `lte.${range.to}T23:59:59+07:00`);
+      return await restGet(f, url, anon, token, `tour_bookings?${q.toString()}`);
+    } catch {
+      return null;
+    }
+  };
+  const [kpi, promotions, stamps, turnover, delivery, tr] = await Promise.all([
+    report('kpi_report'),
+    report('promotions_report'),
+    report('stamps_report'),
+    report('table_turnover'),
+    report('delivery_report'),
+    tours(),
+  ]);
+  return buildOpsFigures({ kpi, promotions, stamps, turnover, delivery, tours: tr });
 }
 
 async function loadAddition(task: string, url: string, key: string, f: typeof fetch) {
@@ -129,11 +182,18 @@ export async function askShopResponse(
       return parseSalesReport(res.data);
     };
     const [current, previous] = await Promise.all([read(range), read(previousRange(range))]);
+    const ops = storeId
+      ? await readOps(f, supabaseUrl, anon, token, storeId, c.org_id, range)
+      : null;
     const pack = buildFiguresPack({
       shopName,
       current,
       previous: previous.totals.bills > 0 ? previous : null,
     });
+    if (ops && ops.text) {
+      pack.text = `${pack.text}\n${ops.text}`;
+      pack.allowed.push(...ops.allowed);
+    }
 
     // 3. the model explains; it never calculates
     const addition = await loadAddition('ask_shop', supabaseUrl, serviceRoleKey, f);

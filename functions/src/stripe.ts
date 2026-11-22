@@ -73,6 +73,8 @@ export class StripeError extends GatewayError {
 }
 
 export type StripeClient = {
+  /** Read (reconciliation); optional so a test double with only `post` still fits. */
+  get?: (path: string, query?: Record<string, string | number>) => Promise<Record<string, unknown>>;
   post: (
     path: string,
     params?: Record<string, unknown>,
@@ -85,6 +87,20 @@ export function createStripeClient(
   fetchImpl: typeof fetch = fetch,
 ): StripeClient {
   return {
+    async get(path, query = {}) {
+      const qs = new URLSearchParams(
+        Object.entries(query).map(([k, v]) => [k, String(v)]),
+      ).toString();
+      const res = await fetchImpl(`https://api.stripe.com${path}${qs ? `?${qs}` : ''}`, {
+        headers: { Authorization: `Bearer ${secretKey}` },
+      });
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown> & {
+        error?: { code?: string; type?: string };
+      };
+      if (!res.ok)
+        throw new StripeError(res.status, json.error?.code ?? json.error?.type ?? 'unknown');
+      return json;
+    },
     async post(path, params = {}, idempotencyKey) {
       const res = await fetchImpl(`https://api.stripe.com${path}`, {
         method: 'POST',

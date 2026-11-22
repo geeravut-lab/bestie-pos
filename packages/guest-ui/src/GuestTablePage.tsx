@@ -26,6 +26,7 @@ import {
   callStaff,
   cancelGuestPayment,
   guestPaymentStatus,
+  loadEta,
   loadGuestTable,
   placeGuestOrder,
   startGuestPayment,
@@ -99,6 +100,15 @@ function GuestHead({ store, table }: { store?: string; table?: string }) {
   );
 }
 
+/** Is there an earlier order of this table kept on this phone? */
+const hasLast = (key: string): boolean => {
+  try {
+    return (globalThis.localStorage?.getItem(key) ?? null) !== null;
+  } catch {
+    return false;
+  }
+};
+
 function GuestOrdering({ token, initial }: { token: string; initial: GuestTable }) {
   const { t, lang } = useI18n();
   const locale = lang === 'th' ? 'th-TH' : 'en-GB';
@@ -145,6 +155,9 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
   const clientId = useRef(newId());
   const keySeq = useRef(0);
   const menu = data.menu;
+  const lastKey = `bestie-guest-last:${token}`;
+  const [eta, setEta] = useState<number | null>(null);
+  const [reordered, setReordered] = useState<number | null>(null);
 
   useEffect(() => {
     try {
@@ -160,8 +173,10 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
     const tick = async () => {
       if (document.visibilityState !== 'visible') return;
       const r = await loadGuestTable(token);
-      if (r.ok)
+      if (r.ok) {
         setData((d) => ({ ...d, bill: r.data.bill, menu: r.data.menu, autoSend: r.data.autoSend }));
+        setEta(r.data.bill.lines.some((l) => l.status === 'sent') ? await loadEta(token) : null);
+      }
     };
     const id = setInterval(() => void tick(), POLL_MS);
     // coming back to the page (after the phone slept, or another app) refreshes at once instead of waiting for the next beat
@@ -254,6 +269,11 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
       web ? { name: contact.name.trim(), phone: contact.phone.trim() } : undefined,
     );
     if (!r.ok) return setError(r.reason);
+    try {
+      globalThis.localStorage?.setItem(lastKey, packCart(cart, Date.now()));
+    } catch {
+      /* private mode: no "same again" */
+    }
     setPlaced(r.order);
     setCart([]);
     clientId.current = newId();
@@ -359,7 +379,34 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
         <section className="card guest-cart" aria-label={t.gsCart}>
           <h2>{t.gsCart}</h2>
           {cart.length === 0 ? (
-            <p className="muted">{t.gsCartEmpty}</p>
+            <>
+              <p className="muted">{t.gsCartEmpty}</p>
+              {!data.kiosk ? (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    try {
+                      const back = restoreCart(
+                        globalThis.localStorage?.getItem(lastKey) ?? null,
+                        menu,
+                        Date.now(),
+                      );
+                      if (back.length > 0) {
+                        setCart(back);
+                        setReordered(back.length);
+                      }
+                    } catch {
+                      /* nothing remembered */
+                    }
+                  }}
+                  hidden={!hasLast(lastKey)}
+                >
+                  {t.reorderAgain}
+                </button>
+              ) : null}
+              {reordered ? <p className="muted">{fmt(t.reorderAdded, { n: reordered })}</p> : null}
+            </>
           ) : (
             <ul className="guest-cart-lines">
               {cart.map((l) => {
@@ -462,6 +509,11 @@ function GuestOrdering({ token, initial }: { token: string; initial: GuestTable 
       {!data.kiosk && data.bill.lines.length > 0 ? (
         <section className="card" aria-label={t.gsBillTitle}>
           <h2>{t.gsBillTitle}</h2>
+          {eta !== null ? (
+            <p className="muted" role="status">
+              {fmt(t.etaLine, { m: eta })}
+            </p>
+          ) : null}
           <ul className="guest-bill">
             {data.bill.lines.map((l, i) => (
               <li key={i}>

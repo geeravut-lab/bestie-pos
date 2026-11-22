@@ -150,6 +150,25 @@ export function ReportsPage({ ctx }: { ctx: PageContext }) {
         <button type="button" className="btn btn-secondary" onClick={() => ctx.navigate('/kpi')}>
           {t.kpLink}
         </button>
+        {(ctx.isModuleOn?.('ai.business_manager') ?? false) ? (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => ctx.navigate('/brief')}
+          >
+            {t.bmLink}
+          </button>
+        ) : null}
+        <button type="button" className="btn btn-secondary" onClick={() => ctx.navigate('/cases')}>
+          {t.csTitle}
+        </button>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => ctx.navigate('/reconcile')}
+        >
+          {t.rcLink}
+        </button>
       </div>
       <section className="card admin-card">
         <div className="filters">

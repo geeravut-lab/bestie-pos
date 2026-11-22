@@ -129,6 +129,9 @@ export function ReturnPage({ ctx, orderId }: { ctx: PageContext; orderId: string
   const [error, setError] = useState<ErrorKey | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [doneId, setDoneId] = useState<string | null>(null);
+  // also send the refund to the payment provider (PromptPay / card paid through it): only offered on the by-hand route
+  const [viaApi, setViaApi] = useState(false);
+  const [apiNote, setApiNote] = useState<string | null>(null);
   // one id per attempt: pressing the button twice, or a retry after a lost answer, can never return twice
   const [attemptId, setAttemptId] = useState(() => crypto.randomUUID());
 
@@ -216,6 +219,28 @@ export function ReturnPage({ ctx, orderId }: { ctx: PageContext; orderId: string
       }) + (r?.points_reversed ? ` · ${fmt(t.returnPointsBack, { n: r.points_reversed })}` : ''),
     );
     setDoneId(attemptId);
+    if (chosen === 'manual' && viaApi && num(r?.amount) > 0) {
+      const { data: sess } = await ctx.client.auth.getSession();
+      const token = sess.session?.access_token;
+      const res2 = token
+        ? await fetch('/api/payments/refund', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_id: orderId, amount: num(r?.amount), reason }),
+          }).catch(() => null)
+        : null;
+      const j = res2
+        ? ((await res2.json().catch(() => null)) as { ok?: boolean; refund_ref?: string } | null)
+        : null;
+      setApiNote(
+        j?.ok
+          ? fmt(t.rfApiDone, { ref: j.refund_ref ?? '' })
+          : res2?.status === 501
+            ? t.rfApiNo
+            : t.rfApiFailed,
+      );
+      setViaApi(false);
+    }
     setQty({});
     setAttemptId(crypto.randomUUID());
     bill.reload();
@@ -228,6 +253,7 @@ export function ReturnPage({ ctx, orderId }: { ctx: PageContext; orderId: string
       </p>
       {!online ? <Notice kind="info">{t.returnOnline}</Notice> : null}
       {done ? <Notice kind="success">{done}</Notice> : null}
+      {apiNote ? <Notice kind="info">{apiNote}</Notice> : null}
       {doneId ? <ReturnSlipButton ctx={ctx} returnId={doneId} /> : null}
       {error ? <Notice kind="error">{errorText(error, t)}</Notice> : null}
       {left === 0 ? <Notice kind="info">{t.returnNothingLeft}</Notice> : null}
@@ -341,6 +367,17 @@ export function ReturnPage({ ctx, orderId }: { ctx: PageContext; orderId: string
                 </label>
               ))}
               {chosen === 'manual' ? <p className="muted">{t.returnMethodManualHint}</p> : null}
+              {chosen === 'manual' ? (
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    checked={viaApi}
+                    onChange={(e) => setViaApi(e.target.checked)}
+                  />{' '}
+                  {t.rfApi}
+                  <span className="muted"> — {t.rfApiHint}</span>
+                </label>
+              ) : null}
               {chosen === 'room' ? <p className="muted">{t.returnMethodRoomHint}</p> : null}
             </fieldset>
           ) : null}

@@ -273,9 +273,13 @@ describe('rows ↔ document', () => {
       orderToRow(o),
       o.lines.map((l) => lineToRow(o, l)),
     )!;
-    expect(back.lines.map((l) => ({ ...l, createdBy: null }))).toEqual(
-      o.lines.map((l) => ({ ...l, createdBy: null })),
-    );
+    const norm = (l: (typeof o.lines)[number]) => ({
+      ...l,
+      createdBy: null,
+      listPrice: l.listPrice ?? null,
+      promoId: l.promoId ?? null,
+    });
+    expect(back.lines.map(norm)).toEqual(o.lines.map(norm));
     expect(back).toMatchObject({
       id: 'o1',
       number: 'A001',

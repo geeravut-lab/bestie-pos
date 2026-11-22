@@ -53,7 +53,27 @@ export type GatewayEvent =
       attemptId: string;
       error: string;
     }
+  | {
+      /** A customer disputed a payment with their bank (chargeback). Not tied to one of our attempts: the payment's provider reference is the key. */
+      kind: 'dispute';
+      eventId: string | null;
+      type: string;
+      disputeRef: string;
+      providerRef: string;
+      amount: number;
+      currency: string;
+      reason: string;
+      status: string;
+    }
   | { kind: 'ignored'; eventId: string | null; type: string };
+
+/** One successful payment as the provider lists it (reconciliation). */
+export type ProviderPayment = {
+  providerRef: string;
+  amount: number;
+  currency: string;
+  createdMs: number;
+};
 
 export type PaymentGateway = {
   /** Stored on every attempt (`payment_attempts.provider`) and checked against the webhook that confirms it. */
@@ -76,6 +96,10 @@ export type PaymentGateway = {
    * A genuine event Bestie does not care about is `{ kind: 'ignored' }`.
    */
   readWebhook(p: { rawBody: string; headers: Headers }): GatewayEvent | null;
+  /** Successful payments created in a period, for the reconciliation; a provider that cannot list them leaves this out. */
+  listSucceeded?(p: { fromMs: number; toMs: number }): Promise<ProviderPayment[]>;
+  /** Give money back on a payment (whole or part). `key` makes a repeat harmless. A provider that cannot do it leaves this out. */
+  refund?(p: { providerRef: string; amount: number; key: string }): Promise<{ refundRef: string }>;
 };
 
 const UUID = /^[0-9a-f-]{36}$/i;
@@ -92,6 +116,9 @@ type StripeEvent = {
       currency?: string;
       metadata?: Record<string, string>;
       last_payment_error?: { code?: string };
+      payment_intent?: string;
+      reason?: string;
+      status?: string;
     };
   };
 };
@@ -105,6 +132,45 @@ export function stripeGateway(
     startPromptPay: (p) => startPromptPay(client, { ...p, siteHost: cfg.siteHost }),
     startReader: (p) => startReaderPayment(client, p),
     cancel: (p) => cancelProviderPayment(client, p),
+    async listSucceeded({ fromMs, toMs }) {
+      if (!client.get) return [];
+      const out: ProviderPayment[] = [];
+      let after: string | undefined;
+      for (let page = 0; page < 20; page++) {
+        const r = (await client.get('/v1/payment_intents', {
+          'created[gte]': Math.floor(fromMs / 1000),
+          'created[lt]': Math.floor(toMs / 1000),
+          limit: 100,
+          ...(after ? { starting_after: after } : {}),
+        })) as {
+          data?: {
+            id?: string;
+            status?: string;
+            amount_received?: number;
+            amount?: number;
+            currency?: string;
+            created?: number;
+          }[];
+          has_more?: boolean;
+        };
+        const rows = r.data ?? [];
+        for (const x of rows)
+          if (x.status === 'succeeded' && typeof x.id === 'string')
+            out.push({
+              providerRef: x.id,
+              amount: x.amount_received ?? x.amount ?? 0,
+              currency: x.currency ?? '',
+              createdMs: (x.created ?? 0) * 1000,
+            });
+        if (!r.has_more || rows.length === 0) break;
+        after = rows[rows.length - 1]?.id;
+      }
+      return out;
+    },
+    async refund({ providerRef, amount, key }) {
+      const r = await client.post('/v1/refunds', { payment_intent: providerRef, amount }, key);
+      return { refundRef: String(r.id ?? '') };
+    },
     readWebhook({ rawBody, headers }) {
       if (
         !verifyStripeSignature({
@@ -122,6 +188,22 @@ export function stripeGateway(
       }
       const eventId = typeof event.id === 'string' ? event.id : null;
       const obj = event.data?.object;
+      if (
+        event.type?.startsWith('charge.dispute.') &&
+        typeof obj?.id === 'string' &&
+        typeof obj.payment_intent === 'string'
+      )
+        return {
+          kind: 'dispute',
+          eventId,
+          type: event.type,
+          disputeRef: obj.id,
+          providerRef: obj.payment_intent,
+          amount: obj.amount ?? 0,
+          currency: obj.currency ?? 'thb',
+          reason: obj.reason ?? '',
+          status: obj.status ?? 'needs_response',
+        };
       const attemptId = obj?.metadata?.attempt_id;
       if (typeof attemptId !== 'string' || !UUID.test(attemptId))
         return { kind: 'ignored', eventId, type: event.type ?? '' };

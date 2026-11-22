@@ -387,6 +387,19 @@ describe('spa advisor SQL mirror', () => {
     expect(sql).toContain("'room', 'platform'");
   });
 
+  it('business manager: the module mirror lives in migration 84', () => {
+    const dir = new URL('../../../supabase/migrations/', import.meta.url);
+    const sql = readFileSync(
+      new URL(readdirSync(dir).find((f) => f.endsWith('_smart_ops.sql')) ?? '', dir),
+      'utf8',
+    );
+    expect(MODULE_BY_ID['ai.business_manager'].plan).toBe('pro');
+    expect(MODULE_BY_ID['ai.business_manager'].defaultProfiles).toEqual([]);
+    expect(sql).toContain("s.plan in ('pro', 'resort')");
+    expect(sql).toContain("(s.module_overrides ->> 'ai.business_manager')::boolean");
+    expect(sql).toContain("'guest.concierge','ai.business_manager'];");
+  });
+
   it('kiosk: the module mirror and the rules that make a kiosk differ from a table live in migration 78', () => {
     const dir = new URL('../../../supabase/migrations/', import.meta.url);
     const sql = readFileSync(

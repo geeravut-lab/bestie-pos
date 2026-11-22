@@ -181,3 +181,51 @@ describe('POST /api/guest/feedback', () => {
     expect(await code('53400')).toBe(429);
   });
 });
+
+describe('GET /api/guest/eta', () => {
+  it('asks the database with the table token and returns the minutes, or null', async () => {
+    const { guestEtaResponse } = await import('./guest-extras-handler.js');
+    const env2 = {
+      SUPABASE_URL: 'https://x.supabase.co',
+      VITE_SUPABASE_URL: 'https://x.supabase.co',
+      SUPABASE_SERVICE_ROLE_KEY: 'svc',
+    };
+    const token = 'a'.repeat(32);
+    const f = vi.fn(async () =>
+      Response.json({ ok: true, minutes: 12, waiting: 2 }),
+    ) as unknown as typeof fetch;
+    const res = await guestEtaResponse(
+      new Request(`https://x/api/guest/eta?token=${token}`, {
+        headers: { 'x-forwarded-for': '3.3.3.3' },
+      }),
+      env2,
+      { fetchImpl: f },
+    );
+    expect(await res.json()).toEqual({ minutes: 12 });
+    expect(
+      JSON.parse(
+        String(
+          (f as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls[0]![1].body,
+        ),
+      ),
+    ).toEqual({ p_token: token });
+    const none = await guestEtaResponse(new Request('https://x/api/guest/eta?token=nope'), env2, {
+      fetchImpl: f,
+    });
+    expect(await none.json()).toEqual({ minutes: null });
+    const empty = vi.fn(async () =>
+      Response.json({ ok: true, minutes: null }),
+    ) as unknown as typeof fetch;
+    expect(
+      await (
+        await guestEtaResponse(
+          new Request(`https://x/api/guest/eta?token=${token}`, {
+            headers: { 'x-forwarded-for': '3.3.3.4' },
+          }),
+          env2,
+          { fetchImpl: empty },
+        )
+      ).json(),
+    ).toEqual({ minutes: null });
+  });
+});

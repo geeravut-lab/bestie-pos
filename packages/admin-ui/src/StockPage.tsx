@@ -17,6 +17,7 @@ import {
   priceInputValue,
   splitQty,
   STOCK_UNITS,
+  WASTE_REASONS,
 } from '@bestie/core';
 import type { InputUnit, StockItem, StockUnit } from '@bestie/core';
 import { errorText, fmt, useI18n } from '@bestie/i18n';
@@ -137,6 +138,15 @@ export function StockPage({ ctx }: { ctx: PageContext }) {
   return (
     <div className="admin-page">
       <h1>{t.stockTitle}</h1>
+      <div className="actions">
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => ctx.navigate('/stock/insights')}
+        >
+          {t.siTitle}
+        </button>
+      </div>
       <Notice kind="info">{t.stockIntro}</Notice>
       {error ? <Notice kind="error">{errorText(error, t)}</Notice> : null}
       {note ? <Notice kind="success">{note}</Notice> : null}
@@ -283,6 +293,7 @@ function ItemsTab({ ctx, d, storeId, canEdit, money, fail, done }: Common) {
     unit: InputUnit;
     cost: string;
     note: string;
+    reason?: string;
   } | null>(null);
   const [problem, setProblem] = useState(false);
 
@@ -328,6 +339,7 @@ function ItemsTab({ ctx, d, storeId, canEdit, money, fail, done }: Common) {
         quantity: q,
         ...(cost !== null ? { cost_per_1000: cost } : {}),
         note: mv.note.trim() || undefined,
+        ...(mv.kind === 'waste' && mv.reason ? { reason: mv.reason } : {}),
       },
     });
     if (error) return fail(error.code);
@@ -502,6 +514,26 @@ function ItemsTab({ ctx, d, storeId, canEdit, money, fail, done }: Common) {
                 value={mv.cost}
                 onChange={(e) => setMv({ ...mv, cost: e.target.value })}
               />
+            </div>
+          ) : null}
+          {mv.kind === 'waste' ? (
+            <div className="form-row">
+              <label className="label" htmlFor="mv-reason">
+                {t.siWasteWhy}
+              </label>
+              <select
+                id="mv-reason"
+                className="field"
+                value={mv.reason ?? ''}
+                onChange={(e) => setMv({ ...mv, reason: e.target.value })}
+              >
+                <option value="">—</option>
+                {WASTE_REASONS.map((r) => (
+                  <option key={r} value={r}>
+                    {tx(t, `siReason_${r}`)}
+                  </option>
+                ))}
+              </select>
             </div>
           ) : null}
           <div className="form-row">

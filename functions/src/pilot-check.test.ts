@@ -272,6 +272,33 @@ describe('checkSystem', () => {
   });
 });
 
+describe('checkSystem: optional services', () => {
+  const ids = (names: string[]) =>
+    checkSystem({ auth: null, vercelEnvNames: names }).filter((r) => r.id.startsWith('env:'));
+  const lv = (rs: CheckResult[], id: string) => rs.find((r) => r.id === id)?.level;
+  it('a missing crypto / YouTube key is only information', () => {
+    const rs = ids([]);
+    expect(lv(rs, 'env:TRONGRID_API_KEY')).toBe('info');
+    expect(lv(rs, 'env:ETHERSCAN_API_KEY')).toBe('info');
+    expect(lv(ids(['TRONGRID_API_KEY', 'ETHERSCAN_API_KEY']), 'env:TRONGRID_API_KEY')).toBe('ok');
+  });
+  it('the PMS provider and its keys must go together', () => {
+    expect(lv(ids([]), 'env:PMS_PROVIDER')).toBe('info');
+    expect(lv(ids(['MEWS_CLIENT_TOKEN', 'MEWS_ACCESS_TOKEN']), 'env:PMS_PROVIDER')).toBe('warn');
+    const ok = ids(['PMS_PROVIDER', 'MEWS_CLIENT_TOKEN', 'MEWS_ACCESS_TOKEN', 'MEWS_BASE_URL']);
+    expect(lv(ok, 'env:PMS_PROVIDER')).toBe('ok');
+    expect(lv(ok, 'env:pms:MEWS')).toBe('ok');
+    const half = ids(['PMS_PROVIDER', 'MEWS_CLIENT_TOKEN']);
+    expect(lv(half, 'env:pms:MEWS')).toBe('warn');
+    expect(lv(ids(['PMS_PROVIDER']), 'env:pms:keys')).toBe('warn');
+    expect(lv(ids(['PMS_PROVIDER', 'CLOUDBEDS_API_KEY']), 'env:pms:CLOUDBEDS')).toBe('ok');
+  });
+  it('e-mail needs the sender too', () => {
+    expect(lv(ids(['RESEND_API_KEY']), 'env:EMAIL_FROM')).toBe('warn');
+    expect(lv(ids(['RESEND_API_KEY', 'EMAIL_FROM']), 'env:EMAIL_FROM')).toBeUndefined();
+  });
+});
+
 describe('the report', () => {
   it('prints a summary and always lists what a script cannot check', () => {
     const text = render([

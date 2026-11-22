@@ -261,6 +261,27 @@ export async function paymentWebhookResponse(
     const { supabaseUrl, serviceRoleKey } = readServerEnv(env);
     const svc = { url: supabaseUrl, apikey: serviceRoleKey, bearer: serviceRoleKey };
 
+    if (event.kind === 'dispute') {
+      // a chargeback: keep a record and tell the managers (an unknown payment is ignored by the database)
+      await rpc(fetchImpl, svc, 'record_payment_dispute', {
+        p: {
+          provider: gateway.id,
+          dispute_ref: event.disputeRef,
+          payment_ref: event.providerRef,
+          amount: event.amount,
+          currency: event.currency,
+          reason: event.reason,
+          status: event.status,
+        },
+      });
+      if (event.eventId)
+        await rpc(fetchImpl, svc, 'record_payment_event', {
+          p_id: event.eventId,
+          p_type: event.type,
+        });
+      return reply({ received: true });
+    }
+
     if (event.kind !== 'ignored') {
       // an event may only settle an attempt that THIS provider started (a second provider can never close another one's bill)
       const attempt = await selectOne<{ provider: string }>(

@@ -343,3 +343,18 @@ export async function sendFeedback(
     return 'failed';
   }
 }
+
+/** About how many minutes until the kitchen finishes what this table ordered (from how long it really took lately); null = no estimate. */
+export async function loadEta(
+  token: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<number | null> {
+  try {
+    const res = await fetchImpl(`/api/guest/eta?token=${encodeURIComponent(token)}`);
+    if (!res.ok) return null;
+    const b = obj(await res.json().catch(() => null));
+    return typeof b.minutes === 'number' && b.minutes > 0 ? b.minutes : null;
+  } catch {
+    return null;
+  }
+}

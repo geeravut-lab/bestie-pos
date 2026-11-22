@@ -27,6 +27,8 @@ export async function runAiWith(args: {
   adapters: Record<ProviderId, ProviderAdapter>;
   log?: (e: AiEvent) => Promise<void> | void;
   sleep?: (ms: number) => Promise<void>;
+  /** The business's monthly AI budget: false = spent, the answer is "not available" (same as no key). Absent = no cap. */
+  guard?: () => Promise<boolean>;
 }): Promise<AiResponse> {
   const { task, request, settings, keys, adapters } = args;
   const sleep = args.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
@@ -40,6 +42,7 @@ export async function runAiWith(args: {
 
   const route = resolveRoute(task, settings, (p) => Boolean(keys[p]));
   if (!route) throw new AiError('not_configured');
+  if (args.guard && !(await args.guard())) throw new AiError('not_configured'); // the business's monthly AI budget is spent
 
   const attempt = async (provider: ProviderId, model: string): Promise<AiResponse> => {
     const key = keys[provider]!;

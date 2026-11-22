@@ -14,6 +14,7 @@ import {
   parseLinkMessage,
 } from '../../packages/core/src/flex.js';
 import type { Notice } from '../../packages/core/src/flex.js';
+import { isStopMessage } from '../../packages/core/src/growth.js';
 import { LINE_MESSAGES, helpBothLanguages, isIslandCommand } from './line-messages.js';
 import type { Lang } from './line-messages.js';
 
@@ -50,7 +51,9 @@ export interface LineStore {
   }): Promise<void>;
   ownerLang(ownerId: string): Promise<Lang>;
   /** A guest sent the code of an online booking: remember this LINE user for that booking (reminders only). Optional: absent = feature off. */
-  bindGuest?(code: string, lineUserId: string): Promise<boolean>;
+  bindGuest?(code: string, lineUserId: string): Promise<boolean | 'marketing'>;
+  /** The person typed STOP: no more promotional messages. Returns how many contacts were stopped. Optional: absent = the word is ignored. */
+  stopMarketing?(lineUserId: string): Promise<number>;
   /** The shops of the island marketplace (the guest typed "island"). Optional: absent = the command is off. */
   islandShops?(): Promise<IslandListing | null>;
 }
@@ -203,11 +206,17 @@ export async function handleLineWebhook(args: {
       }
       // a guest's booking code (8 hex characters, as shown on the booking page) → a reminder channel for that one booking
       const guestCode = parseGuestCode(ev.message.text ?? '');
-      if (guestCode && store.bindGuest && (await store.bindGuest(guestCode, uid))) {
-        await reply(
-          ev.replyToken,
-          `${LINE_MESSAGES.guestLinked.th}\n\n${LINE_MESSAGES.guestLinked.en}`,
-        ).catch(() => {}); // the link already worked: a failed reply must not undo it
+      const bound = guestCode && store.bindGuest ? await store.bindGuest(guestCode, uid) : false;
+      if (bound) {
+        const m = bound === 'marketing' ? LINE_MESSAGES.marketingLinked : LINE_MESSAGES.guestLinked;
+        await reply(ev.replyToken, `${m.th}\n\n${m.en}`).catch(() => {}); // the link already worked: a failed reply must not undo it
+        continue;
+      }
+      // STOP withdraws the consent to promotional messages at once
+      if (store.stopMarketing && isStopMessage(ev.message.text ?? '')) {
+        await store.stopMarketing(uid).catch(() => 0);
+        const m = LINE_MESSAGES.marketingStopped;
+        await reply(ev.replyToken, `${m.th}\n\n${m.en}`).catch(() => {});
         continue;
       }
       const code = parseLinkMessage(ev.message.text ?? '');

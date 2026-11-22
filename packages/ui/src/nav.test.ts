@@ -7,13 +7,17 @@ import {
   ART_IDS,
   NAV_BY_ID,
   NAV_ITEMS,
+  PLATFORM_CARDS,
   ROLE_LAYOUT,
   activeNavId,
   disabledNavIds,
+  layoutFor,
   moreItems,
   navItemEnabled,
   roleLabelKey,
+  ungatePlatform,
 } from './nav';
+import type { ArtId } from './nav';
 
 const store = (over: Partial<StoreModuleConfig> = {}): StoreModuleConfig => ({
   profile: 'cafe',
@@ -92,5 +96,23 @@ describe('moreItems', () => {
     expect(more).not.toContain('sell'); // centre
     expect(more).not.toContain('orders'); // tab
     expect(more).toContain('shift');
+  });
+});
+
+describe('a platform administrator in a shop app', () => {
+  it('gets the platform pages next to the pages of the shop role', () => {
+    const plain = layoutFor('owner').cards;
+    expect(plain).not.toContain('branding');
+    const pa = layoutFor('owner', true).cards;
+    for (const id of PLATFORM_CARDS) expect(pa).toContain(id);
+    expect(pa).toContain('dashboard'); // the shop role's own cards stay
+    expect(new Set(pa).size).toBe(pa.length); // no card twice ('ai' was already an owner card)
+    expect(moreItems('owner', true)).toContain('line');
+  });
+  it('never greys the platform pages because of a shop module switch', () => {
+    const off = new Set<ArtId>(['ai', 'tables']);
+    expect(ungatePlatform(new Set(off), true).has('ai')).toBe(false);
+    expect(ungatePlatform(new Set(off), true).has('tables')).toBe(true);
+    expect(ungatePlatform(new Set(off), false).has('ai')).toBe(true);
   });
 });

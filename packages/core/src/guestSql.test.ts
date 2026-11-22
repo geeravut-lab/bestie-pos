@@ -387,6 +387,57 @@ describe('spa advisor SQL mirror', () => {
     expect(sql).toContain("'room', 'platform'");
   });
 
+  it('business manager: the module mirror lives in migration 84', () => {
+    const dir = new URL('../../../supabase/migrations/', import.meta.url);
+    const sql = readFileSync(
+      new URL(readdirSync(dir).find((f) => f.endsWith('_smart_ops.sql')) ?? '', dir),
+      'utf8',
+    );
+    expect(MODULE_BY_ID['ai.business_manager'].plan).toBe('pro');
+    expect(MODULE_BY_ID['ai.business_manager'].defaultProfiles).toEqual([]);
+    expect(sql).toContain("s.plan in ('pro', 'resort')");
+    expect(sql).toContain("(s.module_overrides ->> 'ai.business_manager')::boolean");
+    expect(sql).toContain("'guest.concierge','ai.business_manager'];");
+  });
+
+  it('growth tools: the module mirrors live in migration 85', () => {
+    const dir = new URL('../../../supabase/migrations/', import.meta.url);
+    const sql = readFileSync(
+      new URL(readdirSync(dir).find((f) => f.endsWith('_growth_tools.sql')) ?? '', dir),
+      'utf8',
+    );
+    expect(MODULE_BY_ID.marketing).toMatchObject({ plan: 'pro', defaultProfiles: [] });
+    expect(MODULE_BY_ID['integration.hub']).toMatchObject({ plan: 'pro', defaultProfiles: [] });
+    expect(MODULE_BY_ID.stamps).toMatchObject({ plan: 'basic', defaultProfiles: ['cafe'] });
+    expect(MODULE_BY_ID['slots.booking']).toMatchObject({
+      plan: 'pro',
+      defaultProfiles: ['tours'],
+    });
+    expect(sql).toContain("(s.module_overrides ->> 'marketing')::boolean, false");
+    expect(sql).toContain("(s.module_overrides ->> 'integration.hub')::boolean, false");
+    expect(sql).toContain("(s.module_overrides ->> 'stamps')::boolean, s.profile = 'cafe'");
+    expect(sql).toContain("(s.module_overrides ->> 'slots.booking')::boolean, s.profile = 'tours'");
+    expect(sql).toContain("'ai.business_manager','marketing','integration.hub','stamps'];");
+  });
+
+  it('ops tools: the module mirrors live in migration 86', () => {
+    const dir = new URL('../../../supabase/migrations/', import.meta.url);
+    const sql = readFileSync(
+      new URL(readdirSync(dir).find((f) => f.endsWith('_ops_tools.sql')) ?? '', dir),
+      'utf8',
+    );
+    expect(MODULE_BY_ID.waitlist).toMatchObject({
+      plan: 'basic',
+      defaultProfiles: ['restaurant', 'cafe'],
+    });
+    expect(MODULE_BY_ID.timeclock).toMatchObject({ plan: 'basic', defaultProfiles: [] });
+    expect(sql).toContain(
+      "(s.module_overrides ->> 'waitlist')::boolean, s.profile in ('restaurant', 'cafe')",
+    );
+    expect(sql).toContain("(s.module_overrides ->> 'timeclock')::boolean, false");
+    expect(sql).toContain("'integration.hub','stamps','waitlist','timeclock'];");
+  });
+
   it('kiosk: the module mirror and the rules that make a kiosk differ from a table live in migration 78', () => {
     const dir = new URL('../../../supabase/migrations/', import.meta.url);
     const sql = readFileSync(

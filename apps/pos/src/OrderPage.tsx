@@ -48,6 +48,11 @@ import { ModifierSheet } from './ModifierSheet';
 import { ManagerVoid } from './ManagerVoid';
 import { OrderCustomer } from './OrderCustomer';
 import { OrderDelivery, useDeliveryBill } from './OrderDelivery';
+import { OrderPromo, useOrderExtras } from './OrderPromo';
+import { OrderDiscount } from './OrderDiscount';
+import { OrderStamps } from './OrderStamps';
+import { DisplayFeed } from './customerDisplay';
+import type { DisplayMsg } from './customerDisplay';
 import { PaySheet } from './PaySheet';
 import { useSplitInfo } from './useSplitInfo';
 import {
@@ -99,6 +104,7 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
   const locale = lang === 'th' ? ('th-TH' as const) : ('en-GB' as const);
   const order = useOrder(orderId);
   const remote = usePosData(ctx, order?.storeId ?? null);
+  const extras = useOrderExtras(ctx, order?.storeId ?? '');
   const openOrders = useOpenOrders(order?.storeId ?? null);
   const { pending } = useOutboxCounts();
   const netUp = useOnline();
@@ -172,6 +178,21 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
     open && (ctx.isOwner || ctx.permissions.includes('payment.take')) && binding !== null;
   const bill = orderBill(order, billConfigFor(config, order.channel));
   const tableName = tables.find((x) => x.id === order.tableId)?.name;
+  const displayMsg: DisplayMsg =
+    !open && order.receipt
+      ? { kind: 'thanks', number: order.number, total: bill.total }
+      : {
+          kind: 'bill',
+          number: order.number,
+          lines: order.lines
+            .filter((l) => l.status !== 'void')
+            .map((l) => ({ name: l.name, qty: l.quantity, amount: l.unitPrice * l.quantity })),
+          total: bill.total,
+          pointsDiscount: bill.pointsDiscount,
+        };
+  const openDisplay = () => {
+    globalThis.open?.('/display', 'bestie-display', 'popup,width=960,height=720');
+  };
   const takenTables = new Set(openOrders.filter((o) => o.id !== order.id).map((o) => o.tableId));
   const freeTables: PosTable[] = tables.filter(
     (x) => !takenTables.has(x.id) && x.id !== order.tableId,
@@ -305,7 +326,22 @@ export function OrderPage({ ctx, orderId }: { ctx: PageContext; orderId: string 
         {tableName ? fmt(t.orderAtTable, { name: tableName }) : channelText(t, order.channel)}
         {pending > 0 ? ` · ${t.orderWaitingSync}` : ''}
       </p>
+      <DisplayFeed msg={displayMsg} />
       <OrderCustomer ctx={ctx} orderId={order.id} open={open} online={netUp} />
+      {open && canEdit && (ctx.isOwner || ctx.permissions.includes('order.create')) ? (
+        <OrderDiscount ctx={ctx} orderId={order.id} storeId={order.storeId} online={netUp} />
+      ) : null}
+      <div className="actions no-print">
+        <button type="button" className="btn btn-secondary" onClick={() => openDisplay()}>
+          {t.cdOpen}
+        </button>
+      </div>
+      {open && canEdit && (ctx.isModuleOn?.('stamps') ?? false) ? (
+        <OrderStamps ctx={ctx} orderId={order.id} storeId={order.storeId} online={netUp} />
+      ) : null}
+      {canEdit && extras ? (
+        <OrderPromo order={order} menu={menu} extras={extras} apply={apply} onAdd={addItem} />
+      ) : null}
       {order.channel === 'delivery' &&
       (ctx.isModuleOn?.('delivery') ?? false) &&
       deliveryBill.data ? (

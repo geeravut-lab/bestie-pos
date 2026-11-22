@@ -10,6 +10,7 @@ import type { ProviderId } from '../../packages/core/src/ai.js';
 import { AiError } from './ai-adapters.js';
 import type { AiImage, ProviderAdapter } from './ai-adapters.js';
 import { keysFrom, loadSettings } from './ai-handler.js';
+import { budgetGuard } from './ai-budget.js';
 import { runAiWith } from './ai-run.js';
 import { adaptersFor, loadAddition, logUsage } from './food-ai-handler.js';
 import { rpc } from './guest-extras-handler.js';
@@ -100,6 +101,7 @@ export async function hairAiAction(
         maxTokens: 200,
         images: [image],
       },
+      guard: budgetGuard(f, supabaseUrl, serviceRoleKey, String(o.store_id ?? '')),
       settings,
       keys,
       adapters: adaptersFor(f, deps),

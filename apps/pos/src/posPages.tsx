@@ -10,6 +10,7 @@ import { ReceiptPage, ReceiptsPage } from './ReceiptPages';
 import { ReturnPage } from './ReturnPage';
 import { PrintersPage } from './printing/PrintersPage';
 import { PrintStationPage } from './printing/PrintStationPage';
+import { CustomerDisplayPage } from './customerDisplay';
 
 /** Till screens first, then the back-office pages (a manager at the till can still open /menu, /staff …). */
 export function posPages(ctx: PageContext): ReactNode | null {
@@ -26,6 +27,7 @@ export function posPages(ctx: PageContext): ReactNode | null {
   if (ctx.path === '/receipts') return <ReceiptsPage ctx={ctx} />;
   if (ctx.path === '/settings/printers') return <PrintersPage ctx={ctx} />;
   if (ctx.path === '/print-station') return <PrintStationPage ctx={ctx} />;
+  if (ctx.path === '/display') return <CustomerDisplayPage />;
   const rt = /^\/return\/([0-9a-f-]{36})$/.exec(ctx.path);
   if (rt) return <ReturnPage ctx={ctx} orderId={rt[1]!} />;
   const r = /^\/receipt\/([0-9a-f-]{36})$/.exec(ctx.path);

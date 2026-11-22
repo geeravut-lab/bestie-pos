@@ -14,6 +14,7 @@ import type { AiSettings, ProviderId, ScreenProblem, TaskId } from '@bestie/core
 import { AppError, errorText, fmt, formatDateTime, toErrorCode, useI18n } from '@bestie/i18n';
 import type { Dict, ErrorKey } from '@bestie/i18n';
 import { AsyncButton, Spinner } from '@bestie/ui';
+import { AiEvalPanel } from './AiEvalPanel';
 import { Notice, useLiveSync } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
 import { callAi } from './aiApi';
@@ -282,6 +283,8 @@ export function AiSettingsPage({
           </a>
         </div>
       </section>
+
+      <AiEvalPanel ctx={ctx} />
 
       <section className="card admin-card">
         <h2>{t.aiEvents}</h2>

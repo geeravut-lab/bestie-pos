@@ -5,6 +5,7 @@ import { GUEST_LANGS, fmt, formatDateTime, useI18n } from '@bestie/i18n';
 import { AsyncButton, LangSwitch, QrSvg, Spinner } from '@bestie/ui';
 import { PrintArea } from './PrintArea';
 import { IslandShops } from './IslandShops';
+import { PassPartners } from './PassPartners';
 import { loadPass, loadPassWallet } from './networkApi';
 import type { Loaded } from './networkApi';
 
@@ -118,6 +119,7 @@ export function PassPage({ token }: { token: string }) {
         </ul>
         <p className="muted">{t.npKeepPrivate}</p>
       </section>
+      <PassPartners token={token} />
       <section aria-label={t.npShops}>
         <h2>{t.npShops}</h2>
         <IslandShops shops={p.shops} />

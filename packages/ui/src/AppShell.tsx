@@ -3,13 +3,22 @@ import type { ReactNode } from 'react';
 import { useI18n } from '@bestie/i18n';
 import { Icon } from './Icons';
 import { Brand } from './Logo';
-import { NAV_BY_ID, ROLE_LAYOUT, activeNavId, disabledNavIds, moreItems } from './nav';
+import {
+  NAV_BY_ID,
+  activeNavId,
+  disabledNavIds,
+  layoutFor,
+  moreItems,
+  ungatePlatform,
+} from './nav';
 import type { AppRole, ArtId, NavContext, NavItem } from './nav';
 import { Spinner } from './Spinner';
 import { useBackClosableSheet } from './useBackClosableSheet';
 
 export type ShellProps = {
   role: AppRole;
+  /** A platform administrator also reaches the platform pages (AI provider, branding, flags …) from any app. */
+  platformAdmin?: boolean;
   ctx: NavContext;
   path: string;
   /** Called when an item is tapped. May return a promise / start a transition; use `pendingPath` to show progress. */
@@ -23,8 +32,8 @@ export type ShellProps = {
 };
 
 /** Every id the role can reach, in a stable order: home first, then bar items, then the rest. */
-export function roleNavIds(role: AppRole): ArtId[] {
-  const l = ROLE_LAYOUT[role];
+export function roleNavIds(role: AppRole, platformAdmin = false): ArtId[] {
+  const l = layoutFor(role, platformAdmin);
   return [...new Set<ArtId>(['home', ...l.tabs, ...(l.center ? [l.center] : []), ...l.cards])];
 }
 
@@ -84,6 +93,7 @@ function NavLink({
  */
 export function AppShell({
   role,
+  platformAdmin = false,
   ctx,
   path,
   onNavigate,
@@ -95,11 +105,11 @@ export function AppShell({
   const [moreOpen, setMoreOpen] = useState(false);
   const sheet = useBackClosableSheet(moreOpen, () => setMoreOpen(false));
 
-  const layout = ROLE_LAYOUT[role];
-  const disabled = disabledNavIds(ctx);
+  const layout = layoutFor(role, platformAdmin);
+  const disabled = ungatePlatform(disabledNavIds(ctx), platformAdmin);
   const active = activeNavId(path);
   const pendingId = pendingPath ? activeNavId(pendingPath) : undefined;
-  const more = moreItems(role);
+  const more = moreItems(role, platformAdmin);
   const moreActive = active !== undefined && more.includes(active);
 
   const link = (id: ArtId, className: string, content: (n: NavItem) => ReactNode) => {
@@ -148,7 +158,7 @@ export function AppShell({
           <Brand />
         </div>
         <nav className="sidebar-nav">
-          {roleNavIds(role).map((id) =>
+          {roleNavIds(role, platformAdmin).map((id) =>
             link(id, 'side-item', (n) => (
               <>
                 <Icon name={id} />

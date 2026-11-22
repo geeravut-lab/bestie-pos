@@ -17,6 +17,7 @@ import type { AiSettings, ProviderId } from '../../packages/core/src/ai.js';
 import { reviewPromptAddition, screenPromptAddition } from '../../packages/core/src/aiPrompts.js';
 import { createAnthropicAdapter, createGoogleAdapter } from './ai-adapters.js';
 import type { ProviderAdapter } from './ai-adapters.js';
+import { evalSummary, runEval } from './ai-eval.js';
 import { runAiWith } from './ai-run.js';
 
 type Env = Record<string, string | undefined>;
@@ -127,6 +128,16 @@ export async function aiHandler(
         status: (e as { status?: number }).status ?? null,
       });
     }
+  }
+
+  // the golden questions through the route the administrator picked (a few cents of tokens, 8 calls)
+  if (op === 'eval' && request.method === 'POST') {
+    const settings = await loadSettings(env, fetchImpl);
+    const only = Array.isArray(body?.only)
+      ? body.only.filter((x): x is string => typeof x === 'string').slice(0, 20)
+      : undefined;
+    const results = await runEval({ settings, keys, adapters, ...(only ? { only } : {}) });
+    return reply({ results, summary: evalSummary(results) });
   }
 
   if (op === 'review' && request.method === 'POST') {

@@ -190,6 +190,7 @@ function Inner({
     return {
       role,
       roleName: membership?.roleBuiltIn ? null : (membership?.roleName ?? null),
+      platformAdmin: my.data.isPlatformAdmin,
       ctx: {
         store: store ?? {
           profile: 'restaurant' as const,

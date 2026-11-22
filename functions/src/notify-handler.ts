@@ -4,6 +4,8 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { readServerEnv } from './env.js';
 import { sendGuestReminders } from './guest-reminders.js';
+import { deliverMarketing, deliverWebhooks } from './growth-deliver.js';
+import { postPmsCharges } from './pms-sync.js';
 import { lineConfig } from './line-handler.js';
 import { callRpc, createSupabaseNotifyStore, deliverQueue } from './notify-deliver.js';
 import type { NotifyStore } from './notify-deliver.js';
@@ -24,6 +26,9 @@ export function bangkokParts(ms: number): { date: string; hour: number } {
   return { date: d.toISOString().slice(0, 10), hour: d.getUTCHours() };
 }
 
+/** The business manager looks once in the first quarter of 06:00 Bangkok time (the findings are kept once per day anyway). */
+export const tidyHourNow = (ms: number): boolean =>
+  bangkokParts(ms).hour === 6 && new Date(ms).getUTCMinutes() < 15;
 export const SUMMARY_FROM_HOUR = 21; // the daily summary is written from 21:00 Bangkok time on
 
 export type NotifyDeps = {
@@ -76,6 +81,19 @@ export async function notifyTickResponse(
     const nights = await callRpc(supabaseUrl, serviceRoleKey, 'folio_post_nights_all', {}, f).catch(
       () => 0,
     );
+    // room charges of stays linked to the hotel's own system (PMS) are posted there, once each (does nothing without the PMS variables)
+    const pmsPosted = await postPmsCharges(env, f);
+    // a complaint nobody answered in time tells the managers once; the business manager looks at each shop that has it on (once a day per finding)
+    const casesEscalated = await callRpc(
+      supabaseUrl,
+      serviceRoleKey,
+      'service_cases_escalate',
+      {},
+      f,
+    ).catch(() => 0);
+    const insights = tidyHourNow(now)
+      ? await callRpc(supabaseUrl, serviceRoleKey, 'generate_insights_all', {}, f).catch(() => 0)
+      : 0;
     const cfg = lineConfig(env);
     // guests who booked online and left a LINE / e-mail contact get one reminder shortly before the appointment
     const guests = await sendGuestReminders({
@@ -85,6 +103,16 @@ export async function notifyTickResponse(
       line: cfg,
       fetchImpl: f,
     }).catch(() => ({ due: 0, sent: 0 }));
+    // promotional LINE messages to members who agreed (queued once a day per campaign), and the owners' signed webhooks
+    const marketing = await deliverMarketing({
+      supabaseUrl,
+      serviceRoleKey,
+      cfg,
+      fetchImpl: f,
+    }).catch(() => ({ queued: 0, claimed: 0, sent: 0, failed: 0 }));
+    const webhooks = await deliverWebhooks({ supabaseUrl, serviceRoleKey, fetchImpl: f }).catch(
+      () => ({ claimed: 0, sent: 0, failed: 0 }),
+    );
     const delivery = cfg
       ? await deliverQueue({
           store: deps.store ?? createSupabaseNotifyStore(supabaseUrl, serviceRoleKey, f),
@@ -116,6 +144,13 @@ export async function notifyTickResponse(
     const passesErased = tidyNow
       ? await callRpc(supabaseUrl, serviceRoleKey, 'network_passes_cleanup', {}, f).catch(() => 0)
       : 0;
+    // a forgotten clock-out is closed at 16 hours
+    const clockClosed = tidyNow
+      ? await callRpc(supabaseUrl, serviceRoleKey, 'timeclock_autoclose', {}, f).catch(() => 0)
+      : 0;
+    const webhooksErased = tidyNow
+      ? await callRpc(supabaseUrl, serviceRoleKey, 'webhook_cleanup', {}, f).catch(() => 0)
+      : 0;
     // audit rows older than the retention (default 5 years) are removed in bulk; nothing else can delete audit rows
     const purged = tidyNow
       ? await callRpc(supabaseUrl, serviceRoleKey, 'audit_purge', {}, f)
@@ -125,7 +160,14 @@ export async function notifyTickResponse(
       reminders: typeof reminded === 'number' ? reminded : 0,
       karaokeReleased: typeof released === 'number' ? released : 0,
       folioNights: typeof nights === 'number' ? nights : 0,
+      pmsPosted,
+      casesEscalated: typeof casesEscalated === 'number' ? casesEscalated : 0,
+      insights: typeof insights === 'number' ? insights : 0,
       guestReminders: guests,
+      marketing,
+      webhooks,
+      clockClosed: typeof clockClosed === 'number' ? clockClosed : 0,
+      webhooksErased: typeof webhooksErased === 'number' ? webhooksErased : 0,
       clientPhotosErased: typeof clientPhotosErased === 'number' ? clientPhotosErased : 0,
       hairPhotosErased: typeof photosErased === 'number' ? photosErased : 0,
       guestContactsErased: typeof contactsErased === 'number' ? contactsErased : 0,

@@ -6,6 +6,7 @@ import type { Dict } from '@bestie/i18n';
 import { AsyncButton, Spinner } from '@bestie/ui';
 import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
+import { AiBudgetPanel } from './AiBudgetPanel';
 import { useRemote } from './useRemote';
 
 type Loaded = { usd_thb: number; prices: unknown; rows: UsageRow[] };
@@ -126,6 +127,7 @@ export function AiUsagePage({ ctx }: { ctx: PageContext }) {
         </div>
         {body()}
       </section>
+      <AiBudgetPanel ctx={ctx} orgId={ctx.orgId} />
     </div>
   );
 }

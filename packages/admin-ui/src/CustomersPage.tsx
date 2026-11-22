@@ -8,6 +8,7 @@ import { Notice } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
 import { ClientRecordPanel } from './ClientRecordPanel';
 import { CreditPanel } from './CreditPanel';
+import { MarketingLinePanel } from './MarketingLinePanel';
 import { CryptoPanel } from './CryptoPanel';
 import { CustomerPicker } from './CustomerPicker';
 import { useRemote } from './useRemote';
@@ -134,6 +135,7 @@ function CustomerDetail({ ctx, card }: { ctx: PageContext; card: CustomerCard })
       )}
       <ClientRecordPanel ctx={ctx} customerId={card.id} />
       <CreditPanel ctx={ctx} card={card} />
+      <MarketingLinePanel ctx={ctx} customerId={card.id} />
       <CryptoPanel ctx={ctx} card={card} />
       {ctx.isOwner || ctx.permissions.includes('credit.adjust') ? (
         <button type="button" className="btn btn-secondary" onClick={() => ctx.navigate('/crypto')}>

@@ -32,6 +32,23 @@ import { KaraokeBookingsPage } from './KaraokeBookingsPage';
 import { DeliveryPage } from './DeliveryPage';
 import { FolioPage } from './FolioPage';
 import { HqPage } from './HqPage';
+import { BriefPage } from './BriefPage';
+import { CasesPage } from './CasesPage';
+import { CreditPage } from './CreditPage';
+import { PointsPage } from './PointsPage';
+import { TimeClockPage } from './TimeClockPage';
+import { WaitlistPage } from './WaitlistPage';
+import { HubPage } from './HubPage';
+import { MarketingPage } from './MarketingPage';
+import { StampsPage } from './StampsPage';
+import { ToursPage } from './ToursPage';
+import { KpiPage } from './KpiPage';
+import { ReconcilePage } from './ReconcilePage';
+import { StockSmartPage } from './StockSmartPage';
+import { MenuImportPage } from './MenuImportPage';
+import { MenuProfitPage } from './MenuProfitPage';
+import { PromotionsPage } from './PromotionsPage';
+import { UpsellPage } from './UpsellPage';
 import { KioskPage } from './KioskPage';
 import { KaraokePlayerPage } from './KaraokePlayerPage';
 import { TranslatePage } from './TranslatePage';
@@ -77,7 +94,24 @@ export function adminPages(ctx: PageContext): ReactNode | null {
   if (ctx.path === '/folio') return <FolioPage ctx={ctx} />;
   if (ctx.path === '/delivery') return <DeliveryPage ctx={ctx} />;
   if (ctx.path === '/kiosk') return <KioskPage ctx={ctx} />;
-  if (ctx.path === '/hq') return <HqPage ctx={ctx} />;
+  if (ctx.path === '/hq' || ctx.path === '/dashboard') return <HqPage ctx={ctx} />;
+  if (ctx.path === '/credit') return <CreditPage ctx={ctx} />;
+  if (ctx.path === '/points') return <PointsPage ctx={ctx} />;
+  if (ctx.path === '/waitlist') return <WaitlistPage ctx={ctx} />;
+  if (ctx.path === '/timeclock') return <TimeClockPage ctx={ctx} />;
+  if (ctx.path === '/menu-profit') return <MenuProfitPage ctx={ctx} />;
+  if (ctx.path === '/promotions') return <PromotionsPage ctx={ctx} />;
+  if (ctx.path === '/upsell') return <UpsellPage ctx={ctx} />;
+  if (ctx.path === '/kpi') return <KpiPage ctx={ctx} />;
+  if (ctx.path === '/brief') return <BriefPage ctx={ctx} />;
+  if (ctx.path === '/cases') return <CasesPage ctx={ctx} />;
+  if (ctx.path === '/stamps') return <StampsPage ctx={ctx} />;
+  if (ctx.path === '/tours') return <ToursPage ctx={ctx} />;
+  if (ctx.path === '/marketing') return <MarketingPage ctx={ctx} />;
+  if (ctx.path === '/integrations') return <HubPage ctx={ctx} />;
+  if (ctx.path === '/reconcile') return <ReconcilePage ctx={ctx} />;
+  if (ctx.path === '/stock/insights') return <StockSmartPage ctx={ctx} />;
+  if (ctx.path === '/menu/import') return <MenuImportPage ctx={ctx} />;
   if (ctx.path === '/karaoke') return <KaraokePage ctx={ctx} />;
   if (ctx.path === '/karaoke/bookings') return <KaraokeBookingsPage ctx={ctx} />;
   const playerRoom = karaokePlayerRoomFromPath(ctx.path);
@@ -100,6 +134,8 @@ export function adminPages(ctx: PageContext): ReactNode | null {
   if (ctx.path === '/admin/cards') return <CardImagesPage ctx={ctx} />;
   if (ctx.isPlatformAdmin && ctx.path === '/ai')
     return <AiSettingsPage ctx={ctx} onNavigate={ctx.navigate} />;
+  // everyone else who opens the AI card (an owner / manager) gets the assistant for their own shop; the provider settings are the platform administrator's
+  if (ctx.path === '/ai') return <AskShopPage ctx={ctx} />;
   if (ctx.path === '/admin/ai/prompts')
     return <AiPromptsPage ctx={ctx} onNavigate={ctx.navigate} />;
   if (ctx.path === '/settings/billing') return <BillingPage ctx={ctx} />;

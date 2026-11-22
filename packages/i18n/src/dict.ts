@@ -2599,6 +2599,17 @@ const th = {
   omRoleCashier: 'แคชเชียร์',
   omRoleWaiter: 'พนักงานเสิร์ฟ',
   omRoleKitchen: 'ครัว',
+  omDelTitle: 'ลบบัญชีผู้ใช้นี้ออกจากระบบ',
+  omDelBody:
+    'ลบแล้วเขาเข้าสู่ระบบไม่ได้อีก ข้อมูลการเป็นพนักงาน โปรไฟล์ และการแจ้งเตือนของเขาหายไป แต่บิล ใบเสร็จ และประวัติของร้านยังอยู่ ถ้าเขาเป็นเจ้าของคนเดียวของบริษัทที่ว่างเปล่า บริษัทนั้นถูกลบด้วย ทำย้อนกลับไม่ได้',
+  omDelButton: 'ลบบัญชีนี้',
+  omDelConfirm: 'ยืนยันลบบัญชี {email} อย่างถาวร',
+  omDeleted: 'ลบบัญชีแล้ว: {email}',
+  omDelBlocked: 'ลบไม่ได้: เขาเป็นเจ้าของคนเดียวของบริษัทที่มีข้อมูลอยู่ ({list}) ให้ตั้งเจ้าของคนอื่นหรือย้ายก่อน',
+  omErrDelSelf: 'ลบบัญชีของตัวเองไม่ได้',
+  omErrDelAdmin: 'เขาเป็นผู้ดูแลแพลตฟอร์ม ให้ถอดสิทธิ์ที่หน้าผู้ดูแลแพลตฟอร์มก่อน',
+  omErrDelOwner: 'เขาเป็นเจ้าของคนเดียวของบริษัทที่มีข้อมูลอยู่ ลบไม่ได้',
+  paLogUserDelete: '{actor} ลบบัญชี {target}: {detail}',
   anTitle: 'สถิติการใช้งาน',
   anIntro:
     'นับจากเหตุการณ์ของเราเอง ไม่ใช้บริการวิเคราะห์ภายนอก และไม่เก็บเนื้อหาใด ๆ: เก็บแค่ว่าใครเข้าใช้วันไหนและเปิดหน้าไหน',
@@ -6403,6 +6414,20 @@ const en = {
   omRoleCashier: 'Cashier',
   omRoleWaiter: 'Waiter',
   omRoleKitchen: 'Kitchen',
+  omDelTitle: 'Delete this user account from the system',
+  omDelBody:
+    "After this the person can no longer sign in. Their membership rows, profile and notices go, but the shop's bills, receipts and history stay. If they are the only owner of an empty business, that business is deleted too. This cannot be undone.",
+  omDelButton: 'Delete this account',
+  omDelConfirm: 'Confirm: delete {email} for good',
+  omDeleted: 'Account deleted: {email}',
+  omDelBlocked:
+    'Cannot delete: they are the only owner of a business that holds data ({list}). Make someone else owner or move them first.',
+  omErrDelSelf: 'You cannot delete your own account.',
+  omErrDelAdmin:
+    'They are a platform administrator. Remove that right first on the platform administrators page.',
+  omErrDelOwner:
+    'They are the only owner of a business that holds data, so they cannot be deleted.',
+  paLogUserDelete: '{actor} deleted the account {target}: {detail}',
   anTitle: 'Usage analytics',
   anIntro:
     'Counted from our own events: no outside analytics service and no content is stored — only who used the app on which day and which screens were opened.',

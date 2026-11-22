@@ -152,4 +152,86 @@ describe('<OrgMembersPage>', () => {
     await userEvent.click(screen.getByRole('button', { name: /^Confirm: move/ }));
     expect(await screen.findByText(text)).toBeTruthy();
   });
+
+  describe('delete the account', () => {
+    const person = (
+      over: Record<string, unknown> = {},
+      memberOver: Record<string, unknown> = {},
+    ) => ({
+      ...PERSON,
+      is_admin: false,
+      is_me: false,
+      ...over,
+      memberships: [{ ...PERSON.memberships[0]!, sole_owner: false, empty: false, ...memberOver }],
+    });
+
+    it('deletes only after a second confirming press and says what else went', async () => {
+      const db = mount({
+        platform_orgs_overview: { data: ORGS },
+        platform_member_lookup: { data: person({}, { sole_owner: true, empty: true }) },
+        platform_user_delete: { data: { deleted_orgs: ['Real Co'], memberships: 1 } },
+      });
+      await find();
+      await screen.findByText('new@example.test is now in');
+      await userEvent.click(screen.getByRole('button', { name: 'Delete this account' }));
+      expect(db.rpcs.some((r) => r.fn === 'platform_user_delete')).toBe(false); // first press only asks
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Confirm: delete new@example.test for good' }),
+      );
+      await waitFor(() => expect(db.rpcs.some((r) => r.fn === 'platform_user_delete')).toBe(true));
+      expect(db.rpcs.find((r) => r.fn === 'platform_user_delete')!.args).toEqual({
+        p_user: 'u-9',
+      });
+      expect(await screen.findByText('Account deleted: new@example.test')).toBeTruthy();
+      expect(screen.getByText('Empty businesses deleted: Real Co')).toBeTruthy();
+    });
+
+    it('cancel leaves everything as it was', async () => {
+      const db = mount({
+        platform_orgs_overview: { data: ORGS },
+        platform_member_lookup: { data: person() },
+      });
+      await find();
+      await screen.findByText('new@example.test is now in');
+      await userEvent.click(screen.getByRole('button', { name: 'Delete this account' }));
+      await userEvent.click(screen.getAllByRole('button', { name: 'Cancel' })[0]!);
+      expect(screen.getByRole('button', { name: 'Delete this account' })).toBeTruthy();
+      expect(db.rpcs.some((r) => r.fn === 'platform_user_delete')).toBe(false);
+    });
+
+    it.each([
+      ['yourself', { is_me: true }, {}, /cannot delete your own account/],
+      ['a platform administrator', { is_admin: true }, {}, /platform administrator/],
+      [
+        'the only owner of a business that holds data',
+        {},
+        { sole_owner: true, empty: false },
+        /only owner of a business that holds data \(Real Co\)/,
+      ],
+    ])('blocks the button for %s', async (_label, over, memberOver, text) => {
+      mount({
+        platform_orgs_overview: { data: ORGS },
+        platform_member_lookup: { data: person(over, memberOver) },
+      });
+      await find();
+      await screen.findByText('new@example.test is now in');
+      expect(await screen.findByText(text)).toBeTruthy();
+      expect(
+        (screen.getByRole('button', { name: 'Delete this account' }) as HTMLButtonElement).disabled,
+      ).toBe(true);
+    });
+
+    it('shows the server refusal in plain words', async () => {
+      mount({
+        platform_orgs_overview: { data: ORGS },
+        platform_member_lookup: { data: person() },
+        platform_user_delete: { error: { code: '55006' } },
+      });
+      await find();
+      await screen.findByText('new@example.test is now in');
+      await userEvent.click(screen.getByRole('button', { name: 'Delete this account' }));
+      await userEvent.click(screen.getByRole('button', { name: /^Confirm: delete/ }));
+      expect(await screen.findByText(/so they cannot be deleted/)).toBeTruthy();
+    });
+  });
 });

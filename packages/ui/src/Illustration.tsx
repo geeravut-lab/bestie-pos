@@ -439,6 +439,77 @@ const SCENES: Record<ArtId, { tone: Tone; art: ReactNode }> = {
       </>
     ),
   },
+  waitlist: {
+    tone: 'sun',
+    art: (
+      <>
+        <rect className="il-white il-edge" x="34" y="16" width="72" height="68" rx="9" />
+        <path className="il-edge-line" d="M46 34h40M46 50h40M46 66h28" />
+        <circle className="il-mint il-edge" cx="116" cy="62" r="18" />
+        <path className="il-edge-line" d="M116 52v10l7 4" />
+      </>
+    ),
+  },
+  timeclock: {
+    tone: 'sky',
+    art: (
+      <>
+        <circle className="il-white il-edge" cx="70" cy="50" r="34" />
+        <path className="il-edge-line" d="M70 30v21l14 9" />
+        <rect className="il-accent il-edge" x="104" y="30" width="30" height="42" rx="8" />
+        <path className="il-edge-line" d="M112 44h14M112 54h14M112 64h8" />
+      </>
+    ),
+  },
+  tours: {
+    tone: 'mint',
+    art: (
+      <>
+        <path className="il-sun il-edge" d="M24 78h112l-14-26H40z" />
+        <path className="il-white il-edge" d="M56 52V18l32 12-32 10" />
+        <circle className="il-accent il-edge" cx="112" cy="30" r="12" />
+        <path className="il-edge-line" d="M106 30l4 4 8-9" />
+      </>
+    ),
+  },
+  stamps: {
+    tone: 'sun',
+    art: (
+      <>
+        <rect className="il-white il-edge" x="26" y="20" width="108" height="62" rx="9" />
+        <circle className="il-brand il-edge" cx="52" cy="40" r="9" />
+        <circle className="il-brand il-edge" cx="80" cy="40" r="9" />
+        <circle className="il-white il-edge" cx="108" cy="40" r="9" />
+        <circle className="il-brand il-edge" cx="52" cy="64" r="9" />
+        <circle className="il-white il-edge" cx="80" cy="64" r="9" />
+        <circle className="il-sun il-edge" cx="108" cy="64" r="9" />
+      </>
+    ),
+  },
+  marketing: {
+    tone: 'accent',
+    art: (
+      <>
+        <path className="il-sun il-edge" d="M30 44v22l62 24V20z" />
+        <path className="il-edge-line" d="M100 38a18 18 0 0 1 0 34M44 68v18" />
+        <rect className="il-white il-edge" x="112" y="14" width="30" height="22" rx="6" />
+        <path className="il-edge-line" d="M118 22h18M118 28h10" />
+      </>
+    ),
+  },
+  hub: {
+    tone: 'sky',
+    art: (
+      <>
+        <circle className="il-brand il-edge" cx="80" cy="50" r="14" />
+        <circle className="il-white il-edge" cx="32" cy="26" r="10" />
+        <circle className="il-white il-edge" cx="128" cy="26" r="10" />
+        <circle className="il-white il-edge" cx="32" cy="76" r="10" />
+        <circle className="il-sun il-edge" cx="128" cy="76" r="10" />
+        <path className="il-edge-line" d="M41 30l26 13M119 30L93 43M41 72l26-14M119 72L93 57" />
+      </>
+    ),
+  },
   pay: {
     tone: 'mint',
     art: (

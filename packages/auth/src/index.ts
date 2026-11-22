@@ -1,5 +1,5 @@
 export { AuthApp } from './AuthApp';
-export type { DeviceMode, PageContext } from './AuthApp';
+export type { DeviceMode, GuestPages, PageContext } from './AuthApp';
 export { effectiveActing, withActing } from './acting';
 export type { ActingIdentity } from './acting';
 export { AuthProvider, useAuth } from './context';
@@ -33,3 +33,4 @@ export { useStoreTheme } from './useStoreTheme';
 export { useCardImages } from './useCardImages';
 export { accountLabel, isAivoraUser } from './account';
 export type { AccountLabel, AccountUser } from './account';
+export { pageName, trackPage } from './useUsageTracking';

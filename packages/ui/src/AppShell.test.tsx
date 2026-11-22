@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@bestie/i18n';
 import type { StoreModuleConfig } from '@bestie/core';
 import { AppShell } from './AppShell';
+import { ROLE_LAYOUT } from './nav';
 import { RoleHome } from './RoleHome';
 
 afterEach(cleanup);
@@ -21,7 +22,7 @@ describe('<RoleHome>', () => {
   it('renders one illustrated card per role card and greys out modules that are off', () => {
     wrap(<RoleHome role="cashier" ctx={{ store: store('restaurant') }} onNavigate={() => {}} />);
     const cards = screen.getAllByRole('link');
-    expect(cards).toHaveLength(10);
+    expect(cards).toHaveLength(ROLE_LAYOUT.cashier.cards.length);
     const queue = cards.find((c) => within(c).queryByText('Queue'))!;
     expect(queue.getAttribute('aria-disabled')).toBe('true'); // restaurant has no queue module
     const sell = cards.find((c) => within(c).queryByText('Sell'))!;

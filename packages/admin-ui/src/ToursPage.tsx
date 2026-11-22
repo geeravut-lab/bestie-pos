@@ -4,14 +4,16 @@ import {
   guestName,
   parsePriceInput,
   parseTourBookings,
+  parseTourDeposits,
   parseTourSlots,
   seatsLeft,
 } from '@bestie/core';
-import type { TourBooking, TourSlot } from '@bestie/core';
+import type { TourBooking, TourDeposit, TourSlot } from '@bestie/core';
 import { fmt, formatDateTime, useI18n } from '@bestie/i18n';
 import { AsyncButton, Spinner } from '@bestie/ui';
 import { Notice, useLiveSync } from '@bestie/auth';
 import type { PageContext } from '@bestie/auth';
+import { TourLinkPanel } from './TourLinkPanel';
 import { useRemote } from './useRemote';
 
 type SlotForm = {
@@ -41,14 +43,17 @@ export function ToursPage({ ctx }: { ctx: PageContext }) {
   const storeId = ctx.storeId ?? ctx.homeStoreId ?? null;
   const canEdit = ctx.isOwner || ctx.permissions.includes('menu.edit');
   const canTake = ctx.isOwner || ctx.permissions.includes('payment.take');
+  const canRefund = ctx.isOwner || ctx.permissions.includes('refund.create');
   const [form, setForm] = useState<SlotForm | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [guest, setGuest] = useState({ name: '', phone: '', seats: '2' });
   const [dep, setDep] = useState<{
     id: string;
     amount: string;
-    method: 'promptpay' | 'gateway';
+    method: 'promptpay' | 'gateway' | 'cash';
+    till: string;
   } | null>(null);
+  const [settleTill, setSettleTill] = useState('');
   const [msg, setMsg] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
 
   const data = useRemote(async () => {
@@ -68,17 +73,32 @@ export function ToursPage({ ctx }: { ctx: PageContext }) {
         ? ctx.client.from('tour_bookings').select('*').in('slot_id', ids).order('created_at')
         : Promise.resolve({ data: [], error: null }),
       ctx.client.from('staff').select('id, display_name').eq('active', true).order('display_name'),
-      ctx.client.from('devices').select('id').eq('store_id', storeId).eq('active', true).limit(1),
+      ctx.client
+        .from('devices')
+        .select('id, name')
+        .eq('store_id', storeId)
+        .eq('active', true)
+        .order('name'),
     ]);
+    const bookIds = ((books.data ?? []) as { id: string }[]).map((b) => b.id);
+    const deps = bookIds.length
+      ? await ctx.client
+          .from('tour_deposits')
+          .select('id, booking_id, amount, method, status')
+          .in('booking_id', bookIds)
+      : { data: [], error: null };
     const bySlot: Record<string, TourBooking[]> = {};
     for (const raw of (books.data ?? []) as { slot_id: string }[]) {
       (bySlot[raw.slot_id] ??= []).push(...parseTourBookings([raw]));
     }
+    const tillList = (tills.data ?? []) as { id: string; name: string }[];
     return {
       slots: parsed,
       bookings: bySlot,
+      deposits: parseTourDeposits(deps.data),
       staff: (staff.data ?? []) as { id: string; display_name: string }[],
-      till: ((tills.data ?? [])[0] as { id: string } | undefined)?.id ?? null,
+      tills: tillList,
+      till: tillList[0]?.id ?? null,
     };
   }, `${storeId}`);
   const { reload } = data;
@@ -163,10 +183,28 @@ export function ToursPage({ ctx }: { ctx: PageContext }) {
     const amount = parsePriceInput(dep.amount);
     if (amount === null || amount < 1) return setMsg({ kind: 'error', text: t.touErrInvalid });
     const r = await ctx.client.rpc('take_tour_deposit', {
-      p: { booking_id: dep.id, amount, method: dep.method },
+      p: {
+        booking_id: dep.id,
+        amount,
+        method: dep.method,
+        ...(dep.method === 'cash' ? { device_id: dep.till || d?.till } : {}),
+      },
     });
     if (r.error) return fail(r.error.code);
     setDep(null);
+    reload();
+  };
+  const settle = async (x: TourDeposit, action: 'forfeit' | 'refund') => {
+    setMsg(null);
+    const r = await ctx.client.rpc('resolve_tour_deposit', {
+      p: {
+        deposit_id: x.id,
+        action,
+        ...(action === 'refund' && x.method === 'cash' ? { device_id: settleTill || d?.till } : {}),
+      },
+    });
+    if (r.error) return fail(r.error.code);
+    setMsg({ kind: 'success', text: t.touSettled });
     reload();
   };
   const openBill = async (b: TourBooking) => {
@@ -241,8 +279,17 @@ export function ToursPage({ ctx }: { ctx: PageContext }) {
                         <li key={b.id}>
                           <strong>{b.guestName}</strong> × {b.seats}{' '}
                           <span className="badge">{t[`touSt_${b.status}`]}</span>
+                          {b.source === 'online' ? (
+                            <span className="badge">{t.touOnline}</span>
+                          ) : null}
                           {b.phone ? <span className="muted"> · {b.phone}</span> : null}
-                          {b.deposit > 0 ? (
+                          {b.depositDue > 0 ? (
+                            <span className="muted">
+                              {' '}
+                              ·{' '}
+                              {fmt(t.touDueOf, { got: money(b.deposit), due: money(b.depositDue) })}
+                            </span>
+                          ) : b.deposit > 0 ? (
                             <span className="muted">
                               {' '}
                               · {t.touDeposit}: {money(b.deposit)}
@@ -271,7 +318,15 @@ export function ToursPage({ ctx }: { ctx: PageContext }) {
                                     type="button"
                                     className="btn btn-secondary"
                                     onClick={() =>
-                                      setDep({ id: b.id, amount: '', method: 'promptpay' })
+                                      setDep({
+                                        id: b.id,
+                                        amount:
+                                          b.depositDue > b.deposit
+                                            ? String((b.depositDue - b.deposit) / 100)
+                                            : '',
+                                        method: 'promptpay',
+                                        till: d?.till ?? '',
+                                      })
                                     }
                                   >
                                     {t.touDeposit}
@@ -295,14 +350,36 @@ export function ToursPage({ ctx }: { ctx: PageContext }) {
                                     setDep({
                                       ...dep,
                                       method:
-                                        e.target.value === 'gateway' ? 'gateway' : 'promptpay',
+                                        e.target.value === 'gateway'
+                                          ? 'gateway'
+                                          : e.target.value === 'cash'
+                                            ? 'cash'
+                                            : 'promptpay',
                                     })
                                   }
                                 >
                                   <option value="promptpay">{t.touPromptPay}</option>
                                   <option value="gateway">{t.touCard}</option>
+                                  <option value="cash">{t.touCash}</option>
                                 </select>,
                               )}
+                              {dep.method === 'cash'
+                                ? field(
+                                    `dep-t-${b.id}`,
+                                    t.touTill,
+                                    <select
+                                      id={`dep-t-${b.id}`}
+                                      value={dep.till}
+                                      onChange={(e) => setDep({ ...dep, till: e.target.value })}
+                                    >
+                                      {(d?.tills ?? []).map((x) => (
+                                        <option key={x.id} value={x.id}>
+                                          {x.name}
+                                        </option>
+                                      ))}
+                                    </select>,
+                                  )
+                                : null}
                               {field(
                                 `dep-a-${b.id}`,
                                 t.touDepositAmount,
@@ -360,6 +437,16 @@ export function ToursPage({ ctx }: { ctx: PageContext }) {
           );
         })}
       </ul>
+      {canRefund && d ? (
+        <HeldDeposits
+          rows={heldOfCancelled(d.slots, d.bookings, d.deposits)}
+          tills={d.tills}
+          till={settleTill || d.till || ''}
+          onTill={setSettleTill}
+          onSettle={settle}
+          money={money}
+        />
+      ) : null}
       {canEdit && !form ? (
         <button type="button" className="btn btn-primary" onClick={() => setForm(EMPTY)}>
           {t.touAdd}
@@ -452,6 +539,86 @@ export function ToursPage({ ctx }: { ctx: PageContext }) {
           </div>
         </section>
       ) : null}
+      {canEdit && storeId ? <TourLinkPanel ctx={ctx} storeId={storeId} /> : null}
     </div>
+  );
+}
+
+type HeldRow = { deposit: TourDeposit; guest: string; tour: string };
+/** The deposits still held for bookings that were cancelled or did not show: a manager keeps them as a fee or gives them back. */
+function heldOfCancelled(
+  slots: TourSlot[],
+  bookings: Record<string, TourBooking[]>,
+  deposits: TourDeposit[],
+): HeldRow[] {
+  const out: HeldRow[] = [];
+  for (const s of slots) {
+    for (const b of bookings[s.id] ?? []) {
+      if (b.status !== 'cancelled' && b.status !== 'no_show') continue;
+      for (const x of deposits)
+        if (x.bookingId === b.id && x.status === 'held')
+          out.push({ deposit: x, guest: b.guestName, tour: guestName(s.title, 'th') });
+    }
+  }
+  return out;
+}
+
+function HeldDeposits({
+  rows,
+  tills,
+  till,
+  onTill,
+  onSettle,
+  money,
+}: {
+  rows: HeldRow[];
+  tills: { id: string; name: string }[];
+  till: string;
+  onTill: (v: string) => void;
+  onSettle: (x: TourDeposit, a: 'forfeit' | 'refund') => Promise<void>;
+  money: (n: number) => string;
+}) {
+  const { t } = useI18n();
+  if (rows.length === 0) return null;
+  return (
+    <section className="card admin-card" aria-label={t.touHeldTitle}>
+      <h2>{t.touHeldTitle}</h2>
+      {rows.some((r) => r.deposit.method === 'cash') ? (
+        <div className="form-row">
+          <label className="label" htmlFor="tou-settle-till">
+            {t.touTill}
+          </label>
+          <select id="tou-settle-till" value={till} onChange={(e) => onTill(e.target.value)}>
+            {tills.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+      <ul className="member-list">
+        {rows.map((r) => (
+          <li key={r.deposit.id}>
+            <strong>{r.guest}</strong> · {r.tour} · {money(r.deposit.amount)}{' '}
+            <span className="badge">
+              {r.deposit.method === 'cash'
+                ? t.touCash
+                : r.deposit.method === 'gateway'
+                  ? t.touCard
+                  : t.touPromptPay}
+            </span>
+            <div className="actions">
+              <AsyncButton variant="secondary" onClick={() => onSettle(r.deposit, 'forfeit')}>
+                {t.touKeep}
+              </AsyncButton>
+              <AsyncButton variant="secondary" onClick={() => onSettle(r.deposit, 'refund')}>
+                {t.touRefund}
+              </AsyncButton>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

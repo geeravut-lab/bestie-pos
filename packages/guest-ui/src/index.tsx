@@ -6,6 +6,7 @@ import {
   karaokeTokenFromPath,
   joinSlugFromPath,
   passTokenFromPath,
+  tourTokenFromPath,
 } from '@bestie/core';
 import { GUEST_LANG_STORAGE_KEY, I18nProvider, isGuestLang } from '@bestie/i18n';
 import type { Lang } from '@bestie/i18n';
@@ -16,14 +17,17 @@ import { JoinPage } from './JoinPage';
 import { KaraokeBookPage } from './KaraokeBookPage';
 import { KaraokePage } from './KaraokePage';
 import { PassPage } from './PassPage';
+import { TourBookPage } from './TourBookPage';
 
 export { BookingPage } from './BookingPage';
 export { GuestTablePage } from './GuestTablePage';
+export { GuestHubPage, guestHubPages } from './GuestHubPage';
 export { IslandPage } from './IslandPage';
 export { JoinPage } from './JoinPage';
 export { KaraokeBookPage } from './KaraokeBookPage';
 export { KaraokePage } from './KaraokePage';
 export { PassPage } from './PassPage';
+export { TourBookPage } from './TourBookPage';
 export { loadGuestTable, placeGuestOrder } from './guestApi';
 
 const TABLE_PATH = /^\/t\/([0-9a-f]{24,64})\/?$/;
@@ -112,6 +116,17 @@ export function KaraokeBookRoot({ token }: { token: string }) {
   );
 }
 
+/** Whole guest screen for a shop's tour booking link (`/tour/<token>`). */
+export function TourBookRoot({ token }: { token: string }) {
+  return (
+    <I18nProvider guest initialLang={startLang()}>
+      <main className="guest-root">
+        <TourBookPage token={token} />
+      </main>
+    </I18nProvider>
+  );
+}
+
 /** Whole guest screen for the island marketplace (`/island/<network>`). */
 export function IslandRoot({ slug }: { slug: string }) {
   return (
@@ -135,6 +150,8 @@ export function guestEntry(pathname: string): ReactElement | null {
   if (join) return <JoinRoot slug={join} />;
   const kbook = karaokeBookingTokenFromPath(pathname);
   if (kbook) return <KaraokeBookRoot token={kbook} />;
+  const tour = tourTokenFromPath(pathname);
+  if (tour) return <TourBookRoot token={tour} />;
   const room = karaokeTokenFromPath(pathname);
   if (room) return <KaraokeRoot token={room} />;
   const island = islandSlugFromPath(pathname);

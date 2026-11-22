@@ -211,6 +211,89 @@ describe('<ToursPage>', () => {
       p: { booking_id: 'b1', amount: 200000, method: 'promptpay' },
     });
   });
+  it('takes a CASH deposit into the drawer of the chosen till', async () => {
+    const t3 = {
+      ...tables,
+      devices: [
+        { id: 'd1', name: 'Front' },
+        { id: 'd2', name: 'Pier' },
+      ],
+    };
+    const { db } = mount((ctx) => <ToursPage ctx={ctx} />, t3);
+    await screen.findByText('Snorkel');
+    await userEvent.click(screen.getByRole('button', { name: /Guest list/ }));
+    const row = screen.getByText('Anna').closest('li')!;
+    await userEvent.click(within(row).getByRole('button', { name: 'Take a deposit' }));
+    await userEvent.selectOptions(screen.getByLabelText('Paid by'), 'cash');
+    await userEvent.selectOptions(screen.getByLabelText('Put it in the drawer of'), 'd2');
+    await userEvent.type(screen.getByLabelText('Amount (baht)'), '600');
+    const buttons = screen.getAllByRole('button', { name: 'Take a deposit' });
+    await userEvent.click(buttons[buttons.length - 1]!);
+    await waitFor(() => expect(db.rpcs.some((r) => r.fn === 'take_tour_deposit')).toBe(true));
+    expect(db.rpcs.find((r) => r.fn === 'take_tour_deposit')!.args).toEqual({
+      p: { booking_id: 'b1', amount: 60000, method: 'cash', device_id: 'd2' },
+    });
+  });
+  it('marks an online booking and shows what is due and what was received', async () => {
+    const t4 = {
+      ...tables,
+      tour_bookings: [
+        { ...tables.tour_bookings[0]!, source: 'online', deposit: 30000, deposit_due: 90000 },
+      ],
+    };
+    mount((ctx) => <ToursPage ctx={ctx} />, t4);
+    await screen.findByText('Snorkel');
+    await userEvent.click(screen.getByRole('button', { name: /Guest list/ }));
+    const row = screen.getByText('Anna').closest('li')!;
+    expect(within(row).getByText('Online')).toBeTruthy();
+    expect(within(row).getByText(/Deposit .*300.* of .*900/)).toBeTruthy();
+  });
+  it('lets a manager keep or refund the deposit of a cancelled booking (cash comes out of a till)', async () => {
+    const t5 = {
+      ...tables,
+      tour_bookings: [{ ...tables.tour_bookings[1]!, deposit: 60000 }],
+      tour_deposits: [
+        { id: 'dep1', booking_id: 'b2', amount: 60000, method: 'cash', status: 'held' },
+      ],
+      devices: [{ id: 'd1', name: 'Front' }],
+    };
+    const { db } = mount((ctx) => <ToursPage ctx={ctx} />, t5);
+    const sec = await screen.findByRole('region', { name: /still held/ });
+    expect(within(sec).getByText('Cy')).toBeTruthy();
+    await userEvent.click(within(sec).getByRole('button', { name: 'Refund the deposit' }));
+    await waitFor(() => expect(db.rpcs.some((r) => r.fn === 'resolve_tour_deposit')).toBe(true));
+    expect(db.rpcs.find((r) => r.fn === 'resolve_tour_deposit')!.args).toEqual({
+      p: { deposit_id: 'dep1', action: 'refund', device_id: 'd1' },
+    });
+  });
+  it('shows the booking link with its rules and replaces it on request', async () => {
+    const tok = 'a'.repeat(32);
+    const { db } = mount((ctx) => <ToursPage ctx={ctx} />, tables, {
+      tour_link: {
+        data: {
+          token: tok,
+          enabled: true,
+          settings: {
+            deposit_pct: 30,
+            hold_min: 120,
+            days_ahead: 60,
+            notice_min: 120,
+            pay_note: '',
+          },
+        },
+      },
+      rotate_tour_token: { data: 'b'.repeat(32) },
+    });
+    const input = (await screen.findByLabelText('The shop booking link')) as HTMLInputElement;
+    expect(input.value).toContain(`/tour/${tok}`);
+    await userEvent.click(screen.getByRole('button', { name: /Make a new link/ }));
+    await waitFor(() => expect(db.rpcs.some((r) => r.fn === 'rotate_tour_token')).toBe(true));
+    await waitFor(() =>
+      expect((screen.getByLabelText('The shop booking link') as HTMLInputElement).value).toContain(
+        'b'.repeat(32),
+      ),
+    );
+  });
 });
 
 describe('<MarketingPage>', () => {

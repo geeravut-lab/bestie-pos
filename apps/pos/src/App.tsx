@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { AuthApp, useAuth } from '@bestie/auth';
 import type { ActingIdentity, DeviceMode } from '@bestie/auth';
+import { guestHubPages } from '@bestie/guest-ui';
 import { useI18n } from '@bestie/i18n';
 import { AsyncButton } from '@bestie/ui';
 import { SyncIndicator, useDeviceBinding, useOutboxSync } from '@bestie/offline';
@@ -68,5 +69,13 @@ export function App() {
     [acting, binding, lock, setupMode],
   );
 
-  return <AuthApp app="pos" rawEnv={import.meta.env} pages={posPages} deviceMode={deviceMode} />;
+  return (
+    <AuthApp
+      app="pos"
+      rawEnv={import.meta.env}
+      pages={posPages}
+      guestPages={guestHubPages}
+      deviceMode={deviceMode}
+    />
+  );
 }

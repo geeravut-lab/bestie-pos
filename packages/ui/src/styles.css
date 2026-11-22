@@ -292,3 +292,18 @@ h3 {
   margin-top: auto;
   font-size: 1.4em;
 }
+
+/* usage analytics: daily active people as plain bars */
+.analytics-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 120px;
+  margin-top: 12px;
+}
+.analytics-bar {
+  flex: 1;
+  min-width: 2px;
+  background: var(--bp-primary);
+  border-radius: 2px 2px 0 0;
+}

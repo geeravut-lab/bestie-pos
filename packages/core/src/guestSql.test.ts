@@ -420,6 +420,19 @@ describe('spa advisor SQL mirror', () => {
     expect(sql).toContain("'ai.business_manager','marketing','integration.hub','stamps'];");
   });
 
+  it('tours online: the module mirror lives in migration 88 and the shops column list knows it', () => {
+    const dir = new URL('../../../supabase/migrations/', import.meta.url);
+    const sql = readFileSync(
+      new URL(readdirSync(dir).find((f) => f.endsWith('_tours_online.sql')) ?? '', dir),
+      'utf8',
+    );
+    expect(MODULE_BY_ID['tours.online'].dependsOn).toEqual(['slots.booking']);
+    expect(MODULE_BY_ID['tours.online'].defaultProfiles).toEqual([]);
+    expect(MODULE_BY_ID['tours.online'].plan).toBe('pro');
+    expect(sql).toContain("(s.module_overrides ->> 'tours.online')::boolean, false");
+    expect(sql).toContain("'waitlist','timeclock','tours.online'];");
+  });
+
   it('ops tools: the module mirrors live in migration 86', () => {
     const dir = new URL('../../../supabase/migrations/', import.meta.url);
     const sql = readFileSync(

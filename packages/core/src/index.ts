@@ -43,6 +43,7 @@ export * from './cardImages';
 export * from './aiCost';
 export * from './printing';
 export * from './askShop';
+export * from './askOps';
 export * from './kitchenTicket';
 export * from './printJobs';
 export * from './shopInfo';

@@ -99,6 +99,7 @@ need appointments); enabling one auto-enables its dependencies. Disabling hides 
 | AI business manager (morning brief, action centre) | ○ | ○ | ○ | ○ | ○ | ○ | Pro |
 | Tours: slots with seats, guide, check-in, deposit | – | – | – | – | – | – | Pro (default for the Tours profile) |
 | Karaoke room booking online with a deposit (needs rooms; off by default) | – | – | – | – | – | – | Pro |
+| Tours: guests book seats online with a deposit (needs slots; off by default) | – | – | – | – | – | – | Pro |
 
 ## 6. Core features (benchmark-derived)
 

@@ -114,6 +114,45 @@ describe('POST /api/ask/shop', () => {
     expect(JSON.stringify(calls.find((c) => c.fn === 'log_ai_usage')!.body)).not.toContain('sales');
   });
 
+  it('one shop: the newer modules are read too, with the person’s token, and their numbers are checked like the sales', async () => {
+    calls.length = 0;
+    const base = fakeFetch();
+    const withOps = vi.fn(async (url: unknown, init?: RequestInit) => {
+      const fn = /\/rpc\/(\w+)$/.exec(String(url))?.[1];
+      if (fn === 'promotions_report') {
+        calls.push({
+          fn,
+          auth: String((init?.headers as Record<string, string>).Authorization),
+          body: null,
+        });
+        return Response.json([
+          { promo_id: 'p', name: 'Happy hour', bills: 6, lines: 9, given: 45000 },
+        ]);
+      }
+      if (fn === 'stamps_report') {
+        calls.push({
+          fn,
+          auth: String((init?.headers as Record<string, string>).Authorization),
+          body: null,
+        });
+        return new Response('forbidden', { status: 403 }); // module off: that part is simply missing
+      }
+      return base(url as string, init);
+    }) as unknown as typeof fetch;
+    const res = await ask(
+      good,
+      withOps,
+      'Happy hour gave away 450 THB over 6 bills; the promo also saved 900 THB.',
+    );
+    const b = (await res.json()) as { figures: string; unverified: string[] };
+    expect(b.figures).toContain('Happy hour: 6 bills, 9 lines, 450 THB given');
+    expect(b.figures).not.toContain('Stamp cards');
+    expect(b.unverified).toEqual(['900']);
+    expect(calls.find((c) => c.fn === 'promotions_report')!.auth.startsWith('Bearer jwt-')).toBe(
+      true,
+    );
+  });
+
   it('all shops together: asks the all-shops gate, reads the report with no shop filter, names the group', async () => {
     calls.length = 0;
     const res = await ask(
@@ -124,6 +163,7 @@ describe('POST /api/ask/shop', () => {
     const b = (await res.json()) as { available: boolean; figures: string };
     expect(b.available).toBe(true);
     expect(b.figures).toContain('Shop: All 2 shops together');
+    expect(calls.some((c) => c.fn === 'promotions_report')).toBe(false); // ops figures are per shop
     expect(calls.some((c) => c.fn === 'ask_shop_context_all')).toBe(true);
     const reports = calls.filter((c) => c.fn === 'sales_report');
     expect(reports.every((c) => (c.body as { p: { store_id: unknown } }).p.store_id === null)).toBe(

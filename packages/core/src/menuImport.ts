@@ -57,26 +57,52 @@ export function parseCsv(text: string): string[][] {
 }
 
 const ALIASES: Record<string, readonly string[]> = {
-  category: ['category', 'categories', 'group', 'หมวด', 'หมวดหมู่', 'หมวดสินค้า'],
+  category: [
+    'category',
+    'categories',
+    'group',
+    '\u0e2b\u0e21\u0e27\u0e14',
+    '\u0e2b\u0e21\u0e27\u0e14\u0e2b\u0e21\u0e39\u0e48',
+    '\u0e2b\u0e21\u0e27\u0e14\u0e2a\u0e34\u0e19\u0e04\u0e49\u0e32',
+  ],
   name_th: [
     'name_th',
     'name th',
     'thai name',
-    'ชื่อไทย',
-    'ชื่อ',
-    'ชื่อสินค้า',
-    'ชื่อเมนู',
+    '\u0e0a\u0e37\u0e48\u0e2d\u0e44\u0e17\u0e22',
+    '\u0e0a\u0e37\u0e48\u0e2d',
+    '\u0e0a\u0e37\u0e48\u0e2d\u0e2a\u0e34\u0e19\u0e04\u0e49\u0e32',
+    '\u0e0a\u0e37\u0e48\u0e2d\u0e40\u0e21\u0e19\u0e39',
     'name',
     'item name',
     'item',
     'product',
     'product name',
   ],
-  name_en: ['name_en', 'name en', 'english name', 'ชื่ออังกฤษ'],
-  price: ['price', 'unit price', 'selling price', 'default price', 'ราคา', 'ราคาขาย'],
-  barcode: ['barcode', 'บาร์โค้ด', 'upc', 'ean'],
-  sku: ['sku', 'ref', 'reference', 'รหัส', 'รหัสสินค้า', 'handle'],
-  station: ['station', 'สถานี'],
+  name_en: [
+    'name_en',
+    'name en',
+    'english name',
+    '\u0e0a\u0e37\u0e48\u0e2d\u0e2d\u0e31\u0e07\u0e01\u0e24\u0e29',
+  ],
+  price: [
+    'price',
+    'unit price',
+    'selling price',
+    'default price',
+    '\u0e23\u0e32\u0e04\u0e32',
+    '\u0e23\u0e32\u0e04\u0e32\u0e02\u0e32\u0e22',
+  ],
+  barcode: ['barcode', '\u0e1a\u0e32\u0e23\u0e4c\u0e42\u0e04\u0e49\u0e14', 'upc', 'ean'],
+  sku: [
+    'sku',
+    'ref',
+    'reference',
+    '\u0e23\u0e2b\u0e31\u0e2a',
+    '\u0e23\u0e2b\u0e31\u0e2a\u0e2a\u0e34\u0e19\u0e04\u0e49\u0e32',
+    'handle',
+  ],
+  station: ['station', '\u0e2a\u0e16\u0e32\u0e19\u0e35'],
 };
 const norm = (h: string) => h.trim().toLowerCase().replace(/\s+/g, ' ');
 
@@ -95,9 +121,9 @@ export function mapColumns(header: readonly string[]): Record<string, number> {
   return out;
 }
 
-/** "120", "120.50", "฿1,200", "1 200" → satang; null when it is not a price. */
+/** "120", "120.50", "\u0e3f1,200", "1 200" → satang; null when it is not a price. */
 export function bahtToSatang(v: string): number | null {
-  const x = v.replace(/[฿,\s]|บาท/g, '');
+  const x = v.replace(/[\u0e3f,\s]|\u0e1a\u0e32\u0e17/g, '');
   if (!/^\d+(\.\d{1,2})?$/.test(x)) return null;
   return Math.round(Number(x) * 100);
 }

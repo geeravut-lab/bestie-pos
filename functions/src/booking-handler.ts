@@ -11,6 +11,7 @@
 //   POST /api/guest/booking { t, op: 'contact', id, code, email }                                                  → { ok, error? }  (e-mail for the reminder; '' removes it)
 // Every rule (module on, free time, limits, repeat = same answer) is checked by the database functions; this file only limits the
 // request rate, checks the shapes and talks to them with the service role. The browser never gets a key.
+import { wire } from './guest-wire.js';
 import { createRateLimiter } from './line.js';
 import { hairAiAction } from './hair-ai-handler.js';
 import type { HairAiDeps } from './hair-ai-handler.js';
@@ -109,7 +110,7 @@ export async function guestBookingResponse(
       // the Official Account a guest can add as a friend to get a reminder by LINE (absent = LINE is not set up)
       const basic = env.LINE_BASIC_ID?.trim();
       const lineBasicId = basic && /^@?[A-Za-z0-9._-]{2,40}$/.test(basic) ? basic : null;
-      return info ? reply({ info, lineBasicId }) : reply({ error: 'not_found' }, 404);
+      return info ? reply({ info: r.data, lineBasicId }) : reply({ error: 'not_found' }, 404);
     }
 
     if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
@@ -153,7 +154,7 @@ export async function guestBookingResponse(
         },
       });
       if (!r.ok) return reply({ error: 'server_error' }, 502);
-      return reply({ result: parseBookingResult(r.data) });
+      return reply({ result: wire(parseBookingResult(r.data), r.data) });
     }
 
     if (b.op === 'cancel') {
@@ -167,7 +168,7 @@ export async function guestBookingResponse(
         p_code: code,
       });
       if (!r.ok) return reply({ error: 'server_error' }, 502);
-      return reply({ result: parseCancelResult(r.data) });
+      return reply({ result: wire(parseCancelResult(r.data), r.data) });
     }
     if (b.op === 'contact') {
       if (!allowCancel(`booking-contact:${ip}`)) return reply({ error: 'rate_limited' }, 429);

@@ -6,6 +6,7 @@
 //   POST /api/guest/tour { t, op: 'contact', id, code, email }                     → { ok, error? }  (e-mail for the reminder before the trip; '' removes it)
 // Every rule (module on, notice time, seats left, limits, repeat = same answer) is checked by the database functions; this file only limits the request rate,
 // checks the shapes and talks to them with the service role. The browser never gets a key. Nothing here takes money: the deposit is recorded by the front desk.
+import { wire } from './guest-wire.js';
 import { createRateLimiter } from './line.js';
 import { readServerEnv } from './env.js';
 import { clientKey, jsonObject, rpc } from './guest-extras-handler.js';
@@ -58,7 +59,7 @@ export async function guestTourBookingResponse(
           p_code: code,
         });
         if (!r.ok) return reply({ error: 'server_error' }, 502);
-        return reply({ status: parseTourStatus(r.data) });
+        return reply({ status: wire(parseTourStatus(r.data), r.data) });
       }
       if (!allowRead(`tour:${ip}`)) return reply({ error: 'rate_limited' }, 429);
       const r = await rpc(f, supabaseUrl, serviceRoleKey, 'guest_tour_info', { p_token: token });
@@ -67,7 +68,7 @@ export async function guestTourBookingResponse(
       // the Official Account a guest can add as a friend to get a reminder by LINE (absent = LINE is not set up)
       const basic = env.LINE_BASIC_ID?.trim();
       const lineBasicId = basic && /^@?[A-Za-z0-9._-]{2,40}$/.test(basic) ? basic : null;
-      return info ? reply({ info, lineBasicId }) : reply({ error: 'not_found' }, 404);
+      return info ? reply({ info: r.data, lineBasicId }) : reply({ error: 'not_found' }, 404);
     }
 
     if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
@@ -97,7 +98,7 @@ export async function guestTourBookingResponse(
         p: { slot_id: b.slot_id, seats: b.seats, name, phone, client_id: b.client_id },
       });
       if (!r.ok) return reply({ error: 'server_error' }, 502);
-      return reply({ result: parseTourBookResult(r.data) });
+      return reply({ result: wire(parseTourBookResult(r.data), r.data) });
     }
 
     if (b.op === 'cancel') {

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { guestBookingResponse } from './booking-handler.js';
+import { parseBookingInfo } from '../../packages/core/src/onlineBooking.js';
 
 const TOKEN = 'a'.repeat(32);
 const SVC = '11111111-1111-4111-8111-111111111111';
@@ -46,7 +47,11 @@ describe('GET', () => {
       }),
     });
     expect(res.status).toBe(200);
-    expect(((await res.json()) as { info: { storeName: string } }).info.storeName).toBe('Salon');
+    // the page parses the answer again with the database's own keys, so it travels as the database wrote it
+    const body = (await res.json()) as { info: { store_name: string } };
+    expect(body.info.store_name).toBe('Salon');
+    // and the page can read it (it runs the same parser again)
+    expect(parseBookingInfo(body.info)?.storeName).toBe('Salon');
   });
   it('a wrong link is 404, a malformed one 422', async () => {
     expect(

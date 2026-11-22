@@ -59,8 +59,8 @@ describe('GET', () => {
       }),
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { info: { storeName: string; slots: unknown[] } };
-    expect(body.info.storeName).toBe('Island Tours');
+    const body = (await res.json()) as { info: { store_name: string; slots: unknown[] } };
+    expect(body.info.store_name).toBe('Island Tours');
     expect(body.info.slots).toHaveLength(1);
   });
   it('a wrong link is 404, a malformed one 422', async () => {

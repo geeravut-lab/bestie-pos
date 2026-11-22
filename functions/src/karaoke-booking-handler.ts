@@ -6,6 +6,7 @@
 //   POST /api/guest/karaoke-booking { t, op: 'cancel', id, code }                                                          → { result }
 // Every rule (module on, free time, limits, repeat = same answer) is checked by the database functions; this file only limits the request rate,
 // checks the shapes and talks to them with the service role. The browser never gets a key. Nothing here takes money: the deposit is recorded by the front desk.
+import { wire } from './guest-wire.js';
 import { createRateLimiter } from './line.js';
 import { readServerEnv } from './env.js';
 import { clientKey, jsonObject, rpc } from './guest-extras-handler.js';
@@ -80,7 +81,7 @@ export async function guestKaraokeBookingResponse(
           p_code: code,
         });
         if (!r.ok) return reply({ error: 'server_error' }, 502);
-        return reply({ status: parseKaraokeBookStatus(r.data) });
+        return reply({ status: wire(parseKaraokeBookStatus(r.data), r.data) });
       }
       if (!allowRead(`kbook:${ip}`)) return reply({ error: 'rate_limited' }, 429);
       const r = await rpc(f, supabaseUrl, serviceRoleKey, 'guest_karaoke_booking_info', {
@@ -88,7 +89,7 @@ export async function guestKaraokeBookingResponse(
       });
       if (!r.ok) return reply({ error: 'server_error' }, 502);
       const info = parseKaraokeBookingInfo(r.data);
-      return info ? reply({ info }) : reply({ error: 'not_found' }, 404);
+      return info ? reply({ info: r.data }) : reply({ error: 'not_found' }, 404);
     }
 
     if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
@@ -131,7 +132,7 @@ export async function guestKaraokeBookingResponse(
         },
       });
       if (!r.ok) return reply({ error: 'server_error' }, 502);
-      return reply({ result: parseKaraokeBookResult(r.data) });
+      return reply({ result: wire(parseKaraokeBookResult(r.data), r.data) });
     }
 
     if (b.op === 'cancel') {
@@ -145,7 +146,7 @@ export async function guestKaraokeBookingResponse(
         p_code: code,
       });
       if (!r.ok) return reply({ error: 'server_error' }, 502);
-      return reply({ result: parseKaraokeCancelResult(r.data) });
+      return reply({ result: wire(parseKaraokeCancelResult(r.data), r.data) });
     }
     return reply({ error: 'invalid' }, 422);
   } catch {

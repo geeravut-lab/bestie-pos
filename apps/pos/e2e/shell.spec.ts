@@ -176,7 +176,7 @@ test.describe('shell layout', () => {
   test('role chips switch the home cards', async ({ page }) => {
     await open(page);
     await page.getByRole('button', { name: 'ครัวและบาร์' }).click();
-    await expect(page.locator('.nav-card')).toHaveCount(1);
+    await expect(page.locator('.nav-card')).toHaveCount(2); // the kitchen screen and the time clock
     await expect(page.locator('.nav-card', { hasText: 'จอครัว' })).toBeVisible();
   });
 });

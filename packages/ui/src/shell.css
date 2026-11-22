@@ -2548,3 +2548,23 @@ a.nav-card[aria-busy='true'] {
   background: var(--bp-brand);
   vertical-align: middle;
 }
+
+/* Install-the-app button in the top bar and the steps on the account page */
+.install-btn {
+  min-height: 2.25rem;
+  padding-inline: 0.75rem;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+@media (max-width: 30rem) {
+  .install-btn {
+    padding-inline: 0.5rem;
+    font-size: 0.8125rem;
+  }
+}
+.install-steps {
+  margin: 0.25rem 0 0;
+  padding-inline-start: 1.25rem;
+  display: grid;
+  gap: 0.35rem;
+}

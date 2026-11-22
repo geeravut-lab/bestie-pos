@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { errorText, useI18n } from '@bestie/i18n';
 import type { ErrorKey } from '@bestie/i18n';
 import { isInviteCodeShape, normalizeInviteCode } from '@bestie/core';
-import { AsyncButton, Brand, LangSwitch, Spinner } from '@bestie/ui';
+import { AsyncButton, Brand, InstallAppCard, LangSwitch, Spinner } from '@bestie/ui';
 import type { PublicEnv } from '@bestie/supabase';
 import { accountLabel, isAivoraUser } from './account';
 import { useAuth } from './context';
@@ -573,6 +573,7 @@ export function AccountPage() {
           {t.authSignOut}
         </AsyncButton>
       </section>
+      <InstallAppCard />
       {myRole || my.data?.isPlatformAdmin ? (
         <section className="card auth-card" aria-label={t.acctRoleTitle}>
           <h2>{t.acctRoleTitle}</h2>

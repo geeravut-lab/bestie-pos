@@ -226,6 +226,15 @@ describe('<OnboardingPage> duplicate-business warning', () => {
       from: vi.fn(),
     }) as never;
 
+  it('offers every business type, none of them marked as coming soon', () => {
+    mount(<OnboardingPage onCreated={async () => {}} />, clientWith(vi.fn()));
+    const group = screen.getByRole('group', { name: 'Store type' });
+    const chips = group.querySelectorAll('button.chip');
+    expect(chips.length).toBe(8);
+    chips.forEach((c) => expect((c as HTMLButtonElement).disabled).toBe(false));
+    expect(screen.queryByText(/Coming soon/)).toBeNull();
+  });
+
   it('warns first that a team with a business should ask for an invite code', () => {
     mount(<OnboardingPage onCreated={async () => {}} />, clientWith(vi.fn()));
     expect(screen.getByText(/already have a business in Bestie/i)).toBeTruthy();

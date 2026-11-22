@@ -213,9 +213,9 @@ const PROFILE_CHOICES = [
   { id: 'cafe', live: true },
   { id: 'salon', live: true },
   { id: 'spa', live: true },
-  { id: 'resort', live: false },
+  { id: 'resort', live: true },
   { id: 'retail', live: true },
-  { id: 'tours', live: false },
+  { id: 'tours', live: true },
   { id: 'karaoke', live: true },
 ] as const;
 

@@ -21,7 +21,7 @@ const steps = rest.filter((a) => !a.startsWith('--'));
 const yes = rest.includes('--yes');
 if (!['local', 'remote'].includes(target) || steps.length === 0) {
   console.error(
-    'usage: run.mjs <local|remote> <setup|simulate|retail|network|phase4|extras|growth|cleanup>… [--yes]',
+    'usage: run.mjs <local|remote> <setup|simulate|retail|network|phase4|extras|growth|full|cleanup>… [--yes]',
   );
   process.exit(2);
 }
@@ -46,6 +46,8 @@ const STEP_FILES = {
   extras: () => ['00_helpers.sql', '20_sim_helpers.sql', ...files('6')],
   // sets A–D and tours online (needs migrations 82–88 and the setup step); safe to run again
   growth: () => ['00_helpers.sql', '20_sim_helpers.sql', ...files('7')],
+  // more people and real transactions at the newest shops, and the data every module needs to be clicked through (needs setup, phase4, extras and growth; safe to run again)
+  full: () => ['00_helpers.sql', '20_sim_helpers.sql', ...files('8')],
   cleanup: () => ['00_helpers.sql', ...files('9')],
 };
 
